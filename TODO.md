@@ -167,9 +167,24 @@ Goal: turn the repository toolchain into a reproducible, installable, and protec
 - [x] **P1** Reconcile README, coverage, agent-tooling, schema identifiers, registry versioning, and implemented-command documentation with the actual repository state. *(M9-03 aligns README, agent-tooling, coverage, and the M8 workflow with the registered CLI and proven compiler/IR/M4 surfaces; documents IR 0.3.0, CLI schema v7, and profile registry 0.3.0 as separate version domains; and adds a CI regression tying command tables/help plus schema/registry identities to repository truth.)*
 - [x] **P1** Package the AIDL CLI/compiler as an installable artifact with pinned runtime dependencies and a clean-machine smoke test. *(M9-04 adds a PEP-517/setuptools wheel with the existing `aidl` console entry point, Python 3.12 support, exact runtime/build pins, packaged `spec/*.json` contracts, focused packaging regressions, and an isolated fresh-venv smoke that proves installed help/check/diff/error behavior without repository import paths.)*
 - [x] **P1** Add a reproducible release workflow for CLI artifacts, JSON schemas, checksums, and release notes. *(M9-05 adds a versioned tag/version contract, deterministic same-commit double-build certification, complete tracked `spec/*.json` contract bundling, machine-readable release manifest, SHA-256 component/archive checksums, committed changelog-derived notes, and a read-only Actions dry run with publication disabled.)*
-- [ ] **P1** Protect `main` with required validation, compatibility, fixture, runtime, IntelliJ, and `.ai/**` boundary checks.
+- [ ] **P1** **M9-06** Protect `main` with required validation, compatibility, fixture, runtime, IntelliJ, and `.ai/**` boundary checks.
 - [x] **P2** Add contribution, security-reporting, support-status, and artifact provenance documentation. *(M9-07 adds repository-level contribution and security policies, an evidence-bounded support matrix, and provenance/integrity documentation tied exactly to the M9-05 deterministic bundle, manifest, checksums, source commit and dry-run workflow without claiming publication, signatures, SBOMs, attestations, or branch protection.)*
-- [ ] **P1** Publish the first explicitly scoped toolchain pre-release without implying stability for unsupported language profiles.
+- [ ] **P1** **M9-08** Publish the first explicitly scoped toolchain pre-release without implying stability for unsupported language profiles.
+
+### M9-09 — Roadmap and Agent State Consistency
+
+- [ ] **P1** Make `TODO.md` the sole handwritten authority for roadmap order, milestone identity, and completion state; keep conformance manifests as the separate authority for implementation/support claims.
+- [ ] **P1** Eliminate independently maintained durable project `.ai/**` milestone/current-state documents, or derive any retained committed projection deterministically from the authoritative roadmap instead of maintaining a second handwritten roadmap.
+- [ ] **P1** Add deterministic offline CI validation for any committed project `.ai/**` current-state exposure so lagging, contradictory, or independently edited agent-facing milestone state is rejected without network access.
+- [ ] **P1** Reconcile legacy `BACKLOG`, `TASK`, `HANDOFF`, and applicable `CONTEXT` current-state content against `TODO.md` before it is frozen, removed, or replaced by deterministic generation.
+- [ ] **P1** Define the policy-safe maintenance path for that reconciliation or migration while preserving the rule that ordinary project PRs targeting `main` must continue to reject every `.ai/**` mutation.
+
+#### M9-09 acceptance criteria
+
+- [ ] `TODO.md` is the sole handwritten roadmap, milestone, and completion authority.
+- [ ] No committed agent-facing current-state projection lags or contradicts the authoritative roadmap.
+- [ ] Conformance manifests remain the separate implementation/support-claim authority and are not derived from roadmap completion state.
+- [ ] Roadmap/agent-state consistency validation is deterministic and offline.
 
 ### M9 acceptance criteria
 
@@ -204,9 +219,60 @@ Goal: provide editor-neutral, compiler-authoritative semantics for unsaved and m
 - [x] **P1** Introduce an in-memory compiler snapshot API for authoritative unsaved-buffer analysis. *(M11-01 adds immutable compiler snapshots that combine deterministic saved-project discovery with explicit in-memory overrides, reuse the existing parser/project/type/diagnostic pipeline, carry resolve/completion/documentation queries over the same source texts, and make LSP diagnostics/definition authoritative on unsaved full-text buffers without adding workspace-ownership or incremental-state semantics.)*
 - [x] **P1** Define deterministic workspace discovery, ownership, and multi-root behavior. *(M11-02 canonicalizes configured root order, assigns every source to the most-specific containing root before analysis, builds isolated per-root compiler snapshots, safely admits owned unsaved new `.aidl` files, and routes LSP diagnostics/definition through the owning snapshot so overlapping or independent roots cannot leak semantics.)*
 - [x] **P1** Add incremental analysis, cache invalidation, watched-file handling, cancellation, progress, and lifecycle/load tests. *(M11-03 adds compiler-owned per-root snapshot caching keyed by exact deterministic source fingerprints, conservative root-level invalidation for saved/unsaved and watched-file changes, isolated caches, cancellation without cache/partial-result publication, balanced work-done progress, shutdown/restart state handling, and structural repeated-request load regressions without wall-clock gates.)*
-- [ ] **P1** Expose existing compiler-owned completion, documentation, references, rename, and authorized fixes through LSP.
-- [ ] **P1** Preserve compiler diagnostic codes, semantic identities, and edit preconditions across the protocol boundary.
+- [x] **P1** Expose existing compiler-owned completion, documentation, references, rename, and authorized fixes through LSP. *(M11-04 exposes those capabilities over the owning incremental compiler snapshot, including unsaved buffers and isolated multi-root workspaces, with compiler-owned rename/fix authority and no editor-local semantic fallback.)*
+
+### M11-04.1 — Dependency-Aware Incremental Analysis
+
+- [ ] **P1** Replace root-wide rebuilds with dependency-aware module/declaration invalidation while retaining a conservative full-root fallback whenever dependency precision is unavailable.
+- [ ] **P1** Add content-addressed parse reuse plus incremental resolve, type-check, validation, and diagnostic caches so unchanged semantic work is reused across requests.
+- [ ] **P1** Key reusable analysis on exact source content plus compiler/schema/profile/configuration versions and dependency fingerprints; stale or mismatched keys must never be reused.
+- [ ] **P1** Centralize reverse-reference and dependency indexes that drive invalidation, references, rename, impact, and affected-declaration queries from one compiler-owned relation.
+- [ ] **P1** Extend cooperative cancellation into incremental parse/resolve/type/validate/index phases so cancelled work cannot publish partial caches, indexes, diagnostics, or edits.
+- [ ] **P1** Make watched-file invalidation dependency-aware for edits, creates, deletes, and moves, with deterministic conservative fallback when ownership or dependency identity is uncertain.
+- [ ] **P1** Prove cached and uncached analysis are semantically equivalent for diagnostics, completion, definition, documentation, references, rename planning, and authorized fixes.
+- [ ] **P1** Instrument compiler phases and add reproducible cold/warm Small/Medium/Large benchmarks that report cache hits/misses, invalidated/reused units, rebuild work, and query counts without making uncontrolled wall-clock timing a CI gate.
+- [ ] **P1** Publish controlled p50/p95 targets for diagnostics, completion, definition, references, and rename only from a defined benchmark environment and workload contract.
+- [ ] **P1** Bound cache/index memory, cross-request reuse, and deterministic eviction; measure memory alongside latency and structural work so warm performance cannot grow state without limit.
+- [ ] **P1** Add rapid-edit, repeated-cancel, delete/move, restart, and multi-root workspace-churn regressions covering cache correctness, invalidation, equivalence, memory bounds, and stale-result suppression.
+
+### M11.5 — Unified Compiler Service Architecture
+
+- [ ] **P1** Define one compiler-service API that owns project/workspace analysis and serves CLI, LSP, agent, and future protocol adapters without adapter-owned semantic state.
+- [ ] **P1** Move lifecycle and cache/index ownership behind that service so adapters do not construct divergent compiler lifecycles or independently invalidate semantic state.
+- [ ] **P1** Define transport-independent snapshot identity and lifecycle contracts, including freshness, ownership, cancellation, restart, and stale-snapshot rejection.
+- [ ] **P1** Prohibit divergent adapter caches or semantic indexes; every adapter must reuse the same service-owned snapshot/cache/index interpretation.
+- [ ] **P1** Add cross-adapter equivalence tests proving the same snapshot yields equivalent diagnostics, identities, queries, and edit plans through CLI/LSP/service consumers.
+- [ ] **P2** Expose non-semantic service metrics for cache reuse, invalidation, rebuild work, memory, and query volume without allowing metrics plumbing to own language semantics.
+
+### M11.6 — Agent Query Optimization
+
+- [ ] **P1** Add batched compiler-service queries for inspect, dependencies, explain, and impact so agents can request bounded semantic context without repeated full-project setup.
+- [ ] **P1** Return a stable snapshot fingerprint with agent query results and reject or explicitly mark requests/results that target a stale snapshot.
+- [ ] **P1** Add affected-declarations and affected-files queries backed by compiler-owned dependency/reverse-reference indexes rather than repository-wide text scans.
+- [ ] **P1** Add a conservative minimal-validation projection that identifies the smallest known validation scope for a change and falls back to broader validation whenever precision is uncertain.
+- [ ] **P1** Reuse compiler-service snapshots and indexes across agent queries so repeated inspect/dependency/explain/impact work does not rebuild equivalent semantic state.
+- [ ] **P1** Preserve deterministic bounds, totals, ordering, and truncation metadata for every batched or affected-set response.
+
+### M11.7 — MCP Integration
+
+- [ ] **P2** Add a thin, initially read-only MCP adapter over the unified compiler service; it must not become a second parser, resolver, validator, compatibility engine, or planner.
+- [ ] **P2** Expose structured MCP tools for check, summary, inspect, dependencies, explain, impact, diff, and plan by projecting existing compiler/CLI/service contracts rather than reimplementing them.
+- [ ] **P2** Reuse long-lived service snapshots and return their fingerprints so MCP clients can correlate results and detect stale project state.
+- [ ] **P2** Define stable transport-independent request/result schemas and keep MCP transport errors distinct from compiler validation, resolution, compatibility, planning, and stale-snapshot failures.
+- [ ] **P2** Add deterministic MCP contract, lifecycle, cancellation, stale-state, invalid-input, and cross-adapter equivalence regressions.
+- [ ] **P2** Document the recommended MCP coding-agent workflow and its bounded context/query strategy.
+- [ ] **P2** Keep all parser, resolver, type/validation, compatibility, planning, and fallback semantics out of the MCP adapter; unsupported service capabilities must fail explicitly rather than being guessed locally.
+
+### M11.8 — Protocol Identity and Edit Preconditions
+
+- [ ] **P1** Preserve compiler diagnostic codes, semantic identities, document/edit versions, and explicit edit preconditions across the protocol boundary.
+
+### M11.9 — Optional LSP Protocol Library
+
 - [ ] **P2** Select and pin an LSP protocol library only if it reduces protocol-maintenance risk without owning language semantics.
+
+### M11.10 — Packaged Server and Client Smokes
+
 - [ ] **P1** Add packaged server launchers and smoke tests for VS Code plus at least one of Zed or Neovim.
 
 ### M11 acceptance criteria
@@ -293,11 +359,40 @@ Goal: establish the published compatibility, security, and operational evidence 
 - [ ] External security and privacy findings are resolved or documented with explicit release decisions.
 - [ ] A 1.0 release can be reproduced from source and upgraded from every supported pre-1.0 compatibility baseline.
 
+## Milestone M16 — Agent Construction and Verification
+
+Goal: enable model-independent coding agents to construct and change AIDL projects through compiler-authoritative, transactional and verifiable operations.
+
+M16 builds on M7 as the compatibility authority, M8 as the bounded read/query-tooling baseline, and M11 as the snapshot/service/transport foundation. It does not redefine runtime or ecosystem responsibilities owned by M12–M15.
+
+- [ ] **P1** Add compiler-authoritative in-memory semantic patch validation and atomic apply with snapshot preconditions, diagnostics, impact, compatibility, and rollback.
+- [ ] **P1** Add an in-memory `validate-change` operation that applies a proposed change only to a specific compiler snapshot and returns `check`, impact, semantic diff, M7 compatibility classification, and applicable plan evidence without modifying project files.
+- [ ] **P1** Add versioned compiler-owned construction capabilities that report legal declaration kinds for a location, required clauses, admissible field types, and compiler-authorized fixes without reconstructing semantics from agent prompts, skills, or heuristics.
+- [ ] **P1/P2** Add a model-independent Natural-Language-to-AIDL evaluation suite with roughly 50–100 representative construction/change tasks and metrics for compile success, semantic correctness, unnecessary edits, repair loops, and regressions.
+- [ ] **P1** Add versioned semantic agent-task fixtures containing an initial project, user requirement, and acceptable semantic end-state or invariants; validate compiler/IR properties rather than exact text diffs so multiple correct implementations can pass.
+- [ ] **P2** Add an explicit bounded-context construction API on top of M8 where an agent supplies a token/element budget and task focus and the compiler returns the smallest semantically closed context needed for the change, with deterministic bounds, totals, ordering, and truncation metadata.
+- [ ] **P1** Add factual edit provenance and machine audit evidence containing the source semantic hash, compiler version, proposed/applied patch, result hash, before/after diagnostics, M7 compatibility class, and executed tests without storing model chain-of-thought or other hidden reasoning.
+- [ ] **P1** Define compiler/policy-owned authorization boundaries for agent edits using M7 compatibility classes and explicit policy evidence to distinguish changes eligible for automatic apply from changes requiring human approval, such as public API breaks or schema migrations.
+- [ ] **P2** Add structured remediation plans that order dependent repair steps beyond individual fixes, while reusing compiler diagnostics and M7 migration/compatibility evidence instead of introducing a second compatibility engine.
+- [ ] **P2** Define a versioned model- and vendor-neutral agent operation protocol for compiler-owned construction and verification capabilities; CLI, LSP, MCP, or future transports may project the protocol but must not own language semantics.
+- [ ] **P1** Enforce stale-agent and concurrent-edit protection so patch validation/apply is bound to exact source/semantic hashes and snapshot preconditions and fails deterministically when a human or another agent has advanced project state.
+- [ ] **P1/P2** Add adversarial agent-security regressions proving comments, documentation, or AIDL strings cannot bypass compiler rules, path boundaries remain enforced, generated files cannot be manipulated outside authorized ownership flows, and compatibility/compiler disagreement can never be relabeled as safe by an agent.
+
+### M16 acceptance criteria
+
+- [ ] An agent can validate a complete change against an in-memory snapshot without modifying project files.
+- [ ] An accepted semantic patch can be applied only against the snapshot against which it was validated.
+- [ ] Every change returns deterministic before/after hashes, diagnostics, impact, and compatibility evidence.
+- [ ] Representative natural-language tasks can be solved without repository-wide heuristic scanning.
+- [ ] Agent benchmarks measure semantic correctness rather than identical text output.
+
 ## Implementation policy
 
-`spec/conformance-manifest.json` is the authoritative versioned implementation/support source. New or changed support claims must update a stable manifest surface ID, use only the schema-defined status vocabulary, and carry repository-relative evidence that passes `python3 -m tools.conformance_manifest validate`.
+`TODO.md` is the sole handwritten authority for roadmap order, milestone identity, and completion state. Operational execution state remains on `agents/channel`; committed legacy project `.ai/**` current-state files are not a second roadmap authority.
 
-M10-01 records repository-level support surfaces only. The still-open M10-02 item owns the exhaustive Parse/Resolve/Validate/IR/Generate/IDE matrix for every Core declaration and semantic rule; absence of that matrix must not be interpreted as full layer completeness. Public wording in `SUPPORT.md` is drift-checked against each manifest `supportStatement`.
+`spec/conformance-manifest.json` is the separate authoritative versioned implementation/support source. New or changed support claims must update a stable manifest surface ID, use only the schema-defined status vocabulary, and carry repository-relative evidence that passes `python3 -m tools.conformance_manifest validate`. Roadmap completion alone never promotes a support claim.
+
+M10-01 records repository-level support surfaces only. M10-02 provides the exhaustive Parse/Resolve/Validate/IR/Generate/IDE matrix for every Core declaration and semantic rule; incomplete rows or evidence remain explicit in that matrix and must not be interpreted as full layer completeness. Public wording in `SUPPORT.md` is drift-checked against each manifest `supportStatement`.
 
 A feature should not be described as fully supported until the applicable manifest scope and its required semantic validation, IR representation, and executable evidence justify that claim.
 
@@ -316,20 +411,20 @@ A core language feature is considered complete when:
 
 ## Recommended execution order
 
-1. Complete M8 — Agent-first tooling
-2. M9 — Release and quality baseline
-3. M10 — Core conformance closure
-4. M11 — Production language server
-5. M12 — Distributed runtime vertical slice
-6. M13 — Offline Calendar vertical slice
-7. M14 — Media, cloud, and realtime vertical slice
-8. M15 — Adapter ecosystem and 1.0 readiness
+1. M9 — Release and quality baseline
+2. M10 — Core conformance closure
+3. M11 — Production language server
+4. M12 — Distributed runtime vertical slice
+5. M13 — Offline Calendar vertical slice
+6. M14 — Media, cloud, and realtime vertical slice
+7. M15 — Adapter ecosystem and 1.0 readiness
+8. M16 — Agent Construction and Verification
 
 Do not expand the language surface merely to advance a later milestone. Promote a capability only when its required parser, semantic, IR, fixture, runtime or explicit capability-failure, and editor boundaries can advance coherently.
 
 The next success criterion is intentionally agent-focused:
 
-> Given only an AIDL project and a fully qualified declaration name, a coding agent can discover the relevant semantic context, explain dependencies and diagnostics, assess change impact, validate the change, and consume deterministic bounded output without scanning the entire repository.
+> Given an AIDL project and a change request, a model-independent coding agent can obtain bounded compiler-owned context, construct a semantic patch, validate it entirely in memory against a specific snapshot, inspect deterministic diagnostics, impact, and compatibility evidence, and apply it only while the validated preconditions still hold, without repository-wide heuristic scanning.
 
 The next release criterion is equally concrete:
 
