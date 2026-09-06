@@ -32,8 +32,8 @@ Code actions are even narrower. The LSP cannot invent a fix from a diagnostic me
 
 All semantic requests use the M11-03 cancellation token and optional work-done progress path. Cancellation returns the LSP request-cancelled error and does not publish a partial semantic result. Watched-file and open-buffer changes continue to invalidate the owning compiler root before subsequent requests.
 
-## M11-05 boundary
+## M11.8 boundary
 
-M11-04 preserves the compiler results that are already available, but it does not define the final protocol contract for semantic identities, diagnostic identity payloads, edit versioning, document versions, or explicit edit preconditions. Those protocol-preservation requirements remain M11-05. No client should infer stronger preconditions from the current workspace-edit shape.
+M11-04 preserves the compiler results that are already available, but it does not define the final protocol contract for semantic identities, diagnostic identity payloads, edit versioning, document versions, or explicit edit preconditions. Those protocol-preservation requirements remain M11.8. No client should infer stronger preconditions from the current workspace-edit shape.
 
 Focused regressions live in `tools/test_aidl_lsp_capabilities.py` plus the existing LSP, snapshot, workspace, incremental-state, completion, documentation, and refactoring suites.
