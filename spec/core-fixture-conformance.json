@@ -1,0 +1,54 @@
+{
+  "$schema": "./core-fixture-conformance.schema.json",
+  "schemaVersion": 1,
+  "source": "spec/core-conformance.json",
+  "supportedLayers": ["parse", "resolve", "validate", "ir"],
+  "requiredKinds": ["positive", "negative", "ir", "compatibility"],
+  "evidenceCatalog": {
+    "positive-core": [
+      {"path": "fixtures/valid/m4-minimal/app.aidl", "type": "fixture"},
+      {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}
+    ],
+    "negative-core": [
+      {"path": "tools/test_aidl_check.py", "type": "test"},
+      {"path": "tools/test_core_typecheck.py", "type": "test"},
+      {"path": "tools/test_compiler_diagnostics_m2_03.py", "type": "test"},
+      {"path": "tools/test_compiler_diagnostics_m2_04.py", "type": "test"},
+      {"path": "tools/test_compiler_diagnostics_m2_05.py", "type": "test"},
+      {"path": "tools/test_compiler_diagnostics_m2_08.py", "type": "test"}
+    ],
+    "ir-core": [
+      {"path": "fixtures/valid/m4-minimal/snapshots/ir.json", "type": "snapshot"},
+      {"path": "tools/test_ir_semantic_projection.py", "type": "test"}
+    ],
+    "compatibility-core": [
+      {"path": "tools/ir_compatibility_contract/matrix.json", "type": "matrix"},
+      {"path": "tools/test_ir_compatibility.py", "type": "test"}
+    ]
+  },
+  "defaultEvidence": {
+    "positive": ["positive-core"],
+    "negative": ["negative-core"],
+    "ir": ["ir-core"],
+    "compatibility": ["compatibility-core"]
+  },
+  "featureIds": [
+    "decl.api",
+    "decl.entity",
+    "decl.mutation",
+    "decl.query",
+    "decl.service",
+    "decl.transaction",
+    "rule.consumer.at-least-once",
+    "rule.module.cyclic-dependency",
+    "rule.module.duplicate-declaration",
+    "rule.module.unresolved-name",
+    "rule.mutation.required-clauses",
+    "rule.mutation.single-root-effect",
+    "rule.names.stable-fqn",
+    "rule.query.side-effect-free",
+    "rule.transaction.cross-resource-rejected",
+    "rule.transaction.cross-service-rejected",
+    "rule.types.int-to-decimal-only"
+  ]
+}

@@ -1,0 +1,1 @@
+[{"code":"AIDL-DIST400","phase":"policy","severity":"error","message":"persisted entity 'example.domain.Pet' must have exactly one owner service; found none","location":{"file":"fixtures/invalid/missing-owner/entity.aidl","line":2,"column":1,"offset":22},"subject":{"kind":"entity","name":"Pet"},"expected":"exactly one owner service","docs":"aidl://diagnostics/AIDL-DIST400"}]

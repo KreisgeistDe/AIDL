@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/7/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v7",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1-v6 envelopes remain valid through frozen schemas; v7 extends successful aidl dependencies output with bounded transitive closure metadata.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/6/cli-output.schema.json"},
+    {"$ref": "#/$defs/dependenciesEnvelope"}
+  ],
+  "$defs": {
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declarationId", "fullyQualifiedName", "kind"],
+      "properties": {
+        "declarationId": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*@[1-9][0-9]*$"},
+        "fullyQualifiedName": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1}
+      }
+    },
+    "dependencyTotals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directDependencies", "transitiveDependencies"],
+      "properties": {
+        "directDependencies": {"type": "integer", "minimum": 0},
+        "transitiveDependencies": {"type": "integer", "minimum": 0}
+      }
+    },
+    "dependencyTruncated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["directDependencies", "transitiveDependencies"],
+      "properties": {
+        "directDependencies": {"type": "boolean"},
+        "transitiveDependencies": {"type": "boolean"}
+      }
+    },
+    "resolvedDependenciesResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query", "declaration", "dependencies", "transitiveDependencies", "totals", "truncated"],
+      "properties": {
+        "status": {"const": "resolved"},
+        "query": {"type": "string", "minLength": 1},
+        "declaration": {"$ref": "#/$defs/dependency"},
+        "dependencies": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {"$ref": "#/$defs/dependency"}
+        },
+        "transitiveDependencies": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {"$ref": "#/$defs/dependency"}
+        },
+        "totals": {"$ref": "#/$defs/dependencyTotals"},
+        "truncated": {"$ref": "#/$defs/dependencyTruncated"}
+      }
+    },
+    "dependenciesEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok", "result"],
+      "properties": {
+        "command": {"const": "dependencies"},
+        "diagnostics": {
+          "type": "array",
+          "items": {"$ref": "https://aidl.example/spec/cli/3/cli-output.schema.json#/$defs/diagnostic"}
+        },
+        "ok": {"const": true},
+        "result": {"$ref": "#/$defs/resolvedDependenciesResult"}
+      }
+    }
+  }
+}

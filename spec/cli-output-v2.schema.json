@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/2/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v2",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1 command envelopes remain valid through the frozen v1 schema; v2 adds aidl inspect.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/1/cli-output.schema.json"},
+    {"$ref": "#/$defs/inspectEnvelope"}
+  ],
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "column", "offset"],
+      "properties": {
+        "file": {"type": "string"},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1},
+        "offset": {"type": "integer", "minimum": 0}
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "phase", "severity", "message", "location"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^AIDL-"},
+        "phase": {"type": "string"},
+        "severity": {"enum": ["error", "warning", "info"]},
+        "message": {"type": "string"},
+        "location": {"$ref": "#/$defs/location"},
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name"],
+          "properties": {"kind": {"type": "string"}, "name": {"type": "string"}}
+        },
+        "expected": {"type": "string"},
+        "allowedFixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {"kind": {"type": "string"}, "text": {"type": "string"}}
+          }
+        },
+        "docs": {"type": "string"}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["compiler", "invalidFqn", "unknownFqn", "ambiguousFqn", "inspectBuild", "internal"]},
+        "message": {"type": "string"}
+      }
+    },
+    "canonicalIdentity": {
+      "type": "object",
+      "required": ["declarationId", "fqn", "name", "ownerModule", "semanticHash"],
+      "properties": {
+        "declarationId": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*@[1-9][0-9]*$"},
+        "fqn": {"type": "string"},
+        "name": {"type": "string", "minLength": 1},
+        "ownerModule": {"type": "string", "minLength": 1},
+        "ownerServiceId": {"type": "string"},
+        "semanticHash": {"type": "string", "pattern": "^sha256:[a-f0-9]{64}$"}
+      },
+      "additionalProperties": true
+    },
+    "inspectDeclaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fullyQualifiedName", "name", "kind", "module", "exported", "location", "representation", "canonical"],
+      "properties": {
+        "fullyQualifiedName": {"type": "string"},
+        "name": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "module": {"type": "string", "minLength": 1},
+        "exported": {"type": "boolean"},
+        "location": {"$ref": "#/$defs/location"},
+        "representation": {"type": "string", "minLength": 1},
+        "canonical": {"$ref": "#/$defs/canonicalIdentity"}
+      }
+    },
+    "inspectResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query"],
+      "properties": {
+        "status": {"enum": ["resolved", "invalid", "unknown", "ambiguous"]},
+        "query": {"type": "string"},
+        "declaration": {"$ref": "#/$defs/inspectDeclaration"},
+        "matchCount": {"type": "integer", "minimum": 2}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "resolved"}}, "required": ["status"]},
+          "then": {"required": ["declaration"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "ambiguous"}}, "required": ["status"]},
+          "then": {"required": ["matchCount"]}
+        }
+      ]
+    },
+    "inspectEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok"],
+      "properties": {
+        "command": {"const": "inspect"},
+        "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+        "ok": {"type": "boolean"},
+        "result": {"$ref": "#/$defs/inspectResult"},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"required": ["result"], "not": {"required": ["error"]}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"required": ["error"]}
+        }
+      ]
+    }
+  }
+}

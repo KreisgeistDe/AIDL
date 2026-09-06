@@ -1,0 +1,14 @@
+{
+  "profiles": {
+    "core": 1,
+    "web": 1,
+    "distributed": 1,
+    "cloud": 1,
+    "media": 1,
+    "realtime": 1
+  },
+  "standardLibrary": "aidl.std",
+  "grammar": "sha256:57f79c714a040b19ea3520cbc8ecfac68c4236fc62da735758860eada75ab4f9",
+  "generators": {},
+  "deploymentAdapters": {}
+}

@@ -1,0 +1,53 @@
+{
+  "$schema": "./performance-baselines.schema.json",
+  "schemaVersion": 1,
+  "measurementModel": "deterministic-compiler-structure-v1",
+  "resourceLimits": {
+    "sourceFiles": 48,
+    "sourceBytes": 196608,
+    "declarations": 1536,
+    "symbols": 1536,
+    "importResolutions": 48
+  },
+  "workloads": [
+    {
+      "id": "small",
+      "modules": 4,
+      "declarationsPerModule": 8,
+      "fieldsPerDeclaration": 3,
+      "baseline": {
+        "sourceFiles": 4,
+        "sourceBytes": 4745,
+        "declarations": 32,
+        "symbols": 32,
+        "importResolutions": 3
+      }
+    },
+    {
+      "id": "medium",
+      "modules": 12,
+      "declarationsPerModule": 16,
+      "fieldsPerDeclaration": 3,
+      "baseline": {
+        "sourceFiles": 12,
+        "sourceBytes": 27937,
+        "declarations": 192,
+        "symbols": 192,
+        "importResolutions": 11
+      }
+    },
+    {
+      "id": "large",
+      "modules": 32,
+      "declarationsPerModule": 32,
+      "fieldsPerDeclaration": 3,
+      "baseline": {
+        "sourceFiles": 32,
+        "sourceBytes": 147261,
+        "declarations": 1024,
+        "symbols": 1024,
+        "importResolutions": 31
+      }
+    }
+  ]
+}

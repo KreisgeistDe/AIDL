@@ -1,0 +1,330 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/1/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v1",
+  "description": "Stable machine-readable envelope for currently supported AIDL CLI JSON outputs. Schema artifact version: 1.0.0.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["command", "diagnostics", "ok"],
+  "properties": {
+    "command": {
+      "enum": ["check", "ir", "plan", "diff", "resolve", "complete", "document", "usages", "rename"]
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/diagnostic"}
+    },
+    "ok": {"type": "boolean"},
+    "result": {},
+    "error": {"$ref": "#/$defs/error"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"command": {"const": "ir"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "ir.schema.json"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "plan"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/plan"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "diff"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/diffResult"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "resolve"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/resolutionResult"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "complete"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/completionResult"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "document"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/documentationResult"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "usages"}, "ok": {"const": true}}, "required": ["command", "ok"]},
+      "then": {"required": ["result"], "properties": {"result": {"$ref": "#/$defs/usageResult"}}}
+    },
+    {
+      "if": {"properties": {"command": {"const": "rename"}}, "required": ["command"]},
+      "then": {"properties": {"result": {"$ref": "#/$defs/renameResult"}}}
+    }
+  ],
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "column", "offset"],
+      "properties": {
+        "file": {"type": "string"},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1},
+        "offset": {"type": "integer", "minimum": 0}
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "phase", "severity", "message", "location"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^AIDL-"},
+        "phase": {"type": "string"},
+        "severity": {"enum": ["error", "warning", "info"]},
+        "message": {"type": "string"},
+        "location": {"$ref": "#/$defs/location"},
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name"],
+          "properties": {"kind": {"type": "string"}, "name": {"type": "string"}}
+        },
+        "expected": {"type": "string"},
+        "allowedFixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {"kind": {"type": "string"}, "text": {"type": "string"}}
+          }
+        },
+        "docs": {"type": "string"}
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"type": "string"},
+        "message": {"type": "string"},
+        "side": {"type": "string"}
+      },
+      "additionalProperties": false
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fullyQualifiedName", "kind", "location"],
+      "properties": {
+        "fullyQualifiedName": {"type": "string"},
+        "kind": {"type": "string"},
+        "location": {"$ref": "#/$defs/location"}
+      }
+    },
+    "resolutionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status"],
+      "properties": {
+        "status": {"enum": ["resolved", "unresolved", "ambiguous", "invalid"]},
+        "reference": {"type": "string"},
+        "target": {"$ref": "#/$defs/target"}
+      }
+    },
+    "completionResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "candidates"],
+      "properties": {
+        "status": {"enum": ["resolved", "invalid"]},
+        "prefix": {"type": "string"},
+        "qualifier": {"type": "string"},
+        "candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["insertText", "displayText", "fullyQualifiedName", "kind", "origin", "location"],
+            "properties": {
+              "insertText": {"type": "string"},
+              "displayText": {"type": "string"},
+              "fullyQualifiedName": {"type": "string"},
+              "kind": {"type": "string"},
+              "origin": {"type": "string"},
+              "location": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["file", "offset"],
+                "properties": {"file": {"type": "string"}, "offset": {"type": "integer", "minimum": 0}}
+              }
+            }
+          }
+        }
+      }
+    },
+    "documentationResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "diagnostics"],
+      "properties": {
+        "status": {"enum": ["resolved", "unresolved", "ambiguous", "invalid"]},
+        "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+        "declaration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fullyQualifiedName", "kind", "location", "representation"],
+          "properties": {
+            "fullyQualifiedName": {"type": "string"},
+            "kind": {"type": "string"},
+            "location": {"$ref": "#/$defs/location"},
+            "representation": {"type": "string"}
+          }
+        }
+      }
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "column", "offset", "length"],
+      "properties": {
+        "file": {"type": "string"},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1},
+        "offset": {"type": "integer", "minimum": 0},
+        "length": {"type": "integer", "minimum": 1}
+      }
+    },
+    "usageResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "usages"],
+      "properties": {
+        "status": {"enum": ["resolved", "unresolved", "ambiguous", "invalid"]},
+        "target": {"$ref": "#/$defs/target"},
+        "usages": {"type": "array", "items": {"$ref": "#/$defs/usage"}}
+      }
+    },
+    "renameResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "applied", "edits"],
+      "properties": {
+        "status": {"enum": ["ready", "applied", "invalid", "invalidName", "collision", "validationFailed", "unresolved", "ambiguous"]},
+        "applied": {"type": "boolean"},
+        "target": {"$ref": "#/$defs/target"},
+        "newFullyQualifiedName": {"type": "string"},
+        "message": {"type": "string"},
+        "edits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["file", "line", "column", "offset", "length", "replacement"],
+            "properties": {
+              "file": {"type": "string"},
+              "line": {"type": "integer", "minimum": 1},
+              "column": {"type": "integer", "minimum": 1},
+              "offset": {"type": "integer", "minimum": 0},
+              "length": {"type": "integer", "minimum": 1},
+              "replacement": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["planVersion", "irVersion", "sourceSemanticHash", "appId", "systemId", "deployment", "actions"],
+      "properties": {
+        "planVersion": {"const": "0.1.0"},
+        "irVersion": {"type": "string"},
+        "sourceSemanticHash": {"type": "string"},
+        "appId": {"type": "string"},
+        "systemId": {"type": "string"},
+        "deployment": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["declarationId", "name", "fqn", "environment", "regions"],
+          "properties": {
+            "declarationId": {"type": "string"},
+            "name": {"type": "string"},
+            "fqn": {"type": "string"},
+            "environment": {"type": ["string", "null"]},
+            "regions": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "targetId"],
+            "properties": {
+              "kind": {"enum": ["bindResource", "deployService", "exposeApi", "activateTopic"]},
+              "targetId": {"type": "string"},
+              "adapter": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "diffResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["changes", "classifications", "guidance"],
+      "properties": {
+        "changes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "path", "oldValue", "newValue"],
+            "properties": {
+              "kind": {"enum": ["added", "removed", "changed"]},
+              "path": {"type": "string"},
+              "oldValue": {},
+              "newValue": {}
+            }
+          }
+        },
+        "classifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "path", "classification", "rule", "reason"],
+            "properties": {
+              "kind": {"enum": ["added", "removed", "changed"]},
+              "path": {"type": "string"},
+              "classification": {"enum": ["safe", "conditional", "migration-required", "breaking"]},
+              "rule": {"type": "string"},
+              "reason": {"type": "string"}
+            }
+          }
+        },
+        "guidance": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "path", "classification", "classificationRule", "phases", "preconditions", "note"],
+            "properties": {
+              "kind": {"enum": ["added", "removed", "changed"]},
+              "path": {"type": "string"},
+              "classification": {"enum": ["safe", "conditional", "migration-required", "breaking"]},
+              "classificationRule": {"type": "string"},
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["phase", "action", "evidence"],
+                  "properties": {
+                    "phase": {"enum": ["expand", "deployReaders", "backfill", "switchWrites", "verify", "contract"]},
+                    "action": {"type": "string"},
+                    "evidence": {"type": "string"}
+                  }
+                }
+              },
+              "preconditions": {"type": "array", "items": {"type": "string"}},
+              "note": {"type": "string"}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "distribution": "aidl-toolchain",
+  "version": "0.0.0",
+  "tag": "aidl-toolchain-v0.0.0",
+  "notesSource": "CHANGELOG.md",
+  "contractGlob": "spec/*.json",
+  "publication": "disabled"
+}

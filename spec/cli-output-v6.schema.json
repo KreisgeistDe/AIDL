@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/6/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v6",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1-v5 envelopes remain valid through frozen schemas; v6 adds aidl impact.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/5/cli-output.schema.json"},
+    {"$ref": "#/$defs/impactEnvelope"}
+  ],
+  "$defs": {
+    "impactIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declarationId", "fullyQualifiedName", "kind"],
+      "properties": {
+        "declarationId": {"type": "string", "minLength": 1},
+        "fullyQualifiedName": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1}
+      }
+    },
+    "impactEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "declaration", "evidence"],
+      "properties": {
+        "category": {"type": "string", "minLength": 1},
+        "declaration": {"$ref": "#/$defs/impactIdentity"},
+        "evidence": {"type": "string", "minLength": 1}
+      }
+    },
+    "compatibilityCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "evidenceDeclarationIds", "status", "surface"],
+      "properties": {
+        "command": {"const": "aidl diff"},
+        "evidenceDeclarationIds": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "status": {"const": "requiresComparison"},
+        "surface": {"enum": ["apiClient", "eventTopic", "persistedSchema"]}
+      }
+    },
+    "generatedArtifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifacts", "reason", "status"],
+      "properties": {
+        "artifacts": {"type": "array", "maxItems": 0},
+        "reason": {"type": "string", "minLength": 1},
+        "status": {"const": "unknown"}
+      }
+    },
+    "impactTotals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["affectedDeclarations", "compatibilityChecks", "persistedState", "publicContracts"],
+      "properties": {
+        "affectedDeclarations": {"type": "integer", "minimum": 0},
+        "compatibilityChecks": {"type": "integer", "minimum": 0},
+        "persistedState": {"type": "integer", "minimum": 0},
+        "publicContracts": {"type": "integer", "minimum": 0}
+      }
+    },
+    "impactTruncated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["affectedDeclarations", "compatibilityChecks", "persistedState", "publicContracts"],
+      "properties": {
+        "affectedDeclarations": {"type": "boolean"},
+        "compatibilityChecks": {"type": "boolean"},
+        "persistedState": {"type": "boolean"},
+        "publicContracts": {"type": "boolean"}
+      }
+    },
+    "resolvedImpactResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query", "declaration", "affectedDeclarations", "publicContracts", "persistedState", "generatedArtifacts", "compatibilityChecks", "totals", "truncated"],
+      "properties": {
+        "status": {"const": "resolved"},
+        "query": {"type": "string", "minLength": 1},
+        "declaration": {"$ref": "#/$defs/impactIdentity"},
+        "affectedDeclarations": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/impactEvidence"}},
+        "publicContracts": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/impactEvidence"}},
+        "persistedState": {"type": "array", "maxItems": 128, "items": {"$ref": "#/$defs/impactEvidence"}},
+        "generatedArtifacts": {"$ref": "#/$defs/generatedArtifacts"},
+        "compatibilityChecks": {"type": "array", "maxItems": 32, "items": {"$ref": "#/$defs/compatibilityCheck"}},
+        "totals": {"$ref": "#/$defs/impactTotals"},
+        "truncated": {"$ref": "#/$defs/impactTruncated"}
+      }
+    },
+    "unresolvedImpactResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query"],
+      "properties": {
+        "status": {"enum": ["invalid", "unknown", "ambiguous"]},
+        "query": {"type": "string"},
+        "matchCount": {"type": "integer", "minimum": 0}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["ambiguousFqn", "compiler", "impactBuild", "internal", "invalidFqn", "unknownFqn"]},
+        "message": {"type": "string"}
+      }
+    },
+    "impactEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok"],
+      "properties": {
+        "command": {"const": "impact"},
+        "diagnostics": {
+          "type": "array",
+          "items": {"$ref": "https://aidl.example/spec/cli/4/cli-output.schema.json#/$defs/explainEnvelope/properties/diagnostics/items"}
+        },
+        "ok": {"type": "boolean"},
+        "result": {"oneOf": [{"$ref": "#/$defs/resolvedImpactResult"}, {"$ref": "#/$defs/unresolvedImpactResult"}]},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"required": ["result"], "not": {"required": ["error"]}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"required": ["error"]}
+        }
+      ]
+    }
+  }
+}

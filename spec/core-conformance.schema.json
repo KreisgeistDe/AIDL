@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/conformance/core/1/core-conformance.schema.json",
+  "title": "AIDL Core conformance matrix",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "source", "layers", "statusValues", "evidenceCatalog", "declarationIds", "ruleIds", "features"],
+  "properties": {
+    "$schema": {"const": "./core-conformance.schema.json"},
+    "schemaVersion": {"const": 1},
+    "source": {"const": "docs/aidl-core-subset.md"},
+    "layers": {"const": ["parse", "resolve", "validate", "ir", "generate", "ide"]},
+    "statusValues": {"const": ["not-applicable", "missing", "partial", "implemented"]},
+    "evidenceCatalog": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/evidence"}}
+    },
+    "declarationIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^decl\\.[a-z][a-z0-9-]*$"}},
+    "ruleIds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^rule\\.[a-z][a-z0-9.-]*$"}},
+    "features": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/feature"}}
+  },
+  "$defs": {
+    "evidence": {
+      "type": "object", "additionalProperties": false, "required": ["path", "type"],
+      "properties": {"path": {"type": "string", "minLength": 1}, "type": {"enum": ["source", "test", "schema", "workflow", "documentation"]}}
+    },
+    "layerStatus": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parse", "resolve", "validate", "ir", "generate", "ide"],
+      "properties": {
+        "parse": {"$ref": "#/$defs/status"}, "resolve": {"$ref": "#/$defs/status"}, "validate": {"$ref": "#/$defs/status"},
+        "ir": {"$ref": "#/$defs/status"}, "generate": {"$ref": "#/$defs/status"}, "ide": {"$ref": "#/$defs/status"}
+      }
+    },
+    "status": {"enum": ["not-applicable", "missing", "partial", "implemented"]},
+    "layerEvidence": {
+      "type": "object", "additionalProperties": false,
+      "required": ["parse", "resolve", "validate", "ir", "generate", "ide"],
+      "properties": {
+        "parse": {"$ref": "#/$defs/evidenceRefs"}, "resolve": {"$ref": "#/$defs/evidenceRefs"}, "validate": {"$ref": "#/$defs/evidenceRefs"},
+        "ir": {"$ref": "#/$defs/evidenceRefs"}, "generate": {"$ref": "#/$defs/evidenceRefs"}, "ide": {"$ref": "#/$defs/evidenceRefs"}
+      }
+    },
+    "evidenceRefs": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "feature": {
+      "type": "object", "additionalProperties": false, "required": ["id", "category", "layerStatus", "layerEvidence"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^(?:decl|rule)\\.[a-z][a-z0-9.-]*$"},
+        "category": {"enum": ["declaration", "rule"]},
+        "layerStatus": {"$ref": "#/$defs/layerStatus"},
+        "layerEvidence": {"$ref": "#/$defs/layerEvidence"}
+      }
+    }
+  }
+}

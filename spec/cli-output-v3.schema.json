@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/3/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v3",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1/v2 envelopes remain valid through frozen schemas; v3 adds aidl dependencies.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/2/cli-output.schema.json"},
+    {"$ref": "#/$defs/dependenciesEnvelope"}
+  ],
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "phase", "severity", "message", "location"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^AIDL-"},
+        "phase": {"type": "string"},
+        "severity": {"enum": ["error", "warning", "info"]},
+        "message": {"type": "string"},
+        "location": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file", "line", "column", "offset"],
+          "properties": {
+            "file": {"type": "string"},
+            "line": {"type": "integer", "minimum": 1},
+            "column": {"type": "integer", "minimum": 1},
+            "offset": {"type": "integer", "minimum": 0}
+          }
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "name"],
+          "properties": {"kind": {"type": "string"}, "name": {"type": "string"}}
+        },
+        "expected": {"type": "string"},
+        "allowedFixes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {"kind": {"type": "string"}, "text": {"type": "string"}}
+          }
+        },
+        "docs": {"type": "string"}
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["declarationId", "fullyQualifiedName", "kind"],
+      "properties": {
+        "declarationId": {"type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_.-]*@[1-9][0-9]*$"},
+        "fullyQualifiedName": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1}
+      }
+    },
+    "dependenciesResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query"],
+      "properties": {
+        "status": {"enum": ["resolved", "invalid", "unknown", "ambiguous"]},
+        "query": {"type": "string"},
+        "declaration": {"$ref": "#/$defs/dependency"},
+        "dependencies": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/dependency"}
+        },
+        "matchCount": {"type": "integer", "minimum": 2}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "resolved"}}, "required": ["status"]},
+          "then": {"required": ["declaration", "dependencies"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "ambiguous"}}, "required": ["status"]},
+          "then": {"required": ["matchCount"]}
+        }
+      ]
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["compiler", "invalidFqn", "unknownFqn", "ambiguousFqn", "dependencyBuild", "internal"]},
+        "message": {"type": "string"}
+      }
+    },
+    "dependenciesEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok"],
+      "properties": {
+        "command": {"const": "dependencies"},
+        "diagnostics": {"type": "array", "items": {"$ref": "#/$defs/diagnostic"}},
+        "ok": {"type": "boolean"},
+        "result": {"$ref": "#/$defs/dependenciesResult"},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"required": ["result"], "not": {"required": ["error"]}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"required": ["error"]}
+        }
+      ]
+    }
+  }
+}

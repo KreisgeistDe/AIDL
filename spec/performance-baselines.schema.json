@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/performance/1/performance-baselines.schema.json",
+  "title": "AIDL deterministic performance baseline contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["$schema", "schemaVersion", "measurementModel", "resourceLimits", "workloads"],
+  "properties": {
+    "$schema": {"const": "./performance-baselines.schema.json"},
+    "schemaVersion": {"const": 1},
+    "measurementModel": {"const": "deterministic-compiler-structure-v1"},
+    "resourceLimits": {"$ref": "#/$defs/metrics"},
+    "workloads": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/workload"}
+    }
+  },
+  "$defs": {
+    "positiveInteger": {"type": "integer", "minimum": 1},
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceFiles", "sourceBytes", "declarations", "symbols", "importResolutions"],
+      "properties": {
+        "sourceFiles": {"$ref": "#/$defs/positiveInteger"},
+        "sourceBytes": {"$ref": "#/$defs/positiveInteger"},
+        "declarations": {"$ref": "#/$defs/positiveInteger"},
+        "symbols": {"$ref": "#/$defs/positiveInteger"},
+        "importResolutions": {"type": "integer", "minimum": 0}
+      }
+    },
+    "workload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "modules", "declarationsPerModule", "fieldsPerDeclaration", "baseline"],
+      "properties": {
+        "id": {"enum": ["small", "medium", "large"]},
+        "modules": {"$ref": "#/$defs/positiveInteger"},
+        "declarationsPerModule": {"$ref": "#/$defs/positiveInteger"},
+        "fieldsPerDeclaration": {"type": "integer", "minimum": 2},
+        "baseline": {"$ref": "#/$defs/metrics"}
+      }
+    }
+  }
+}

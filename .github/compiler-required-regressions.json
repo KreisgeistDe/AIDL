@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "gate": "Compiler / Python",
+  "workflow": ".github/workflows/python-validation.yml",
+  "workflowJob": "compiler-python",
+  "selectionPolicy": ".github/python-test-selection.json",
+  "cliSource": "tools/aidl_cli.py",
+  "compilerSuites": [
+    {
+      "area": "completion",
+      "module": "tools.compiler_completion",
+      "source": "tools/compiler_completion.py",
+      "compilerTests": [
+        "tools/test_compiler_completion.py"
+      ],
+      "cliCommands": [
+        "complete"
+      ],
+      "cliTests": [
+        "tools/test_aidl_completion_cli.py"
+      ]
+    },
+    {
+      "area": "documentation",
+      "module": "tools.compiler_documentation",
+      "source": "tools/compiler_documentation.py",
+      "compilerTests": [
+        "tools/test_compiler_documentation.py"
+      ],
+      "cliCommands": [
+        "document"
+      ],
+      "cliTests": [
+        "tools/test_aidl_documentation_cli.py"
+      ]
+    },
+    {
+      "area": "refactoring",
+      "module": "tools.compiler_refactoring",
+      "source": "tools/compiler_refactoring.py",
+      "compilerTests": [
+        "tools/test_compiler_refactoring.py"
+      ],
+      "cliCommands": [
+        "rename",
+        "usages"
+      ],
+      "cliTests": [
+        "tools/test_aidl_refactoring_cli.py"
+      ]
+    },
+    {
+      "area": "resolution",
+      "module": "tools.compiler_resolution",
+      "source": "tools/compiler_resolution.py",
+      "compilerTests": [
+        "tools/test_compiler_resolution.py"
+      ],
+      "cliCommands": [
+        "resolve"
+      ],
+      "cliTests": [
+        "tools/test_aidl_resolve_cli.py"
+      ]
+    }
+  ],
+  "cliRegressionModules": [
+    "tools/test_aidl_check.py",
+    "tools/test_aidl_completion_cli.py",
+    "tools/test_aidl_diff_cli.py",
+    "tools/test_aidl_documentation_cli.py",
+    "tools/test_aidl_exit_codes.py",
+    "tools/test_aidl_ir.py",
+    "tools/test_aidl_json_cli.py",
+    "tools/test_aidl_plan.py",
+    "tools/test_aidl_refactoring_cli.py",
+    "tools/test_aidl_resolve_cli.py",
+    "tools/test_cli_output_schema.py",
+    "tools/test_compiler_change_impact.py",
+    "tools/test_compiler_explanation.py",
+    "tools/test_compiler_summary.py",
+    "tools/test_m8_agent_workflow.py",
+    "tools/test_repository_state_docs.py"
+  ]
+}

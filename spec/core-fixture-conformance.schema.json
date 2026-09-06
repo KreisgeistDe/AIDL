@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.dev/spec/core-fixture-conformance.schema.json",
+  "title": "AIDL Core fixture conformance coverage",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schemaVersion",
+    "source",
+    "supportedLayers",
+    "requiredKinds",
+    "evidenceCatalog",
+    "defaultEvidence",
+    "featureIds"
+  ],
+  "properties": {
+    "$schema": {"const": "./core-fixture-conformance.schema.json"},
+    "schemaVersion": {"const": 1},
+    "source": {"const": "spec/core-conformance.json"},
+    "supportedLayers": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "parse"},
+        {"const": "resolve"},
+        {"const": "validate"},
+        {"const": "ir"}
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "requiredKinds": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "positive"},
+        {"const": "negative"},
+        {"const": "ir"},
+        {"const": "compatibility"}
+      ],
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "evidenceCatalog": {
+      "type": "object",
+      "minProperties": 4,
+      "additionalProperties": {
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["path", "type"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "type": {
+              "enum": ["fixture", "test", "snapshot", "matrix"]
+            }
+          }
+        }
+      }
+    },
+    "defaultEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["positive", "negative", "ir", "compatibility"],
+      "properties": {
+        "positive": {"$ref": "#/$defs/evidenceRefs"},
+        "negative": {"$ref": "#/$defs/evidenceRefs"},
+        "ir": {"$ref": "#/$defs/evidenceRefs"},
+        "compatibility": {"$ref": "#/$defs/evidenceRefs"}
+      }
+    },
+    "featureIds": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^(decl|rule)\\."
+      }
+    }
+  },
+  "$defs": {
+    "evidenceRefs": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    }
+  }
+}

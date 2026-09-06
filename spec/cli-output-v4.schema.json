@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/4/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v4",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1/v2/v3 envelopes remain valid through frozen schemas; v4 adds aidl explain.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/3/cli-output.schema.json"},
+    {"$ref": "#/$defs/explainEnvelope"}
+  ],
+  "$defs": {
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "line", "column", "offset"],
+      "properties": {
+        "file": {"type": "string"},
+        "line": {"type": "integer", "minimum": 1},
+        "column": {"type": "integer", "minimum": 1},
+        "offset": {"type": "integer", "minimum": 0}
+      }
+    },
+    "subject": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name"],
+      "properties": {
+        "kind": {"type": "string"},
+        "name": {"type": "string"}
+      }
+    },
+    "fix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": {"type": "string"},
+        "text": {"type": "string"}
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "phase", "message"],
+      "properties": {
+        "code": {"type": "string", "pattern": "^AIDL-"},
+        "phase": {"type": "string"},
+        "message": {"type": "string"},
+        "expected": {"type": "string"},
+        "docs": {"type": "string"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["location"],
+      "properties": {
+        "location": {"$ref": "#/$defs/location"},
+        "subject": {"$ref": "#/$defs/subject"}
+      }
+    },
+    "explanation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rule", "evidence", "remediation"],
+      "properties": {
+        "rule": {"$ref": "#/$defs/rule"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "remediation": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/fix"}
+        }
+      }
+    },
+    "declaration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fullyQualifiedName", "kind", "location"],
+      "properties": {
+        "fullyQualifiedName": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "location": {"$ref": "#/$defs/location"}
+      }
+    },
+    "explainResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "query"],
+      "properties": {
+        "status": {"enum": ["resolved", "invalid", "unknown", "ambiguous"]},
+        "query": {"type": "string"},
+        "declaration": {"$ref": "#/$defs/declaration"},
+        "explanations": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/explanation"}
+        },
+        "totalDiagnosticCount": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "matchCount": {"type": "integer", "minimum": 2}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "resolved"}}, "required": ["status"]},
+          "then": {"required": ["declaration", "explanations", "totalDiagnosticCount", "truncated"]}
+        },
+        {
+          "if": {"properties": {"status": {"const": "ambiguous"}}, "required": ["status"]},
+          "then": {"required": ["matchCount"]}
+        }
+      ]
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["invalidFqn", "unknownFqn", "ambiguousFqn", "internal"]},
+        "message": {"type": "string"}
+      }
+    },
+    "explainEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok"],
+      "properties": {
+        "command": {"const": "explain"},
+        "diagnostics": {
+          "type": "array",
+          "items": {"$ref": "https://aidl.example/spec/cli/3/cli-output.schema.json#/$defs/diagnostic"}
+        },
+        "ok": {"type": "boolean"},
+        "result": {"$ref": "#/$defs/explainResult"},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"required": ["result"], "not": {"required": ["error"]}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"required": ["result", "error"]}
+        }
+      ]
+    }
+  }
+}

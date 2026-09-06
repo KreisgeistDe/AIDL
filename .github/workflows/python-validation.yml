@@ -1,0 +1,253 @@
+name: Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  compiler-python:
+    name: Compiler / Python
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-validation.txt
+
+      - name: Install validation dependencies
+        run: python3 -m pip install -r requirements-validation.txt
+
+      - name: Set up Node 22 for generated TypeScript compile regression
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Certify required compiler and CLI regressions
+        run: python3 -m tools.ci_required_regressions validate
+
+      - name: Validate deterministic performance baselines
+        run: python3 -m tools.performance_baselines check
+
+      - name: Run all committed generic Python tests
+        run: python3 -m tools.ci_test_selection run
+
+      - name: Run repository spec lint
+        run: python3 tools/spec_lint.py .
+
+      - name: Run Petstore parser smoke
+        run: python3 tools/aidl_parser.py examples/petstore --fail-on-diagnostics
+
+      - name: Run installable CLI clean-machine smoke
+        run: python3 tools/package_smoke.py
+
+  compatibility:
+    name: Compatibility / Pull Request
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out actual head
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: head
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: head/requirements-validation.txt
+
+      - name: Install validation dependencies
+        working-directory: head
+        run: python3 -m pip install -r requirements-validation.txt
+
+      - name: Resolve comparison baseline
+        id: baseline
+        working-directory: head
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          ref="$(python3 -m tools.ir_compatibility_ci baseline-ref \
+            --event-name "$GITHUB_EVENT_NAME" \
+            --pull-request-base-sha "$PR_BASE_SHA" \
+            --push-before-sha "$PUSH_BEFORE_SHA" \
+            --head-sha "$HEAD_SHA")"
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - name: Check out comparison baseline
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ steps.baseline.outputs.ref }}
+          path: baseline
+
+      - name: Evaluate compatibility policy
+        id: compatibility
+        working-directory: head
+        run: |
+          set +e
+          python3 -m tools.ir_compatibility_ci run \
+            --baseline-root ../baseline \
+            --current-root . \
+            --config .github/aidl-compatibility-targets.json \
+            --output ../aidl-compatibility-report.json
+          status=$?
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload compatibility report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidl-compatibility-report
+          path: aidl-compatibility-report.json
+          if-no-files-found: error
+
+      - name: Apply compatibility exit status
+        if: always()
+        run: exit "${{ steps.compatibility.outputs.status }}"
+
+  golden-fixtures:
+    name: Golden Fixtures
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-validation.txt
+
+      - name: Install validation dependencies
+        run: python3 -m pip install -r requirements-validation.txt
+
+      - name: Run IR/schema compatibility matrix
+        run: python3 -m unittest tools/test_ir_compatibility.py
+
+      - name: Run M5 golden fixture and snapshot corpus
+        run: python3 -m unittest tools/test_m5_fixture_corpus.py
+
+  petstore-runtime:
+    name: Petstore Runtime / PostgreSQL
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: petstore
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d petstore"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-validation.txt
+
+      - name: Install validation dependencies
+        run: python3 -m pip install -r requirements-validation.txt
+
+      - name: Run M4 Petstore build-path tests
+        run: python3 -m unittest tools/test_m4_petstore.py
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: examples/petstore/m4-app/package-lock.json
+
+      - name: Verify npm 10
+        run: npm --version | grep '^10\.'
+
+      - name: Check runnable Petstore slice
+        run: python3 -m tools.aidl_cli check examples/petstore/m4-app/app.aidl
+
+      - name: Plan runnable Petstore slice
+        run: python3 -m tools.aidl_cli plan examples/petstore/m4-app/app.aidl > /tmp/petstore-plan.json
+
+      - name: Emit canonical IR for runnable Petstore slice
+        run: python3 -m tools.aidl_cli ir examples/petstore/m4-app/app.aidl > /tmp/petstore-ir.json
+
+      - name: Generate Petstore through M4 bundle
+        run: python3 -m tools.m4_petstore generate
+
+      - name: Install locked Node dependencies
+        working-directory: examples/petstore/m4-app
+        run: npm ci
+
+      - name: Build strict ESM TypeScript
+        working-directory: examples/petstore/m4-app
+        run: npm run build
+
+      - name: Run Node tests
+        working-directory: examples/petstore/m4-app
+        run: npm test
+
+      - name: Run PostgreSQL migration and startup smoke
+        working-directory: examples/petstore/m4-app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/petstore
+        run: npm run smoke
+
+      - name: Run Petstore HTTP PostgreSQL E2E
+        working-directory: examples/petstore/m4-app
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/petstore
+        run: npm run test:e2e
+
+  intellij-plugin:
+    name: IntelliJ Plugin
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: plugins/intellij
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+          cache-dependency-path: |
+            plugins/intellij/*.gradle.kts
+            plugins/intellij/gradle.properties
+            plugins/intellij/gradle/wrapper/gradle-wrapper.properties
+
+      - name: Run IntelliJ checks
+        run: ./gradlew --no-daemon check
+
+      - name: Build IntelliJ plugin
+        run: ./gradlew --no-daemon buildPlugin

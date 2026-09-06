@@ -1,0 +1,17 @@
+from __future__ import annotations
+
+CLI_OUTPUT_SCHEMA_VERSION = "7.0.0"
+CLI_OUTPUT_SCHEMA_ID = "https://aidl.example/spec/cli/7/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_PATH = "spec/cli-output-v7.schema.json"
+CLI_OUTPUT_SCHEMA_V6_ID = "https://aidl.example/spec/cli/6/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V6_PATH = "spec/cli-output-v6.schema.json"
+CLI_OUTPUT_SCHEMA_V5_ID = "https://aidl.example/spec/cli/5/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V5_PATH = "spec/cli-output-v5.schema.json"
+CLI_OUTPUT_SCHEMA_V4_ID = "https://aidl.example/spec/cli/4/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V4_PATH = "spec/cli-output-v4.schema.json"
+CLI_OUTPUT_SCHEMA_V3_ID = "https://aidl.example/spec/cli/3/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V3_PATH = "spec/cli-output-v3.schema.json"
+CLI_OUTPUT_SCHEMA_V2_ID = "https://aidl.example/spec/cli/2/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V2_PATH = "spec/cli-output-v2.schema.json"
+CLI_OUTPUT_SCHEMA_V1_ID = "https://aidl.example/spec/cli/1/cli-output.schema.json"
+CLI_OUTPUT_SCHEMA_V1_PATH = "spec/cli-output.schema.json"

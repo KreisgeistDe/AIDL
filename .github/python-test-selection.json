@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "roots": [
+    "tools"
+  ],
+  "pattern": "test_*.py",
+  "exclusions": [
+    {
+      "path": "tools/test_ir_compatibility.py",
+      "ciJob": "Golden Fixtures",
+      "command": "python3 -m unittest tools/test_ir_compatibility.py",
+      "reason": "Executed by the dedicated Golden Fixtures job so IR/schema compatibility remains an independently visible gate."
+    },
+    {
+      "path": "tools/test_m4_petstore.py",
+      "ciJob": "Petstore Runtime / PostgreSQL",
+      "command": "python3 -m unittest tools/test_m4_petstore.py",
+      "reason": "Executed by the dedicated Petstore Runtime / PostgreSQL job alongside the generated runtime and database checks."
+    },
+    {
+      "path": "tools/test_m5_fixture_corpus.py",
+      "ciJob": "Golden Fixtures",
+      "command": "python3 -m unittest tools/test_m5_fixture_corpus.py",
+      "reason": "Executed by the dedicated Golden Fixtures job so the fixture and snapshot corpus remains an independently visible gate."
+    }
+  ]
+}

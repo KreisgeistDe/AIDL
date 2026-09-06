@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "registryVersion": "0.3.0",
+  "profiles": [
+    {
+      "id": "core",
+      "major": 1,
+      "declarations": [
+        "enum",
+        "alias",
+        "opaque",
+        "value",
+        "union",
+        "error",
+        "entity",
+        "view",
+        "api",
+        "policy",
+        "query",
+        "mutation",
+        "workflow",
+        "task",
+        "native function",
+        "test"
+      ],
+      "validators": [
+        "types.closed",
+        "public.serializable",
+        "effects.declared",
+        "auth.denyByDefault",
+        "mutation.idempotency",
+        "transaction.singleOwner",
+        "errors.publicContract"
+      ]
+    },
+    {
+      "id": "web",
+      "major": 1,
+      "requires": ["core@1"],
+      "declarations": [
+        "frontend",
+        "theme",
+        "component",
+        "page",
+        "form",
+        "action",
+        "seo",
+        "a11y",
+        "privacy",
+        "native component"
+      ],
+      "validators": [
+        "ui.asyncStates",
+        "ui.a11y",
+        "ui.designTokens",
+        "ui.errorCoverage",
+        "ui.syncOutcomeCoverage"
+      ]
+    },
+    {
+      "id": "distributed",
+      "major": 1,
+      "requires": ["core@1"],
+      "declarations": [
+        "system",
+        "service",
+        "topic",
+        "queue",
+        "consumer",
+        "projection",
+        "saga",
+        "schedule"
+      ],
+      "validators": [
+        "ownership.exactlyOne",
+        "references.localOwner",
+        "consumer.idempotency",
+        "service.reliabilityStores",
+        "outbox.atomic",
+        "ordering.partitionCompatible",
+        "projection.rebuildable",
+        "syncCallGraph.acyclic"
+      ]
+    },
+    {
+      "id": "offline",
+      "major": 1,
+      "requires": ["core@1", "distributed@1"],
+      "declarations": ["sync", "syncStatus"],
+      "validators": [
+        "sync.identity",
+        "sync.serverClock",
+        "sync.tombstoneRetention",
+        "sync.conflictTotality",
+        "sync.authorizationRecheck",
+        "sync.localMigration"
+      ]
+    },
+    {
+      "id": "cloud",
+      "major": 1,
+      "requires": ["core@1"],
+      "declarations": ["resource", "deployment"],
+      "validators": [
+        "adapter.capabilities",
+        "deployment.minimumReplicas",
+        "deployment.rolloutSafety",
+        "secrets.referencesOnly",
+        "slo.feasibility",
+        "data.residency"
+      ]
+    },
+    {
+      "id": "media",
+      "major": 1,
+      "requires": ["core@1", "cloud@1"],
+      "declarations": ["media", "rendition"],
+      "validators": [
+        "media.handleOpaque",
+        "media.uploadResumable",
+        "media.checksum",
+        "media.lifecycle",
+        "media.nativeBudgets"
+      ]
+    },
+    {
+      "id": "realtime",
+      "major": 1,
+      "requires": ["core@1", "distributed@1"],
+      "declarations": ["channel"],
+      "validators": [
+        "channel.backpressure",
+        "channel.resumeOrFallback",
+        "channel.auth",
+        "channel.deliveryVisible"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "targets": [
+    {
+      "id": "petstore",
+      "path": "examples/petstore/m4-app/app.aidl"
+    }
+  ]
+}

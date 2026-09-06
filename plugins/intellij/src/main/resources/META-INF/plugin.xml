@@ -1,0 +1,58 @@
+<idea-plugin>
+    <id>de.kreisgeist.aidl</id>
+    <name>AIDL Language Support</name>
+    <vendor email="dev@kreisgeist.de">Kreisgeist</vendor>
+
+    <description>
+        Editor support for AIDL: file type registration,
+        permissive parsing, syntax highlighting and compiler-backed semantic inspections.
+    </description>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <fileType
+            name="AIDL"
+            language="AIDL"
+            implementationClass="de.kreisgeist.aidl.AidlFileType"
+            fieldName="INSTANCE"
+            extensions="aidl"/>
+
+        <lang.parserDefinition
+            language="AIDL"
+            implementationClass="de.kreisgeist.aidl.parser.AidlParserDefinition"/>
+
+        <lang.syntaxHighlighterFactory
+            language="AIDL"
+            implementationClass="de.kreisgeist.aidl.highlighting.AidlSyntaxHighlighterFactory"/>
+
+        <completion.contributor
+            language="AIDL"
+            implementationClass="de.kreisgeist.aidl.completion.AidlCompilerCompletionContributor"/>
+
+        <lang.documentationProvider
+            language="AIDL"
+            implementationClass="de.kreisgeist.aidl.documentation.AidlCompilerDocumentationProvider"/>
+
+        <psi.referenceContributor
+            implementation="de.kreisgeist.aidl.references.AidlReferenceContributor"/>
+
+        <referencesSearch
+            implementation="de.kreisgeist.aidl.references.AidlCompilerReferencesSearchExecutor"/>
+
+        <renamePsiElementProcessor
+            implementation="de.kreisgeist.aidl.references.AidlCompilerRenameProcessor"/>
+
+        <localInspection
+            language="AIDL"
+            shortName="AidlCompilerDiagnostics"
+            displayName="AIDL compiler diagnostics"
+            groupName="AIDL"
+            enabledByDefault="true"
+            level="WARNING"
+            implementationClass="de.kreisgeist.aidl.inspections.AidlCompilerInspection"/>
+
+        <colorSettingsPage
+            implementation="de.kreisgeist.aidl.highlighting.AidlColorSettingsPage"/>
+    </extensions>
+</idea-plugin>

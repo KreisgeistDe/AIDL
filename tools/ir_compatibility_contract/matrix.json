@@ -1,0 +1,109 @@
+{
+  "versionCases": [
+    {
+      "id": "same-version",
+      "producer": "0.3.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": true
+    },
+    {
+      "id": "older-minor",
+      "producer": "0.2.9",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": true
+    },
+    {
+      "id": "newer-patch-same-minor",
+      "producer": "0.3.7",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": true
+    },
+    {
+      "id": "different-major",
+      "producer": "1.0.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": false,
+      "error": "incompatible IR major"
+    },
+    {
+      "id": "newer-minor-unknown-addition",
+      "producer": "0.4.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": ["/futureField"],
+      "toleratedAdditiveFields": [],
+      "compatible": false,
+      "error": "unsupported additive IR fields: /futureField"
+    },
+    {
+      "id": "newer-minor-explicitly-tolerated-addition",
+      "producer": "0.4.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1]],
+      "documentProfiles": [{"id": "core", "major": 1}],
+      "additiveFields": ["/futureField"],
+      "toleratedAdditiveFields": ["/futureField"],
+      "compatible": true
+    },
+    {
+      "id": "independent-profile-major-supported",
+      "producer": "0.3.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1], ["cloud", 2]],
+      "documentProfiles": [{"id": "cloud", "major": 2}, {"id": "core", "major": 1}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": true
+    },
+    {
+      "id": "independent-profile-major-unsupported",
+      "producer": "0.3.0",
+      "consumer": "0.3.0",
+      "profiles": [["core", 1], ["cloud", 2]],
+      "documentProfiles": [{"id": "core", "major": 1}, {"id": "cloud", "major": 3}],
+      "additiveFields": [],
+      "toleratedAdditiveFields": [],
+      "compatible": false,
+      "error": "unsupported profile majors: cloud@3"
+    }
+  ],
+  "schemaCases": [
+    {
+      "id": "current-core-baseline",
+      "mutation": "none",
+      "valid": true
+    },
+    {
+      "id": "unknown-top-level-core-field",
+      "mutation": "unknownTopLevelField",
+      "valid": false
+    },
+    {
+      "id": "structurally-invalid-semantic-hash",
+      "mutation": "invalidSemanticHashType",
+      "valid": false
+    },
+    {
+      "id": "unknown-field-on-core-declaration",
+      "mutation": "unknownDeclarationField",
+      "valid": false
+    }
+  ]
+}

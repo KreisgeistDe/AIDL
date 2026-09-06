@@ -1,0 +1,28 @@
+name: Protect project AI workflow boundary
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  reject-ai-workflow-state:
+    name: Reject .ai changes on project PRs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out pull request
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reject .ai path mutations
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          git diff --name-status -z --diff-filter=ACDMRT "$BASE_SHA...$HEAD_SHA" \
+            | python3 tools/validate_ai_workflow_boundary.py

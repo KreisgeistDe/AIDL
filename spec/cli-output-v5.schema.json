@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.example/spec/cli/5/cli-output.schema.json",
+  "title": "AIDL CLI JSON Output v5",
+  "description": "Current machine-readable AIDL CLI contract. Existing v1-v4 envelopes remain valid through frozen schemas; v5 adds aidl summary.",
+  "oneOf": [
+    {"$ref": "https://aidl.example/spec/cli/4/cli-output.schema.json"},
+    {"$ref": "#/$defs/summaryEnvelope"}
+  ],
+  "$defs": {
+    "kindCount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "count"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "moduleSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "documentCount", "declarationCount", "exportedDeclarationCount", "declarationKinds"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "documentCount": {"type": "integer", "minimum": 1},
+        "declarationCount": {"type": "integer", "minimum": 0},
+        "exportedDeclarationCount": {"type": "integer", "minimum": 0},
+        "declarationKinds": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/kindCount"}
+        }
+      }
+    },
+    "declarationSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fullyQualifiedName", "kind", "exported"],
+      "properties": {
+        "fullyQualifiedName": {"type": "string", "minLength": 1},
+        "kind": {"type": "string", "minLength": 1},
+        "exported": {"type": "boolean"}
+      }
+    },
+    "moduleDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceModule", "targetModule"],
+      "properties": {
+        "sourceModule": {"type": "string", "minLength": 1},
+        "targetModule": {"type": "string", "minLength": 1}
+      }
+    },
+    "summaryTotals": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modules", "declarations", "moduleDependencies"],
+      "properties": {
+        "modules": {"type": "integer", "minimum": 0},
+        "declarations": {"type": "integer", "minimum": 0},
+        "moduleDependencies": {"type": "integer", "minimum": 0}
+      }
+    },
+    "summaryTruncated": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["modules", "declarations", "moduleDependencies"],
+      "properties": {
+        "modules": {"type": "boolean"},
+        "declarations": {"type": "boolean"},
+        "moduleDependencies": {"type": "boolean"}
+      }
+    },
+    "summaryResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documentCount",
+        "moduleCount",
+        "declarationCount",
+        "exportedDeclarationCount",
+        "documentsWithoutModuleCount",
+        "declarationKinds",
+        "modules",
+        "declarations",
+        "moduleDependencies",
+        "totals",
+        "truncated"
+      ],
+      "properties": {
+        "documentCount": {"type": "integer", "minimum": 0},
+        "moduleCount": {"type": "integer", "minimum": 0},
+        "declarationCount": {"type": "integer", "minimum": 0},
+        "exportedDeclarationCount": {"type": "integer", "minimum": 0},
+        "documentsWithoutModuleCount": {"type": "integer", "minimum": 0},
+        "declarationKinds": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/kindCount"}
+        },
+        "modules": {
+          "type": "array",
+          "maxItems": 64,
+          "items": {"$ref": "#/$defs/moduleSummary"}
+        },
+        "declarations": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {"$ref": "#/$defs/declarationSummary"}
+        },
+        "moduleDependencies": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {"$ref": "#/$defs/moduleDependency"}
+        },
+        "totals": {"$ref": "#/$defs/summaryTotals"},
+        "truncated": {"$ref": "#/$defs/summaryTruncated"}
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "message"],
+      "properties": {
+        "kind": {"enum": ["compiler", "internal"]},
+        "message": {"type": "string"}
+      }
+    },
+    "summaryEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command", "diagnostics", "ok"],
+      "properties": {
+        "command": {"const": "summary"},
+        "diagnostics": {
+          "type": "array",
+          "items": {"$ref": "https://aidl.example/spec/cli/4/cli-output.schema.json#/$defs/explainEnvelope/properties/diagnostics/items"}
+        },
+        "ok": {"type": "boolean"},
+        "result": {"$ref": "#/$defs/summaryResult"},
+        "error": {"$ref": "#/$defs/error"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"ok": {"const": true}}, "required": ["ok"]},
+          "then": {"required": ["result"], "not": {"required": ["error"]}}
+        },
+        {
+          "if": {"properties": {"ok": {"const": false}}, "required": ["ok"]},
+          "then": {"required": ["error"], "not": {"required": ["result"]}}
+        }
+      ]
+    }
+  }
+}

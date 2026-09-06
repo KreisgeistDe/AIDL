@@ -1,0 +1,97 @@
+{
+  "version": 2,
+  "cases": [
+    {
+      "id": "valid-basic-types",
+      "suite": "valid",
+      "path": "valid/basic-types",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    },
+    {
+      "id": "valid-imported-types",
+      "suite": "valid",
+      "path": "valid/imported-types",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    },
+    {
+      "id": "valid-m4-minimal",
+      "suite": "valid",
+      "path": "valid/m4-minimal",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json",
+        "ir": "snapshots/ir.json",
+        "plan": "snapshots/plan.json",
+        "generated": "snapshots/generated"
+      }
+    },
+    {
+      "id": "valid-petstore",
+      "suite": "valid",
+      "path": "valid/petstore",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json",
+        "ir": "snapshots/ir.json",
+        "plan": "snapshots/plan.json",
+        "generated": "snapshots/generated"
+      }
+    },
+    {
+      "id": "valid-calendar-offline",
+      "suite": "valid",
+      "path": "valid/calendar-offline",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    },
+    {
+      "id": "valid-videohub",
+      "suite": "valid",
+      "path": "valid/videohub",
+      "expectedDiagnostics": [],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    },
+    {
+      "id": "invalid-missing-owner",
+      "suite": "invalid",
+      "path": "invalid/missing-owner",
+      "expectedDiagnostics": [
+        {
+          "code": "AIDL-DIST400",
+          "file": "entity.aidl",
+          "line": 2,
+          "column": 1
+        }
+      ],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    },
+    {
+      "id": "invalid-cross-service-ref",
+      "suite": "invalid",
+      "path": "invalid/cross-service-ref",
+      "expectedDiagnostics": [
+        {
+          "code": "AIDL-DIST401",
+          "file": "a-order.aidl",
+          "line": 4,
+          "column": 3
+        }
+      ],
+      "snapshots": {
+        "diagnostics": "snapshots/diagnostics.json"
+      }
+    }
+  ]
+}

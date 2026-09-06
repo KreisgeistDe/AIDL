@@ -1,0 +1,59 @@
+{
+  "contractVersion": "1.0.0",
+  "fixture": "examples/petstore",
+  "generatedRoot": "generated/",
+  "language": {
+    "name": "TypeScript",
+    "version": "5.9.x",
+    "moduleSystem": "ESM",
+    "strict": true
+  },
+  "runtime": {
+    "name": "Node.js",
+    "version": "22.x LTS",
+    "platform": "Linux x86_64"
+  },
+  "packageManager": {
+    "name": "npm",
+    "version": "10.x",
+    "lockfileRequired": true
+  },
+  "api": {
+    "transport": "REST",
+    "framework": "Fastify",
+    "frameworkVersion": "5.x",
+    "mediaType": "application/json"
+  },
+  "persistence": {
+    "database": "PostgreSQL",
+    "databaseVersion": "17.x",
+    "driver": "pg",
+    "driverVersion": "8.x",
+    "orm": null,
+    "migrationFormat": "SQL"
+  },
+  "generatorBoundary": {
+    "input": "canonical AIDL IR only",
+    "reparseSource": false,
+    "manualGeneratedEdits": false
+  },
+  "support": {
+    "required": [
+      "domain types and entities",
+      "REST query and mutation routes",
+      "PostgreSQL persistence",
+      "owner-local transactions",
+      "optimistic concurrency",
+      "idempotency",
+      "transactional outbox events"
+    ],
+    "deferred": [
+      "GraphQL generation",
+      "RPC generation",
+      "workflow and saga runtime",
+      "multi-language generators",
+      "provider-specific cloud bindings",
+      "multi-region orchestration"
+    ]
+  }
+}

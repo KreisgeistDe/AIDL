@@ -1,0 +1,178 @@
+{
+  "cases": [
+    {
+      "id": "m2_01_owner_cardinality",
+      "rule": "M2-01",
+      "expected": [
+        {
+          "code": "AIDL-DIST400",
+          "file": "entity.aidl",
+          "line": 2,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "id": "m2_02_cross_service_ref",
+      "rule": "M2-02",
+      "expected": [
+        {
+          "code": "AIDL-DIST401",
+          "file": "a-order.aidl",
+          "line": 4,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "id": "m2_03_transaction_boundary",
+      "rule": "M2-03",
+      "expected": [
+        {
+          "code": "AIDL-DIST402",
+          "file": "orders.aidl",
+          "line": 15,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "id": "m2_04_query_side_effect",
+      "rule": "M2-04",
+      "expected": [
+        {
+          "code": "AIDL-DIST403",
+          "file": "query.aidl",
+          "line": 3,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "id": "m2_05_mutation_contract",
+      "rule": "M2-05",
+      "expected": [
+        {
+          "code": "AIDL-DIST404",
+          "file": "mutation.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST404",
+          "file": "mutation.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST404",
+          "file": "mutation.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST404",
+          "file": "mutation.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST405",
+          "file": "mutation.aidl",
+          "line": 2,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "id": "m2_06_public_reason",
+      "rule": "M2-06",
+      "expected": [
+        {
+          "code": "AIDL-DIST406",
+          "file": "operations.aidl",
+          "line": 3,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "id": "m2_07_transaction_isolation",
+      "rule": "M2-07",
+      "expected": [
+        {
+          "code": "AIDL-DIST407",
+          "file": "orders.aidl",
+          "line": 10,
+          "column": 3
+        }
+      ]
+    },
+    {
+      "id": "m2_08_transaction_outbox",
+      "rule": "M2-08",
+      "expected": [
+        {
+          "code": "AIDL-DIST408",
+          "file": "orders.aidl",
+          "line": 11,
+          "column": 5
+        }
+      ]
+    },
+    {
+      "id": "m2_09_consumer_idempotency",
+      "rule": "M2-09",
+      "expected": [
+        {
+          "code": "AIDL-DIST411",
+          "file": "consumer.aidl",
+          "line": 2,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "id": "m2_10_api_contract",
+      "rule": "M2-10",
+      "expected": [
+        {
+          "code": "AIDL-DIST412",
+          "file": "api.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST412",
+          "file": "api.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST412",
+          "file": "api.aidl",
+          "line": 2,
+          "column": 1
+        },
+        {
+          "code": "AIDL-DIST412",
+          "file": "api.aidl",
+          "line": 2,
+          "column": 1
+        }
+      ]
+    },
+    {
+      "id": "m2_11_bounded_collection",
+      "rule": "M2-11",
+      "expected": [
+        {
+          "code": "AIDL-DIST413",
+          "file": "queries.aidl",
+          "line": 4,
+          "column": 3
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,180 @@
+{
+  "$schema": "./conformance-manifest.schema.json",
+  "schemaVersion": 1,
+  "scope": "repository-support-surfaces",
+  "statusValues": ["specified", "experimental", "partial", "implemented", "blocked"],
+  "surfaces": [
+    {
+      "id": "contract.canonical-ir",
+      "kind": "contract",
+      "status": "implemented",
+      "summary": "Versioned deterministic Canonical IR contract for the implemented compiler subset.",
+      "supportStatement": "Canonical IR is implemented at irVersion 0.3.0 with a closed schema and deterministic serialization for the implemented compiler subset.",
+      "evidence": [
+        {"path": "spec/ir.schema.json", "type": "schema"},
+        {"path": "tools/test_compiler_documentation.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.cloud",
+      "kind": "profile",
+      "status": "partial",
+      "summary": "Cloud declarations and selected validation semantics exist without a complete provider runtime.",
+      "supportStatement": "Cloud profile support is partial: selected declarations and semantics are compiler-visible, but complete provider adapters and runtime coverage are not implemented.",
+      "requires": ["profile.core"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"},
+        {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.core",
+      "kind": "profile",
+      "status": "partial",
+      "summary": "Compiler Core has substantial implemented coverage but M10 has not yet certified every declaration and semantic rule across every layer.",
+      "supportStatement": "Core support is partial at conformance level: parser, compiler-owned resolution and validation, diagnostics, and Canonical IR exist for the documented subset, while M10 layer-completeness certification remains open.",
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/aidl-core-subset.md", "type": "documentation"},
+        {"path": "tools/test_compiler_documentation.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.distributed",
+      "kind": "profile",
+      "status": "partial",
+      "summary": "Selected distributed ownership, delivery, outbox, and fixture semantics are implemented without a general distributed runtime.",
+      "supportStatement": "Distributed profile support is partial: selected compiler and fixture semantics are implemented, but a general multi-service runtime remains future work.",
+      "requires": ["profile.core"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"},
+        {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.media",
+      "kind": "profile",
+      "status": "partial",
+      "summary": "Media syntax and selected compiler/fixture semantics exist without production media processing runtime support.",
+      "supportStatement": "Media profile support is partial: selected syntax and compiler/fixture evidence exist, but upload, transcoding, delivery, and provider runtime support are not complete.",
+      "requires": ["profile.core", "profile.cloud"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"},
+        {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.offline",
+      "kind": "profile",
+      "status": "partial",
+      "summary": "Selected offline/sync semantics are compiler- and fixture-covered without the complete multi-writer runtime.",
+      "supportStatement": "Offline profile support is partial: selected sync/conflict semantics are represented in compiler fixtures, but the complete offline multi-writer runtime is not implemented.",
+      "requires": ["profile.core", "profile.distributed"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"},
+        {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "profile.realtime",
+      "kind": "profile",
+      "status": "specified",
+      "summary": "Realtime remains a specified profile without a production channel runtime claim.",
+      "supportStatement": "Realtime is currently a specified profile; no production channel runtime support is claimed.",
+      "requires": ["profile.core", "profile.distributed"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"}
+      ]
+    },
+    {
+      "id": "profile.web",
+      "kind": "profile",
+      "status": "specified",
+      "summary": "Web remains a broad specified profile without complete compiler/generator/runtime conformance evidence.",
+      "supportStatement": "Web is currently a specified profile; complete compiler, generator, and runtime conformance is not claimed.",
+      "requires": ["profile.core"],
+      "evidence": [
+        {"path": "spec/profile-registry.json", "type": "registry"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"}
+      ]
+    },
+    {
+      "id": "release.bundle",
+      "kind": "release",
+      "status": "implemented",
+      "summary": "M9-05 deterministic release-bundle dry run with manifest and checksums; publication remains disabled.",
+      "supportStatement": "The reproducible release bundle is implemented as a dry run with manifest, SHA-256 checksums, tracked contracts, and publication disabled.",
+      "evidence": [
+        {"path": "release/release.json", "type": "release-contract"},
+        {"path": "docs/m9-release-workflow.md", "type": "documentation"},
+        {"path": "tools/test_release_bundle.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "repository.main-protection",
+      "kind": "repository",
+      "status": "blocked",
+      "summary": "Native main branch protection remains an open M9 requirement.",
+      "supportStatement": "Native main branch protection remains blocked/open and must not be described as enforced.",
+      "evidence": [
+        {"path": "TODO.md", "type": "roadmap"},
+        {"path": "SUPPORT.md", "type": "documentation"}
+      ]
+    },
+    {
+      "id": "runtime.m4-petstore",
+      "kind": "runtime",
+      "status": "implemented",
+      "summary": "Bounded TypeScript/Fastify/PostgreSQL M4 vertical slice with generated ownership and Petstore E2E evidence.",
+      "supportStatement": "The bounded M4 TypeScript/Fastify/PostgreSQL Petstore vertical slice is implemented and tested; it is not a general runtime for every profile.",
+      "evidence": [
+        {"path": "spec/m4-stack.json", "type": "schema"},
+        {"path": "tools/test_m4_petstore.py", "type": "test"},
+        {"path": ".github/workflows/python-validation.yml", "type": "workflow"}
+      ]
+    },
+    {
+      "id": "tooling.cli",
+      "kind": "tooling",
+      "status": "implemented",
+      "summary": "Installable compiler-owned CLI with current registered command surface and versioned JSON contracts.",
+      "supportStatement": "The compiler-owned aidl CLI is implemented and installable for Python 3.12 with its registered command surface and versioned JSON output contracts.",
+      "requires": ["contract.canonical-ir", "profile.core"],
+      "evidence": [
+        {"path": "pyproject.toml", "type": "package-contract"},
+        {"path": "spec/cli-output-v7.schema.json", "type": "schema"},
+        {"path": "tools/test_aidl_documentation_cli.py", "type": "test"}
+      ]
+    },
+    {
+      "id": "tooling.intellij",
+      "kind": "tooling",
+      "status": "partial",
+      "summary": "Compiler-backed IntelliJ semantics are implemented for documented operations without full-profile editor conformance.",
+      "supportStatement": "IntelliJ support is partial at conformance level: documented compiler-backed diagnostics, fixes, navigation, rename, completion, and documentation paths exist, but full-profile editor conformance is not claimed.",
+      "requires": ["profile.core"],
+      "evidence": [
+        {"path": "plugins/intellij/AGENTS.md", "type": "documentation"},
+        {"path": ".github/workflows/python-validation.yml", "type": "workflow"},
+        {"path": "docs/12-coverage-and-limits.md", "type": "documentation"}
+      ]
+    },
+    {
+      "id": "tooling.lsp",
+      "kind": "tooling",
+      "status": "experimental",
+      "summary": "Saved-file stdio LSP proof of concept only.",
+      "supportStatement": "The LSP surface is experimental: only the saved-file stdio proof of concept is claimed, not production unsaved-buffer support.",
+      "requires": ["profile.core"],
+      "evidence": [
+        {"path": "tools/aidl_lsp.py", "type": "source"},
+        {"path": "docs/m6-lsp-evaluation.md", "type": "documentation"}
+      ]
+    }
+  ]
+}

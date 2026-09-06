@@ -1,0 +1,18 @@
+# M10-05 Core fixture conformance
+
+M10-05 records fixture coverage only for rows that are already **Core Supported** by the normative implementation contract. It does not promote partial declarations, semantic rules, profiles, syntax, runtime behavior, or generators.
+
+`spec/core-fixture-conformance.json` is the machine-readable coverage index. Its supported feature IDs are not hand-defined policy: `tools/conformance_manifest.py` derives the expected set from `spec/core-conformance.json` by requiring each Parse, Resolve, Validate, and IR layer to be either `implemented` or semantically `not-applicable`, with at least one implemented layer. Any partial or missing required layer therefore excludes the row from M10-05 coverage.
+
+The coverage contract requires four evidence classes for every derived Core Supported row:
+
+- **positive** — accepted source fixture plus executable Golden Fixture coverage;
+- **negative** — executable compiler/diagnostic regressions proving stable rejection behavior;
+- **ir** — a committed Canonical-IR snapshot plus executable semantic-projection coverage;
+- **compatibility** — the committed IR compatibility matrix plus its executable matrix test.
+
+Evidence is catalogued once and referenced through `defaultEvidence`; the stable feature list is checked against the derived supported set. This avoids maintaining a second semantic support policy while still making missing, stale, reordered, or incorrectly promoted fixture evidence fail deterministically.
+
+`tools/test_core_fixture_conformance.py` protects the coverage boundary with negative regressions for missing supported rows, accidental claims for partial rows, unknown evidence IDs, and missing IR/compatibility machine fixtures. The normal generic Python test discovery executes this test, while the existing repository spec-lint path invokes `python3 -m tools.conformance_manifest validate`, so both direct test execution and CI reject drift.
+
+The existing fixture and compatibility harnesses remain authoritative for behavior. M10-05 only binds their evidence to the current Core Supported rows; it does not reinterpret those tests or add new language semantics.

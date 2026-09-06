@@ -1,0 +1,58 @@
+name: Release Bundle
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    tags:
+      - 'aidl-toolchain-v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-bundle-dry-run:
+    name: Release Bundle / Dry Run
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out exact release source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned build backend
+        run: python3 -m pip install setuptools==80.9.0 wheel==0.45.1
+
+      - name: Verify release contract
+        shell: bash
+        run: |
+          tag_args=()
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag_args=(--tag "$GITHUB_REF_NAME")
+          fi
+          python3 -m tools.release_bundle "${tag_args[@]}" verify-contract
+
+      - name: Reproduce release bundle twice
+        shell: bash
+        run: |
+          tag_args=()
+          if [[ "$GITHUB_REF_TYPE" == "tag" ]]; then
+            tag_args=(--tag "$GITHUB_REF_NAME")
+          fi
+          python3 -m tools.release_bundle "${tag_args[@]}" reproduce --output release-dist
+
+      - name: Upload deterministic release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: aidl-toolchain-0.0.0-release-bundle
+          path: release-dist/
+          if-no-files-found: error
