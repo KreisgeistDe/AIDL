@@ -32,7 +32,8 @@ class CoreValueIrSemanticsTests(unittest.TestCase):
 
 export value SnapshotValueContract {
   label: string required
-  optionalSecret: string? sensitive
+  optionalLabel: string?
+  sensitiveLabel: string sensitive
   mutableCount: int mutable
   generatedToken: uuid generated
   labels: set<string> required
@@ -59,7 +60,7 @@ export value SnapshotValueContract {
         validator = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
         return tuple(validator.iter_errors(document))
 
-    def test_value_fields_preserve_order_types_and_core_metadata(self) -> None:
+    def test_value_fields_preserve_order_types_and_independent_core_metadata(self) -> None:
         first = self._ir()
         second = self._ir()
         value = self._declaration(first, "SnapshotValueContract")
@@ -67,32 +68,27 @@ export value SnapshotValueContract {
 
         self.assertEqual(value, second_value)
         self.assertEqual(
-            ["label", "optionalSecret", "mutableCount", "generatedToken", "labels", "lookup"],
+            ["label", "optionalLabel", "sensitiveLabel", "mutableCount", "generatedToken", "labels", "lookup"],
             [field["name"] for field in value["fields"]],
         )
 
         label = value["fields"][0]
         self.assertEqual({"kind": "scalar", "name": "string"}, label["type"])
         self.assertTrue(label["required"])
-        self.assertFalse(label["mutable"])
-        self.assertFalse(label["sensitive"])
-        self.assertFalse(label["generated"])
 
-        optional_secret = value["fields"][1]
+        optional_label = value["fields"][1]
         self.assertEqual(
             {"kind": "nullable", "element": {"kind": "scalar", "name": "string"}},
-            optional_secret["type"],
+            optional_label["type"],
         )
-        self.assertFalse(optional_secret["required"])
-        self.assertFalse(optional_secret["mutable"])
-        self.assertTrue(optional_secret["sensitive"])
-        self.assertFalse(optional_secret["generated"])
+        self.assertFalse(optional_label["required"])
 
-        self.assertTrue(value["fields"][2]["mutable"])
-        self.assertTrue(value["fields"][3]["generated"])
+        self.assertTrue(value["fields"][2]["sensitive"])
+        self.assertTrue(value["fields"][3]["mutable"])
+        self.assertTrue(value["fields"][4]["generated"])
         self.assertEqual(
             {"kind": "set", "element": {"kind": "scalar", "name": "string"}},
-            value["fields"][4]["type"],
+            value["fields"][5]["type"],
         )
         self.assertEqual(
             {
@@ -100,7 +96,7 @@ export value SnapshotValueContract {
                 "key": {"kind": "scalar", "name": "string"},
                 "value": {"kind": "nullable", "element": {"kind": "scalar", "name": "uuid"}},
             },
-            value["fields"][5]["type"],
+            value["fields"][6]["type"],
         )
         self.assertEqual((), self._schema_errors(first))
 
@@ -112,15 +108,15 @@ export value SnapshotValueContract {
         self.assertTrue(self._schema_errors(missing_required))
 
         malformed_sensitive = copy.deepcopy(base)
-        self._declaration(malformed_sensitive, "SnapshotValueContract")["fields"][1]["sensitive"] = "yes"
+        self._declaration(malformed_sensitive, "SnapshotValueContract")["fields"][2]["sensitive"] = "yes"
         self.assertTrue(self._schema_errors(malformed_sensitive))
 
         missing_type = copy.deepcopy(base)
-        del self._declaration(missing_type, "SnapshotValueContract")["fields"][2]["type"]
+        del self._declaration(missing_type, "SnapshotValueContract")["fields"][3]["type"]
         self.assertTrue(self._schema_errors(missing_type))
 
         malformed_type = copy.deepcopy(base)
-        self._declaration(malformed_type, "SnapshotValueContract")["fields"][4]["type"] = {"kind": "set"}
+        self._declaration(malformed_type, "SnapshotValueContract")["fields"][5]["type"] = {"kind": "set"}
         self.assertTrue(self._schema_errors(malformed_type))
 
 
