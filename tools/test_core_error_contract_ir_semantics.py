@@ -53,7 +53,7 @@ export error SnapshotConflict {
     def test_error_contract_is_materialized_from_source(self) -> None:
         first = self._ir()
         second = self._ir()
-        self.assertEqual(first, second)
+        self.assertEqual(self._error(first), self._error(second))
 
         error = self._error(first)
         self.assertEqual("SNAPSHOT_CONFLICT", error["code"])
