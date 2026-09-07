@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aidl-toolchain"
-version = "0.0.0"
+version = "0.1.0rc1"
 description = "Pre-release AIDL compiler and command line toolchain"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
