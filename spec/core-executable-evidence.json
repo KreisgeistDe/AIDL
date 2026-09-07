@@ -17,6 +17,7 @@
       "tools/test_core_event_ir_semantics.py",
       "tools/test_core_topic_delivery_ir_semantics.py",
       "tools/test_core_transaction_semantics.py",
+      "tools/test_core_value_ir_semantics.py",
       "tools/test_ir_schema.py"
     ],
     "parse-core": [
