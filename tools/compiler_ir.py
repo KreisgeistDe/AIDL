@@ -191,7 +191,7 @@ def _normalize_type_spacing(raw: str) -> str:
 
 
 def _take_type(tail: str) -> tuple[str, str]:
-    tail = _normalize_type_spacing(tail)
+    tail = tail.strip()
     if tail.startswith("ref "):
         parts = tail.split(None, 2)
         return ("ref " + parts[1], parts[2] if len(parts) > 2 else "")
