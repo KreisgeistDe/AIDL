@@ -19,11 +19,21 @@ VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
 
 
 class CoreAppIrSemanticsTest(unittest.TestCase):
-    def _build(self, text: str) -> dict:
+    def _analysis(self, text: str):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "app.aidl"
             source.write_text(text, encoding="utf-8")
-            return build_canonical_ir(load_compiler_analysis([source]))
+            return load_compiler_analysis([source])
+
+    def _build(self, text: str) -> dict:
+        return build_canonical_ir(self._analysis(text))
+
+    def _app_contract_diagnostics(self, text: str):
+        return tuple(
+            diagnostic
+            for diagnostic in self._analysis(text).diagnostics
+            if diagnostic.code.value == "AIDL-DIST414"
+        )
 
     def test_app_identity_references_profiles_and_auth_are_deterministic(self) -> None:
         text = SOURCE.read_text(encoding="utf-8")
@@ -61,6 +71,81 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
             },
             app["auth"],
         )
+        self.assertEqual([], self._app_contract_diagnostics(text))
+
+    def test_normative_app_profile_contract_has_stable_source_diagnostics(self) -> None:
+        cases = {
+            "missing profile": (
+                """module example.app
+app ExampleApp {
+  compatibility stable
+}
+""",
+                2,
+                "app 'example.app.ExampleApp' must select at least one explicit profile",
+            ),
+            "malformed profile": (
+                """module example.app
+app ExampleApp {
+  profile Core version 1
+}
+""",
+                3,
+                "app 'example.app.ExampleApp' profile clause must be 'profile ID version POSITIVE_MAJOR'; found 'profile Core version 1'",
+            ),
+            "unregistered profile version": (
+                """module example.app
+app ExampleApp {
+  profile core version 2
+}
+""",
+                3,
+                "app 'example.app.ExampleApp' selects unregistered profile 'core@2'",
+            ),
+            "missing profile dependency": (
+                """module example.app
+app ExampleApp {
+  profile distributed version 1
+}
+""",
+                3,
+                "app 'example.app.ExampleApp' profile 'distributed@1' requires explicit profile 'core@1'",
+            ),
+            "malformed app clause": (
+                """module example.app
+app ExampleApp {
+  profile core version 1
+  system exampleSystem
+}
+""",
+                4,
+                "app 'example.app.ExampleApp' clause is not a normative app clause: 'system exampleSystem'",
+            ),
+        }
+        for name, (text, line, message) in cases.items():
+            with self.subTest(name=name):
+                diagnostics = self._app_contract_diagnostics(text)
+                self.assertEqual(1, len(diagnostics))
+                self.assertEqual(message, diagnostics[0].message)
+                self.assertEqual(line, diagnostics[0].location.line)
+                self.assertEqual("policy", diagnostics[0].phase)
+                self.assertEqual("error", diagnostics[0].severity.value)
+                self.assertEqual(
+                    {"kind": "app", "name": "ExampleApp"},
+                    diagnostics[0].subject.to_json(),
+                )
+
+    def test_unproven_duplicate_and_partial_auth_rules_remain_open(self) -> None:
+        text = """module example.app
+app ExampleApp {
+  profile core version 1
+  profile core version 1
+}
+auth {
+  provider oidc
+}
+"""
+        self.assertEqual([], self._app_contract_diagnostics(text))
 
     def test_missing_or_unresolved_required_app_references_fail_ir(self) -> None:
         text = SOURCE.read_text(encoding="utf-8")
