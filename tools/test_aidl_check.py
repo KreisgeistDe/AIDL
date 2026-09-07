@@ -75,13 +75,17 @@ class AidlCheckTest(unittest.TestCase):
         self.assertEqual("", stderr)
         self.assertFalse(payload["ok"])
         diagnostics = payload["diagnostics"]
-        self.assertEqual(1, len(diagnostics))
-        self.assertEqual("AIDL-R003", diagnostics[0]["code"])
-        self.assertEqual("resolve", diagnostics[0]["phase"])
-        self.assertEqual("error", diagnostics[0]["severity"])
-        self.assertEqual("unresolved name 'MissingType'", diagnostics[0]["message"])
-        self.assertEqual(str(source), diagnostics[0]["location"]["file"])
-        self.assertEqual(2, diagnostics[0]["location"]["line"])
+        self.assertEqual([diagnostic["code"] for diagnostic in diagnostics], ["AIDL-R003", "AIDL-T005"])
+        resolver, materialization = diagnostics
+        self.assertEqual("resolve", resolver["phase"])
+        self.assertEqual("error", resolver["severity"])
+        self.assertEqual("unresolved name 'MissingType'", resolver["message"])
+        self.assertEqual(str(source), resolver["location"]["file"])
+        self.assertEqual(2, resolver["location"]["line"])
+        self.assertEqual("type", materialization["phase"])
+        self.assertIn("may not fall back to a synthetic aidl.std identity", materialization["message"])
+        self.assertEqual(str(source), materialization["location"]["file"])
+        self.assertEqual(2, materialization["location"]["line"])
 
     def test_cyclic_module_dependency_has_stable_source_located_diagnostic(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
