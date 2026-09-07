@@ -70,7 +70,7 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             and diagnostic.subject.kind == "consumer"
         )
 
-    def _consumer_ir(self, text: str):
+    def _ir(self, text: str):
         analysis = self._analysis(text)
         errors = [
             item.to_json()
@@ -78,12 +78,35 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             if item.severity == CompilerDiagnosticSeverity.ERROR
         ]
         self.assertEqual([], errors)
-        ir = build_canonical_ir(analysis)
+        return build_canonical_ir(analysis)
+
+    def _consumer_ir(self, text: str):
+        ir = self._ir(text)
         return next(
             item
             for item in ir["declarations"]
             if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
         )
+
+    def _source_with_start(self, kind: str, input_expression: str = "{ requestId: event.eventId }") -> str:
+        source = _VALID_SOURCE.replace(
+            "  retry: none\n}",
+            f"  retry: none\n  start: {kind} ReviewOrder({input_expression})\n}",
+            1,
+        ).replace(
+            "runs [consumer ApplyOrder]",
+            f"runs [consumer ApplyOrder, {kind} ReviewOrder]",
+            1,
+        )
+        return source + f"""
+
+value ReviewInput {{
+  requestId: uuid required
+}}
+
+{kind} ReviewOrder(input: ReviewInput) -> uuid {{
+}}
+"""
 
     def test_service_binding_is_preserved_deterministically(self) -> None:
         first_analysis = self._analysis(_VALID_SOURCE)
@@ -181,15 +204,90 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
         self.assertEqual(1, len(diagnostics))
         self.assertIn("retry policy 'immediate'", diagnostics[0].message)
 
-    def test_start_is_rejected_until_effect_projection_is_verified(self) -> None:
+    def test_workflow_and_task_start_are_preserved_deterministically_in_ir(self) -> None:
+        for kind in ("workflow", "task"):
+            with self.subTest(kind=kind):
+                source = self._source_with_start(kind)
+                first = self._ir(source)
+                second = self._ir(source)
+                first_consumer = next(
+                    item
+                    for item in first["declarations"]
+                    if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
+                )
+                second_consumer = next(
+                    item
+                    for item in second["declarations"]
+                    if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
+                )
+                first_target = next(
+                    item
+                    for item in first["declarations"]
+                    if item.get("kind") == kind and item.get("name") == "ReviewOrder"
+                )
+                second_target = next(
+                    item
+                    for item in second["declarations"]
+                    if item.get("kind") == kind and item.get("name") == "ReviewOrder"
+                )
+                self.assertEqual(first_consumer, second_consumer)
+                self.assertEqual(first_target, second_target)
+                self.assertEqual(
+                    {
+                        "kind": "start",
+                        "targetKind": kind,
+                        "targetId": first_target["declarationId"],
+                        "input": {
+                            "kind": "record",
+                            "fields": [
+                                {
+                                    "name": "requestId",
+                                    "value": {
+                                        "kind": "symbol",
+                                        "path": ["event", "eventId"],
+                                    },
+                                }
+                            ],
+                        },
+                    },
+                    first_consumer["effect"],
+                )
+
+    def test_unresolved_consumer_start_target_is_rejected_before_ir(self) -> None:
         source = _VALID_SOURCE.replace(
             "  retry: none\n}",
-            "  retry: none\n  start: workflow ReviewOrder(event.eventId)\n}\n\nworkflow ReviewOrder(eventId: uuid) -> uuid {\n}",
+            "  retry: none\n  start: workflow MissingOrder({ requestId: event.eventId })\n}",
             1,
         )
         diagnostics = self._materialization_diagnostics(source)
         self.assertEqual(1, len(diagnostics))
-        self.assertIn("consumer start", diagnostics[0].message)
+        self.assertIn("start target 'workflow MissingOrder' must resolve uniquely", diagnostics[0].message)
+
+    def test_unprojectable_consumer_start_input_is_rejected_before_ir(self) -> None:
+        source = self._source_with_start("workflow", "event.eventId + 1")
+        diagnostics = self._materialization_diagnostics(source)
+        self.assertEqual(1, len(diagnostics))
+        self.assertIn("start input", diagnostics[0].message)
+        self.assertIn("not losslessly projectable", diagnostics[0].message)
+
+    def test_start_saga_is_rejected_at_normative_grammar_boundary(self) -> None:
+        source = _VALID_SOURCE.replace(
+            "  retry: none\n}",
+            "  retry: none\n  start: saga ReviewOrder({ requestId: event.eventId })\n}",
+            1,
+        ) + """
+
+value ReviewInput {
+  requestId: uuid required
+}
+
+saga ReviewOrder(input: ReviewInput) -> uuid {
+}
+"""
+        diagnostics = self._materialization_diagnostics(source)
+        self.assertEqual(1, len(diagnostics))
+        self.assertIn("start kind 'saga'", diagnostics[0].message)
+        self.assertIn("normative consumer invocationKind grammar", diagnostics[0].message)
 
     def test_start_mutation_is_rejected_without_inventing_semantics(self) -> None:
         diagnostics = self._materialization_diagnostics(
@@ -200,7 +298,8 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             )
         )
         self.assertEqual(1, len(diagnostics))
-        self.assertIn("consumer start", diagnostics[0].message)
+        self.assertIn("start kind 'mutation'", diagnostics[0].message)
+        self.assertIn("no closed Core Canonical IR start target kind", diagnostics[0].message)
 
     def test_call_and_consumer_transaction_are_rejected_at_full_ir_boundary(self) -> None:
         call_diagnostics = self._materialization_diagnostics(
