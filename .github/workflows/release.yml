@@ -13,8 +13,8 @@ permissions:
   contents: read
 
 jobs:
-  release-bundle-dry-run:
-    name: Release Bundle / Dry Run
+  release-bundle:
+    name: Release Bundle / Verify
     runs-on: ubuntu-24.04
     steps:
       - name: Check out exact release source
@@ -53,6 +53,35 @@ jobs:
       - name: Upload deterministic release bundle
         uses: actions/upload-artifact@v4
         with:
-          name: aidl-toolchain-0.0.0-release-bundle
+          name: aidl-toolchain-0.1.0rc1-release-bundle
           path: release-dist/
           if-no-files-found: error
+
+  publish-github-prerelease:
+    name: Release Bundle / Publish GitHub Prerelease
+    needs: release-bundle
+    if: github.ref_type == 'tag' && github.ref_name == 'aidl-toolchain-v0.1.0rc1'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download verified deterministic bundle
+        uses: actions/download-artifact@v4
+        with:
+          name: aidl-toolchain-0.1.0rc1-release-bundle
+          path: release-dist
+
+      - name: Publish exact tagged prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "$GITHUB_REF_NAME" \
+            release-dist/aidl-toolchain-0.1.0rc1-release.tar.gz \
+            release-dist/aidl-toolchain-0.1.0rc1-release.tar.gz.sha256 \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --prerelease \
+            --title "AIDL Toolchain 0.1.0rc1" \
+            --notes-file release-dist/aidl-toolchain-0.1.0rc1-release/aidl-toolchain-0.1.0rc1-release-notes.md

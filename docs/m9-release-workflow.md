@@ -1,87 +1,49 @@
-# M9-05 reproducible release workflow
+# M9-08 scoped toolchain pre-release workflow
 
-M9-05 defines a deterministic, read-only release-bundle workflow on top of the
-M9-04 installable `aidl-toolchain` wheel. It does not publish a GitHub Release,
-create or move tags, or enable branch protection.
+M9-08 promotes the deterministic M9-05 bundle into the first explicitly scoped public toolchain pre-release. It does not create or move tags from pull requests, does not claim native `main` protection is enforced, and does not widen language-profile support.
 
-## Version and tag contract
+## Version, tag, and publication contract
 
-`release/release.json` is the versioned release control record. For schema
-version 1 it must contain exactly:
+`release/release.json` remains the release control record. Schema version 1 now requires:
 
 - distribution `aidl-toolchain`;
-- the same version as `[project].version` in `pyproject.toml`;
-- tag `aidl-toolchain-v<version>`;
-- versioned release-notes source `CHANGELOG.md`;
-- contract inventory source `spec/*.json`;
-- publication state `disabled`.
+- PEP 440 pre-release version `0.1.0rc1`, matching `[project].version` in `pyproject.toml`;
+- exact tag `aidl-toolchain-v0.1.0rc1` (`<distribution>-v<version>`);
+- `CHANGELOG.md` as the committed notes authority;
+- tracked root `spec/*.json` files as the contract inventory;
+- publication state `github-prerelease-on-tag`.
 
-The current `0.0.0` value remains a non-published toolchain baseline. M9-05
-makes that baseline reproducible; the later pre-release publication item owns a
-future version bump, tag creation, publication enablement, and public release.
-A tag-triggered dry run is accepted only when the actual tag exactly matches the
-configured distribution/version pair.
+A non-pre-release package version, mismatched package version, mismatched configured tag, or mismatched actual tag fails contract validation. Pull requests and manual workflow runs can build and validate but cannot publish.
 
-`CHANGELOG.md` must contain the exact heading
-`## <version> — unreleased toolchain baseline`. Release notes are copied byte for
-byte from that committed source, so notes cannot be synthesized from mutable PR
-or API state.
+## Scoped release notes
+
+The current notes section is headed exactly `## 0.1.0rc1 — scoped toolchain pre-release`. `tools.release_bundle` extracts only that section, ending before the next level-two changelog heading. Historical changelog sections therefore cannot silently broaden the public release notes.
+
+The notes promise only surfaces whose `spec/conformance-manifest.json` status is `implemented`, within each surface's bounded support statement. Every profile currently marked `partial` or `specified` is named as an explicit non-claim; IntelliJ remains partial and LSP experimental. Tests derive the non-implemented profile set from the conformance manifest so a future profile/status change cannot silently drift from release-note scope.
 
 ## Deterministic release set
 
-`python3 -m tools.release_bundle reproduce --output release-dist` builds the
-release twice from the same checked-out commit and rejects any byte difference.
-The build derives `SOURCE_DATE_EPOCH` from the source commit timestamp and fixes
-`PYTHONHASHSEED=0`; the wheel is built with the exact M9-04 setuptools/wheel
-backend pins and no build isolation.
+`python3 -m tools.release_bundle reproduce --output release-dist` builds twice from the same checked-out commit and rejects any file-set or byte difference. `SOURCE_DATE_EPOCH` comes from the source commit; `PYTHONHASHSEED=0`; the wheel uses the pinned M9-04 build backend without build isolation.
 
-The output contains exactly:
+The output contains the versioned wheel, the scoped release-notes section, every tracked root `spec/*.json` contract, a manifest with source/tag/version/publication identity and SHA-256 values, `SHA256SUMS`, a deterministic normalized `.tar.gz`, and its sibling SHA-256 file. Validation rejects missing/additional artifacts, contract inventory drift, manifest/checksum drift, archive drift, or scoped-note drift.
 
-- directory `aidl-toolchain-<version>-release/`;
-- `aidl_toolchain-<version>-py3-none-any.whl`;
-- `contracts/<original-name>.json` for every tracked root `spec/*.json` file,
-  sorted deterministically and with no hand-maintained allowlist;
-- `aidl-toolchain-<version>-release-notes.md` copied from `CHANGELOG.md`;
-- `aidl-toolchain-<version>-release-manifest.json` recording source commit,
-  source epoch, tag/version identity, wheel checksum, release-notes checksum,
-  and every source/release contract path plus SHA-256;
-- `SHA256SUMS` over every staged component except itself;
-- deterministic `aidl-toolchain-<version>-release.tar.gz` with normalized
-  ownership, modes, ordering, timestamps and gzip header;
-- sibling `.tar.gz.sha256` checksum.
+## CI and publication semantics
 
-Validation rejects missing or additional root/stage artifacts, contract-set
-mismatch, manifest drift, checksum drift, archive-member drift, wrong
-version/tag identity, and any byte mismatch across the two independent builds.
-A newly committed `spec/*.json` file is automatically required in the release
-set; deleting one removes it from the source-of-truth inventory.
+`.github/workflows/release.yml` runs for pull requests to `main`, matching `aidl-toolchain-v*` tags, and manual dispatch. The `release-bundle` job has only repository-level `contents: read`, checks out the exact source SHA, validates the contract (binding `GITHUB_REF_NAME` when the event is a tag), reproduces the bundle, and uploads it as an Actions artifact.
 
-## CI dry run
+A second `publish-github-prerelease` job runs only after that verified build succeeds and only when both conditions are true:
 
-`.github/workflows/release.yml` runs `Release Bundle / Dry Run` for pull requests
-to `main`, matching release tags, and manual dispatches. It checks out the exact
-PR head or tag commit with full history, installs only the pinned M9-04 build
-backend, verifies the release contract, reproduces the bundle twice, and uploads
-the resulting deterministic directory as an Actions artifact.
+- `github.ref_type == 'tag'`;
+- `github.ref_name == 'aidl-toolchain-v0.1.0rc1'`.
 
-The workflow has only `contents: read`. A tag run therefore proves that a tagged
-commit can reproduce the exact bundle without publishing it. Actual GitHub
-Release creation, public artifact publication, provenance/attestation policy,
-and the first scoped pre-release remain later M9 work.
+Only that job receives `contents: write`. It downloads the already verified bundle and runs `gh release create` with `--verify-tag` and `--prerelease`, attaching the deterministic archive/checksum and using the scoped notes file. A PR head, manual run, branch push, or differently named tag cannot reach public publication.
 
-## Focused regression coverage
+## First publication sequence
 
-`tools/test_release_bundle.py` is discovered by the existing M9-01 Python test
-selector. It covers wrong package version, wrong tag, deterministic automatic
-contract inventory, missing release files, unexpected artifacts, and
-non-reproducible bytes. The full Actions dry run additionally proves the real
-wheel, complete current JSON-contract set, release manifest, archive and
-checksums from the project head.
+No tag or GitHub Release existed when M9-08 was implemented. The feature branch must merge through a green PR first. After integration, the precise publication step is to create and push annotated or lightweight tag `aidl-toolchain-v0.1.0rc1` pointing at the integrated `main` commit that contains this release contract. The tag-triggered workflow then rebuilds that exact commit and, only after verification succeeds, creates the GitHub pre-release.
+
+Do not tag or publish an unreviewed feature head.
 
 ## Scope boundary
 
-M9-05 changes release construction only. Existing Validation, Compatibility,
-Golden Fixtures, Petstore Runtime/PostgreSQL, IntelliJ, packaging smoke and
-`.ai/**` boundary checks remain unchanged. Branch protection, contribution and
-security/support/provenance documentation, and actual public pre-release
-publication remain separate open roadmap items.
+M9-08 changes the release version/tag/publication contract, scoped notes, deterministic bundle behavior, publication workflow, and matching support/conformance/roadmap documentation. M9-06 remains an administrative blocker and is not completed by this workflow. No Ruleset administration, signatures/attestations, SBOM, transparency log, or unsupported-profile stability promise is introduced.

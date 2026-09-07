@@ -107,8 +107,8 @@
       "id": "release.bundle",
       "kind": "release",
       "status": "implemented",
-      "summary": "M9-05 deterministic release-bundle dry run with manifest and checksums; publication remains disabled.",
-      "supportStatement": "The reproducible release bundle is implemented as a dry run with manifest, SHA-256 checksums, tracked contracts, and publication disabled.",
+      "summary": "M9-08 deterministic scoped prerelease bundle with exact-tag-only GitHub prerelease publication after verification.",
+      "supportStatement": "The reproducible scoped prerelease bundle is implemented with manifest, SHA-256 checksums, tracked contracts, scoped notes, and public GitHub prerelease publication gated to the verified exact configured tag.",
       "evidence": [
         {"path": "release/release.json", "type": "release-contract"},
         {"path": "docs/m9-release-workflow.md", "type": "documentation"},
