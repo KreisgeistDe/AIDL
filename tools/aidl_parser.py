@@ -611,13 +611,61 @@ class Parser:
         node = Node("enum", name=name.value if name else None, span=start.start)
         if self.match_symbol("{"):
             cases: list[str] = []
-            while not self.check_kind("EOF") and not self.match_symbol("}"):
-                if self.current.kind in {"IDENT", "KEYWORD"}:
-                    cases.append(self.advance().value)
-                else:
+            enum_cases: list[dict[str, Any]] = []
+            after_comma = False
+            while not self.check_kind("EOF"):
+                self.skip_newlines()
+                if self.current.value == "}":
+                    if after_comma:
+                        enum_cases.append({"raw": ",", "malformed": True})
                     self.advance()
+                    node.end = self.previous.end
+                    break
+
+                entry_tokens: list[Token] = []
+                while (
+                    not self.check_kind("EOF")
+                    and not self.check_kind("NEWLINE")
+                    and self.current.value not in {",", "}"}
+                ):
+                    entry_tokens.append(self.advance())
+
+                raw = join_tokens(token.value for token in entry_tokens).strip()
+                entry: dict[str, Any] = {"raw": raw}
+                if entry_tokens and entry_tokens[0].kind in {"IDENT", "KEYWORD"}:
+                    entry["name"] = entry_tokens[0].value
+                    cases.append(entry_tokens[0].value)
+                if len(entry_tokens) == 1 and "name" in entry:
+                    entry["assignedValue"] = None
+                    entry["malformed"] = False
+                elif (
+                    len(entry_tokens) == 3
+                    and "name" in entry
+                    and entry_tokens[1].value == "="
+                    and entry_tokens[2].kind == "STRING"
+                ):
+                    entry["assignedValue"] = entry_tokens[2].value
+                    entry["malformed"] = False
+                else:
+                    entry["malformed"] = True
+                if raw or entry.get("malformed"):
+                    enum_cases.append(entry)
+
+                if self.match_symbol(","):
+                    after_comma = True
+                    continue
+                after_comma = False
+                if self.check_kind("NEWLINE"):
+                    self.advance()
+                    continue
+                if self.current.value == "}":
+                    continue
+                if self.check_kind("EOF"):
+                    break
             node.attrs["cases"] = cases
-            node.end = self.previous.end
+            node.attrs["enumCases"] = enum_cases
+            if node.end is None:
+                node.end = self.current.end
         return node
 
     def parse_type_like(self, kind: str, start: Token) -> Node:

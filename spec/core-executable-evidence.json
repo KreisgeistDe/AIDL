@@ -34,6 +34,7 @@
       "tools/test_core_app_ir_semantics.py",
       "tools/test_core_consumer_binding_semantics.py",
       "tools/test_core_consumer_execution_contract.py",
+      "tools/test_core_enum_ir_semantics.py",
       "tools/test_core_event_ir_semantics.py",
       "tools/test_core_topic_materialization_contract.py",
       "tools/test_m5_fixture_corpus.py"
