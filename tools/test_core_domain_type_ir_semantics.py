@@ -126,10 +126,8 @@ export value SnapshotCollections {
         analysis = self._analysis(
             """
 
-export value BrokenCollections {
-  badSet: set<string, int>
-  badMap: map<[string], int>
-}
+export alias BrokenSet = set<string, int>
+export alias BrokenMap = map<[string], int>
 """
         )
         type_diagnostics = [
