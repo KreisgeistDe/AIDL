@@ -38,6 +38,9 @@ export value SnapshotValueContract {
   generatedToken: uuid generated
   labels: set<string>
   lookup: map<string, uuid?>
+  optionalSecret: string? sensitive
+  requiredLabels: set<string> required
+  nestedLookup: map<string, set<uuid?>?>? generated
 }
 """
         )
@@ -68,7 +71,18 @@ export value SnapshotValueContract {
 
         self.assertEqual(value, second_value)
         self.assertEqual(
-            ["label", "optionalLabel", "sensitiveLabel", "mutableCount", "generatedToken", "labels", "lookup"],
+            [
+                "label",
+                "optionalLabel",
+                "sensitiveLabel",
+                "mutableCount",
+                "generatedToken",
+                "labels",
+                "lookup",
+                "optionalSecret",
+                "requiredLabels",
+                "nestedLookup",
+            ],
             [field["name"] for field in value["fields"]],
         )
 
@@ -102,6 +116,49 @@ export value SnapshotValueContract {
         self.assertTrue(value["fields"][6]["required"])
         self.assertEqual((), self._schema_errors(first))
 
+    def test_value_type_and_modifier_combinations_are_split_without_losing_semantics(self) -> None:
+        value = self._declaration(self._ir(), "SnapshotValueContract")
+        fields = {field["name"]: field for field in value["fields"]}
+
+        optional_secret = fields["optionalSecret"]
+        self.assertEqual(
+            {"kind": "nullable", "element": {"kind": "scalar", "name": "string"}},
+            optional_secret["type"],
+        )
+        self.assertFalse(optional_secret["required"])
+        self.assertTrue(optional_secret["sensitive"])
+
+        required_labels = fields["requiredLabels"]
+        self.assertEqual(
+            {"kind": "set", "element": {"kind": "scalar", "name": "string"}},
+            required_labels["type"],
+        )
+        self.assertTrue(required_labels["required"])
+
+        nested_lookup = fields["nestedLookup"]
+        self.assertEqual(
+            {
+                "kind": "nullable",
+                "element": {
+                    "kind": "map",
+                    "key": {"kind": "scalar", "name": "string"},
+                    "value": {
+                        "kind": "nullable",
+                        "element": {
+                            "kind": "set",
+                            "element": {
+                                "kind": "nullable",
+                                "element": {"kind": "scalar", "name": "uuid"},
+                            },
+                        },
+                    },
+                },
+            },
+            nested_lookup["type"],
+        )
+        self.assertFalse(nested_lookup["required"])
+        self.assertTrue(nested_lookup["generated"])
+
     def test_closed_ir_schema_rejects_missing_or_malformed_value_field_contract(self) -> None:
         base = self._ir()
 
@@ -110,15 +167,15 @@ export value SnapshotValueContract {
         self.assertTrue(self._schema_errors(missing_required))
 
         malformed_sensitive = copy.deepcopy(base)
-        self._declaration(malformed_sensitive, "SnapshotValueContract")["fields"][2]["sensitive"] = "yes"
+        self._declaration(malformed_sensitive, "SnapshotValueContract")["fields"][7]["sensitive"] = "yes"
         self.assertTrue(self._schema_errors(malformed_sensitive))
 
         missing_type = copy.deepcopy(base)
-        del self._declaration(missing_type, "SnapshotValueContract")["fields"][3]["type"]
+        del self._declaration(missing_type, "SnapshotValueContract")["fields"][8]["type"]
         self.assertTrue(self._schema_errors(missing_type))
 
         malformed_type = copy.deepcopy(base)
-        self._declaration(malformed_type, "SnapshotValueContract")["fields"][5]["type"] = {"kind": "set"}
+        self._declaration(malformed_type, "SnapshotValueContract")["fields"][9]["type"] = {"kind": "map"}
         self.assertTrue(self._schema_errors(malformed_type))
 
 
