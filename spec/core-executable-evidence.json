@@ -11,6 +11,7 @@
       "tools/test_core_api_contract_semantics.py",
       "tools/test_core_app_ir_semantics.py",
       "tools/test_core_consumer_binding_semantics.py",
+      "tools/test_core_consumer_execution_contract.py",
       "tools/test_core_consumer_idempotency_semantics.py",
       "tools/test_core_domain_type_ir_semantics.py",
       "tools/test_core_entity_ownership_semantics.py",
@@ -31,6 +32,7 @@
     "validate-core": [
       "tools/test_core_app_ir_semantics.py",
       "tools/test_core_consumer_binding_semantics.py",
+      "tools/test_core_consumer_execution_contract.py",
       "tools/test_m5_fixture_corpus.py"
     ],
     "validate-types": [

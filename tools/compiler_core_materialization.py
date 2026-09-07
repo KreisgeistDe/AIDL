@@ -1,4 +1,4 @@
-"""Reject Core type semantics that current semantic/IR layers cannot materialize."""
+"""Reject Core semantics that current semantic/IR layers cannot materialize."""
 from __future__ import annotations
 
 import re
@@ -25,6 +25,9 @@ GENERIC_DECLARATION_KINDS = {
     "alias", "opaque", "value", "view", "query", "mutation", "workflow", "saga", "task",
 }
 FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.+)$", re.S)
+_CONSUMER_SERVICE = re.compile(
+    r"^service\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)$"
+)
 
 
 @dataclass(frozen=True)
@@ -251,6 +254,147 @@ def _error_name_issues(project: CompilerProject, item, issues: list[CoreMaterial
                     issues.append(issue)
 
 
+def _list_clause(declaration, key: str) -> tuple[str, ...]:
+    pattern = re.compile(rf"^{re.escape(key)}(?:\s*:\s*|\s+)(\[.*\])$", re.S)
+    for child in declaration.node.children:
+        if not child.name:
+            continue
+        match = pattern.match(child.name.strip())
+        if match:
+            raw = match.group(1).strip()
+            return _split(raw[1:-1])
+    return ()
+
+
+def _service_runs_consumer(project: CompilerProject, service, consumer) -> bool:
+    consumer_identity = _identity(consumer)
+    for entry in _list_clause(service.declaration, "runs"):
+        match = re.fullmatch(r"consumer\s+(.+)", entry.strip(), re.S)
+        if not match:
+            continue
+        resolved = _resolve(project, service, match.group(1).strip())
+        if len(resolved) == 1 and _identity(resolved[0]) == consumer_identity:
+            return True
+    return False
+
+
+def _system_contains_service(project: CompilerProject, service) -> bool:
+    service_identity = _identity(service)
+    for system in project.declaration_names:
+        if system.declaration.kind != "system":
+            continue
+        for reference in _list_clause(system.declaration, "services"):
+            resolved = _resolve(project, system, reference)
+            if len(resolved) == 1 and _identity(resolved[0]) == service_identity:
+                return True
+    return False
+
+
+def _canonical_core_context(project: CompilerProject) -> bool:
+    apps = sum(item.declaration.kind == "app" for item in project.declaration_names)
+    systems = sum(item.declaration.kind == "system" for item in project.declaration_names)
+    return apps == 1 and systems == 1
+
+
+def _consumer_execution_issues(project: CompilerProject, item, issues: list[CoreMaterializationIssue]) -> None:
+    """Close service materialization and block remaining execution clauses from silent loss."""
+    if not _canonical_core_context(project):
+        return
+    event = item.declaration.node.attrs.get("on")
+    topic = item.declaration.node.attrs.get("from")
+    if not isinstance(event, str) or not isinstance(topic, str):
+        return
+
+    for child in item.declaration.node.children:
+        if not child.name or not child.span:
+            continue
+        clause = child.name.strip()
+
+        service_match = _CONSUMER_SERVICE.fullmatch(clause)
+        if service_match:
+            reference = re.sub(r"\s*\.\s*", ".", service_match.group(1))
+            services = tuple(
+                candidate
+                for candidate in _resolve(project, item, reference)
+                if candidate.declaration.kind == "service"
+            )
+            if len(services) != 1:
+                issue = _issue(
+                    item,
+                    f"consumer service '{reference}' must resolve uniquely before Canonical IR materialization; found {len(services)} service declarations",
+                    "one resolved service that runs the consumer and is included by the system",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
+            else:
+                service = services[0]
+                service_name = service.fully_qualified_name or service.declaration.name or reference
+                if not _service_runs_consumer(project, service, item):
+                    issue = _issue(
+                        item,
+                        f"consumer service '{service_name}' does not list consumer '{item.declaration.name or '<unnamed>'}' in its runs clause",
+                        "consumer service binding preserved by the canonical service runs contract",
+                        child.span,
+                    )
+                    if issue:
+                        issues.append(issue)
+                elif not _system_contains_service(project, service):
+                    issue = _issue(
+                        item,
+                        f"consumer service '{service_name}' is not included by the canonical system services clause",
+                        "consumer service binding preserved by a service included in the canonical system",
+                        child.span,
+                    )
+                    if issue:
+                        issues.append(issue)
+            continue
+
+        if re.match(r"^retry(?:\s*:\s*|\s+)", clause) and "none" not in clause:
+            policy = "immediate" if "immediate" in clause else "exponential" if "exponential" in clause else "non-none"
+            issue = _issue(
+                item,
+                f"consumer retry policy '{policy}' is grammatical but is not reliably materialized by the current Core Canonical IR projection",
+                "retry none until non-none consumer retry has verified Canonical IR projection",
+                child.span,
+            )
+            if issue:
+                issues.append(issue)
+            continue
+
+        if re.match(r"^start(?:\s*:\s*|\s+)", clause):
+            issue = _issue(
+                item,
+                "consumer start is grammatical but is not yet accepted by the verified Core Canonical IR materialization boundary",
+                "no consumer start until target resolution and effect projection are executable evidence",
+                child.span,
+            )
+            if issue:
+                issues.append(issue)
+            continue
+
+        if re.match(r"^call(?:\s*:\s*|\s+)", clause):
+            issue = _issue(
+                item,
+                "consumer call is grammatical but its execution contract is not materialized by the closed Core Canonical IR",
+                "no consumer call until its target and execution semantics have a canonical IR representation",
+                child.span,
+            )
+            if issue:
+                issues.append(issue)
+            continue
+
+        if child.kind == "blockClause" and re.match(r"^transaction\s+on\s+", clause):
+            issue = _issue(
+                item,
+                "consumer transaction is grammatical without the isolation required by the normative Core transaction contract and is not materialized by Canonical IR",
+                "no consumer transaction until grammar, isolation semantics, and canonical IR agree",
+                child.span,
+            )
+            if issue:
+                issues.append(issue)
+
+
 def collect_core_materialization_issues(project: CompilerProject) -> tuple[CoreMaterializationIssue, ...]:
     """Return deterministic errors for Core facts that would otherwise be widened or dropped."""
     issues: list[CoreMaterializationIssue] = []
@@ -273,6 +417,8 @@ def collect_core_materialization_issues(project: CompilerProject) -> tuple[CoreM
                 _visit_type(project, item, root, raw, location, issues)
         if declaration.kind in {"query", "mutation"}:
             _error_name_issues(project, item, issues)
+        if declaration.kind == "consumer":
+            _consumer_execution_issues(project, item, issues)
 
     document_order = {document.source_path: index for index, document in enumerate(project.documents)}
     issues.sort(
