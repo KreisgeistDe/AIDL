@@ -16,11 +16,6 @@ STD_TYPES = {
     "Page", "PageInput", "Cursor", "OperationId", "PrincipalId", "SubjectId",
     "FieldError", "FieldErrors", "ProblemDetails", "Unit",
 }
-MATERIALIZED_TYPE_KINDS = {"alias", "opaque", "enum", "value", "entity", "view"}
-SCALARS = {
-    "string", "int", "decimal", "bool", "uuid", "date", "datetime", "duration",
-    "revision", "email", "url", "bytes",
-}
 _SCALAR_INVOCATION = re.compile(
     r"\b(string|int|decimal|bool|uuid|date|datetime|duration|revision|email|url|bytes)\s*\(([^()]*)\)"
 )
@@ -131,15 +126,7 @@ def _constraint_issue(item, raw: str) -> AliasOpaqueMaterializationIssue | None:
 def _visit(project: CompilerProject, item, root: TypeRef, raw: str, issues: list[AliasOpaqueMaterializationIssue]) -> None:
     if root.kind == "entity-id":
         matches = _resolve(project, item, root.name or "")
-        if len(matches) != 1 or matches[0].declaration.kind != "entity":
-            issue = _issue(
-                item,
-                f"entity identity target '{root.name or ''}.id' must resolve uniquely to an entity before Canonical IR materialization",
-                "one resolved entity identity",
-            )
-            if issue:
-                issues.append(issue)
-        else:
+        if len(matches) == 1 and matches[0].declaration.kind == "entity":
             issue = _issue(
                 item,
                 f"entity identity target '{root.name or ''}.id' would lose its source identity because the current Canonical IR projects it as scalar uuid",
@@ -167,24 +154,8 @@ def _visit(project: CompilerProject, item, root: TypeRef, raw: str, issues: list
                 )
                 if issue:
                     issues.append(issue)
-            else:
-                target = matches[0]
-                if target.declaration.kind not in MATERIALIZED_TYPE_KINDS:
-                    issue = _issue(
-                        item,
-                        f"nominal target type '{name}' resolves to unsupported declaration kind '{target.declaration.kind}'",
-                        "alias, opaque, enum, value, entity, view, or explicitly known Core standard type",
-                    )
-                    if issue:
-                        issues.append(issue)
-                elif root.args or target.declaration.node.attrs.get("typeParameters"):
-                    issue = _issue(
-                        item,
-                        f"generic project target type '{name}' is parsed but its type-parameter semantics are not materialized in Canonical IR",
-                        "non-generic project nominal target until generic IR semantics are implemented",
-                    )
-                    if issue:
-                        issues.append(issue)
+            # Resolved wrong-kind and generic project targets are already owned by
+            # the shared Core AIDL-T005 materialization boundary; do not duplicate them here.
     for argument in root.args:
         _visit(project, item, argument, raw, issues)
 
