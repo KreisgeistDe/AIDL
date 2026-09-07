@@ -33,16 +33,12 @@ topic OrderEvents {
 consumer ApplyOrder on OrderApplied from OrderEvents {
   service OrdersService
   idempotency: event.eventId retain 7d
-  retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)
-  start: workflow ReviewOrder(event.eventId)
-}
-
-workflow ReviewOrder(eventId: uuid) -> uuid {
+  retry: none
 }
 
 service OrdersService {
   uses [OrderEvents]
-  runs [consumer ApplyOrder, workflow ReviewOrder]
+  runs [consumer ApplyOrder]
 }
 
 system OrdersSystem {
@@ -74,7 +70,7 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             and diagnostic.subject.kind == "consumer"
         )
 
-    def test_service_retry_and_start_are_preserved_deterministically(self) -> None:
+    def test_service_binding_is_preserved_deterministically(self) -> None:
         first_analysis = self._analysis(_VALID_SOURCE)
         second_analysis = self._analysis(_VALID_SOURCE)
         first_errors = [
@@ -102,11 +98,6 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             for item in second["declarations"]
             if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
         )
-        workflow = next(
-            item
-            for item in first["declarations"]
-            if item.get("kind") == "workflow" and item.get("name") == "ReviewOrder"
-        )
         service = next(
             item
             for item in first["system"]["services"]
@@ -120,18 +111,8 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
 
         self.assertEqual(first_consumer, second_consumer)
         self.assertEqual(service, second_service)
-        self.assertEqual(
-            {
-                "kind": "exponential",
-                "attempts": 8,
-                "initialDelayMs": 1000,
-                "maxDelayMs": 300000,
-            },
-            first_consumer["retry"],
-        )
-        self.assertEqual("start", first_consumer["effect"]["kind"])
-        self.assertEqual("workflow", first_consumer["effect"]["targetKind"])
-        self.assertEqual(workflow["declarationId"], first_consumer["effect"]["targetId"])
+        self.assertEqual({"kind": "none"}, first_consumer["retry"])
+        self.assertIsNone(first_consumer["effect"])
         self.assertIn(first_consumer["declarationId"], service["runs"])
 
     def test_unresolved_consumer_service_is_rejected_before_ir(self) -> None:
@@ -143,60 +124,55 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
 
     def test_consumer_service_must_match_service_runs_contract(self) -> None:
         diagnostics = self._materialization_diagnostics(
-            _VALID_SOURCE.replace(
-                "runs [consumer ApplyOrder, workflow ReviewOrder]",
-                "runs [workflow ReviewOrder]",
-                1,
-            )
+            _VALID_SOURCE.replace("runs [consumer ApplyOrder]", "runs []", 1)
         )
         self.assertEqual(1, len(diagnostics))
         self.assertIn("does not list consumer", diagnostics[0].message)
 
-    def test_exponential_retry_requires_fully_materializable_budget(self) -> None:
+    def test_exponential_retry_is_rejected_until_ir_projection_is_verified(self) -> None:
         diagnostics = self._materialization_diagnostics(
             _VALID_SOURCE.replace(
-                "exponential(initial: 1s, maxDelay: 5m, attempts: 8)",
-                "exponential(initial: 1s, maxDelay: 5m)",
+                "retry: none",
+                "retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)",
                 1,
             )
         )
         self.assertEqual(1, len(diagnostics))
-        self.assertIn("initial, maxDelay, and attempts", diagnostics[0].message)
+        self.assertIn("retry policy 'exponential'", diagnostics[0].message)
 
-    def test_immediate_retry_is_rejected_only_at_full_ir_materialization_boundary(self) -> None:
+    def test_immediate_retry_is_rejected_until_ir_projection_exists(self) -> None:
         diagnostics = self._materialization_diagnostics(
-            _VALID_SOURCE.replace(
-                "exponential(initial: 1s, maxDelay: 5m, attempts: 8)",
-                "immediate(max: 2)",
-                1,
-            )
+            _VALID_SOURCE.replace("retry: none", "retry: immediate(max: 2)", 1)
         )
         self.assertEqual(1, len(diagnostics))
         self.assertIn("retry policy 'immediate'", diagnostics[0].message)
 
-    def test_start_target_must_resolve_before_ir(self) -> None:
-        diagnostics = self._materialization_diagnostics(
-            _VALID_SOURCE.replace("ReviewOrder(event.eventId)", "MissingWorkflow(event.eventId)", 1)
+    def test_start_is_rejected_until_effect_projection_is_verified(self) -> None:
+        source = _VALID_SOURCE.replace(
+            "  retry: none\n}",
+            "  retry: none\n  start: workflow ReviewOrder(event.eventId)\n}\n\nworkflow ReviewOrder(eventId: uuid) -> uuid {\n}",
+            1,
         )
+        diagnostics = self._materialization_diagnostics(source)
         self.assertEqual(1, len(diagnostics))
-        self.assertIn("must resolve uniquely", diagnostics[0].message)
+        self.assertIn("consumer start", diagnostics[0].message)
 
-    def test_start_mutation_is_rejected_without_inventing_ir_semantics(self) -> None:
+    def test_start_mutation_is_rejected_without_inventing_semantics(self) -> None:
         diagnostics = self._materialization_diagnostics(
             _VALID_SOURCE.replace(
-                "start: workflow ReviewOrder(event.eventId)",
-                "start: mutation ApplyOrder(event.eventId)",
+                "  retry: none\n}",
+                "  retry: none\n  start: mutation ApplyOrder(event.eventId)\n}",
                 1,
             )
         )
         self.assertEqual(1, len(diagnostics))
-        self.assertIn("start mutation", diagnostics[0].message)
+        self.assertIn("consumer start", diagnostics[0].message)
 
     def test_call_and_consumer_transaction_are_rejected_at_full_ir_boundary(self) -> None:
         call_diagnostics = self._materialization_diagnostics(
             _VALID_SOURCE.replace(
-                "start: workflow ReviewOrder(event.eventId)",
-                "call: task ReviewOrder(event.eventId)",
+                "  retry: none\n}",
+                "  retry: none\n  call: task ReviewOrder(event.eventId)\n}",
                 1,
             )
         )
@@ -205,8 +181,8 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
 
         transaction_diagnostics = self._materialization_diagnostics(
             _VALID_SOURCE.replace(
-                "start: workflow ReviewOrder(event.eventId)",
-                "transaction on OrdersDb {\n  }",
+                "  retry: none\n}",
+                "  retry: none\n  transaction on OrdersDb {\n  }\n}",
                 1,
             )
         )
