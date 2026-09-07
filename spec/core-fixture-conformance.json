@@ -49,6 +49,8 @@
     "rule.query.side-effect-free",
     "rule.transaction.cross-resource-rejected",
     "rule.transaction.cross-service-rejected",
+    "rule.transaction.outbox-atomic",
+    "rule.transaction.resource-owner",
     "rule.types.int-to-decimal-only"
   ]
 }
