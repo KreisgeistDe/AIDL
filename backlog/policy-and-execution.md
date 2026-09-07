@@ -12,6 +12,12 @@ The offline repository-state check `python3 -m tools.validate_repository_state` 
 
 M10-01 records repository-level support surfaces only. M10-02 provides the exhaustive Parse/Resolve/Validate/IR/Generate/IDE matrix for every Core declaration and semantic rule; incomplete rows or evidence remain explicit in that matrix and must not be interpreted as full layer completeness. Public wording in `SUPPORT.md` is drift-checked against each manifest `supportStatement`.
 
+The language specification is normative design input, not implementation status. Syntax or semantics documented in `docs/` remain **specified** unless conformance authority and executable evidence justify a stronger claim. Likewise, adding or completing M17+ roadmap tasks does not itself change `spec/conformance-manifest.json`, Core/profile conformance status, generator/runtime support, editor support, or release readiness.
+
+M17–M20 separate missing language/compiler/Canonical-IR planning from existing runtime and ecosystem milestones. In particular, M12 remains distributed-runtime authority, M13 offline-runtime authority, M14 media/cloud/realtime runtime and bounded provider authority, and M15 adapter-ecosystem/1.0-readiness authority. Those milestones may consume M17–M20 language contracts but must not redefine them locally. M21 extends conformance certification beyond Core only after applicable language, generator, runtime, compatibility, and editor evidence exists.
+
+M7 remains the semantic compatibility-classification authority. Later evolution work may reconcile specified terminology and add missing evolution facts, but must project through one versioned compatibility authority rather than introducing a second classifier.
+
 A feature should not be described as fully supported until the applicable manifest scope and its required semantic validation, IR representation, and executable evidence justify that claim.
 
 ## Definition of Done for core features
@@ -27,7 +33,11 @@ A core language feature is considered complete when:
 - [ ] generator/runtime behavior is defined if applicable,
 - [ ] IDE support does not require a conflicting interpretation of the language.
 
+For M17+ profile/language surfaces, the same discipline applies with explicit applicability: Parse/Resolve/Validate/IR evidence is required for a supported language-semantic claim; Generate, Runtime, and IDE evidence is additionally required whenever the public support statement includes those layers. A surface may remain specified, experimental, partial, or blocked without pretending every layer is applicable or complete.
+
 ## Recommended execution order
+
+Existing milestone identity and ordering remain unchanged:
 
 1. M9 — Release and quality baseline
 2. M10 — Core conformance closure
@@ -37,8 +47,17 @@ A core language feature is considered complete when:
 6. M14 — Media, cloud, and realtime vertical slice
 7. M15 — Adapter ecosystem and 1.0 readiness
 8. M16 — Agent Construction and Verification
+9. M17 — Extended Type System and Standard Library
+10. M18 — Advanced Backend Language
+11. M19 — Frontend Language
+12. M20 — Distributed, Sync, Resource, Deployment, and Evolution Language Contracts
+13. M21 — Full-Language Conformance Closure
+
+M17+ are appended rather than inserted into or substituted for M12–M16. Scheduling may execute prerequisites earlier when explicitly dispatched, but roadmap identity/order and the ownership boundaries above remain stable.
 
 Do not expand the language surface merely to advance a later milestone. Promote a capability only when its required parser, semantic, IR, fixture, runtime or explicit capability-failure, and editor boundaries can advance coherently.
+
+The specification-to-roadmap mapping in [`spec-roadmap-gap-matrix.md`](spec-roadmap-gap-matrix.md) is a planning aid under this roadmap, not an implementation/support authority.
 
 The next success criterion is intentionally agent-focused:
 
