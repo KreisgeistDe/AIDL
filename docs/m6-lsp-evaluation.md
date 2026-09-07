@@ -41,7 +41,7 @@ Explicitly excluded from the proof:
 
 - formatting, semantic tokens, symbols, dynamic registration, and dynamic `workspaceFolders` ownership mutation;
 - incremental parser semantics, cross-root semantic caches, TCP/WebSocket transports, and daemon management;
-- full protocol preservation of semantic identities, diagnostic identities, document/edit versions, and edit preconditions, which remains M11-05;
+- full protocol preservation of semantic identities, diagnostic identities, document/edit versions, and edit preconditions, which remains M11.8;
 - M7 semantic diffing and every M8 `inspect`/`dependencies`/`explain` feature as LSP methods.
 
 M11-01 provides `tools.compiler_snapshot`; M11-02 adds `tools.compiler_workspace`; M11-03 adds `tools.compiler_incremental`; M11-04 adds compiler-owned snapshot usage/rename/authorized-fix planning. Together they keep exact source text, workspace ownership, immutable semantic snapshots, cache reuse, invalidation, and edit authority inside compiler-owned APIs. See `docs/m11-compiler-snapshots.md`, `docs/m11-workspace-ownership.md`, `docs/m11-incremental-lsp-state.md`, and `docs/m11-lsp-semantic-capabilities.md`.
@@ -83,7 +83,7 @@ A future production server may adopt a maintained LSP protocol library after the
 
 Proceed with an LSP only as a reusable adapter package around the compiler semantic core. M11-01 through M11-04 now cover unsaved buffers, multi-root ownership, incremental state, and the existing compiler-owned editor semantics. Remaining production work includes:
 
-1. preserve compiler diagnostic codes, semantic identities, and edit preconditions explicitly across protocol mapping;
+1. preserve compiler diagnostic codes, semantic identities, and edit preconditions explicitly across protocol mapping (M11.8);
 2. choose and pin an LSP protocol dependency only if it materially reduces protocol-maintenance risk;
 3. add editor smoke configurations/tests for representative clients after the server contract is stable;
 4. establish controlled latency/memory benchmarks before publishing production performance promises.
