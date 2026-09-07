@@ -34,6 +34,15 @@ _CONSUMER_EXPONENTIAL_RETRY = re.compile(
     r"maxDelay\s*:\s*([1-9][0-9]*(?:ms|s|m|h|d))\s*,\s*"
     r"attempts\s*:\s*([1-9][0-9]*)\s*\)$"
 )
+_CONSUMER_START = re.compile(
+    r"^start(?:\s*:\s*|\s+)(workflow|task|saga|mutation)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)\s*"
+    r"\((.*)\)$",
+    re.S,
+)
+_SYMBOL_EXPRESSION = re.compile(
+    r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*$"
+)
 
 
 @dataclass(frozen=True)
@@ -109,7 +118,7 @@ def _split(text: str) -> tuple[str, ...]:
         elif char in "([{<":
             stack.append(char)
             buffer.append(char)
-        elif char in ")]}>":
+        elif char in ")]}>" :
             if stack and stack[-1] == close[char]:
                 stack.pop()
             buffer.append(char)
@@ -124,6 +133,29 @@ def _split(text: str) -> tuple[str, ...]:
     if part:
         parts.append(part)
     return tuple(parts)
+
+
+def _consumer_start_input_projectable(raw: str) -> bool:
+    raw = raw.strip()
+    if raw in {"null", "true", "false"}:
+        return True
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return True
+    if len(raw) > 1 and raw[0] == raw[-1] == '"':
+        return True
+    if _SYMBOL_EXPRESSION.fullmatch(raw):
+        return True
+    if raw.startswith("{") and raw.endswith("}"):
+        for part in _split(raw[1:-1]):
+            if ":" not in part:
+                return False
+            key, value = part.split(":", 1)
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", key.strip()):
+                return False
+            if not _consumer_start_input_projectable(value):
+                return False
+        return True
+    return False
 
 
 def _normalize_type_spacing(text: str) -> str:
@@ -146,7 +178,7 @@ def _take_type(tail: str) -> tuple[str, str]:
     for index, char in enumerate(tail):
         if char in "([<":
             stack.append(char)
-        elif char in ")]>":
+        elif char in ")]>" :
             if stack and stack[-1] == close[char]:
                 stack.pop()
         elif char.isspace() and not stack:
@@ -371,14 +403,67 @@ def _consumer_execution_issues(project: CompilerProject, item, issues: list[Core
             continue
 
         if re.match(r"^start(?:\s*:\s*|\s+)", clause):
-            issue = _issue(
-                item,
-                "consumer start is grammatical but is not yet accepted by the verified Core Canonical IR materialization boundary",
-                "no consumer start until target resolution and effect projection are executable evidence",
-                child.span,
+            start_match = _CONSUMER_START.fullmatch(clause)
+            if not start_match:
+                issue = _issue(
+                    item,
+                    "consumer start does not match the verified single-target invocation shape",
+                    "start: workflow|task TARGET(INPUT) with one projectable input value",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
+                continue
+
+            target_kind, raw_reference, raw_arguments = start_match.groups()
+            reference = re.sub(r"\s*\.\s*", ".", raw_reference)
+            if target_kind == "saga":
+                issue = _issue(
+                    item,
+                    "consumer start kind 'saga' has Canonical IR representation but is not part of the normative consumer invocationKind grammar",
+                    "workflow or task consumer start until normative grammar includes saga",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
+                continue
+            if target_kind == "mutation":
+                issue = _issue(
+                    item,
+                    "consumer start kind 'mutation' is grammatical but has no closed Core Canonical IR start target kind",
+                    "workflow or task consumer start",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
+                continue
+
+            arguments = _split(raw_arguments)
+            if len(arguments) != 1 or not _consumer_start_input_projectable(arguments[0]):
+                issue = _issue(
+                    item,
+                    "consumer start input is grammatical but is not losslessly projectable by the current Canonical IR value-expression subset",
+                    "one literal, symbol path, or recursively composed record literal input",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
+                continue
+
+            targets = tuple(
+                candidate
+                for candidate in _resolve(project, item, reference)
+                if candidate.declaration.kind == target_kind
             )
-            if issue:
-                issues.append(issue)
+            if len(targets) != 1:
+                issue = _issue(
+                    item,
+                    f"consumer start target '{target_kind} {reference}' must resolve uniquely before Canonical IR materialization; found {len(targets)} {target_kind} declarations",
+                    f"exactly one resolved {target_kind} target",
+                    child.span,
+                )
+                if issue:
+                    issues.append(issue)
             continue
 
         if re.match(r"^call(?:\s*:\s*|\s+)", clause):
