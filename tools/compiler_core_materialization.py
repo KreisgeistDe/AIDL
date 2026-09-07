@@ -28,6 +28,12 @@ FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.+)$", re.S)
 _CONSUMER_SERVICE = re.compile(
     r"^service\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)$"
 )
+_CONSUMER_EXPONENTIAL_RETRY = re.compile(
+    r"^retry(?:\s*:\s*|\s+)exponential\s*\(\s*"
+    r"initial\s*:\s*([1-9][0-9]*(?:ms|s|m|h|d))\s*,\s*"
+    r"maxDelay\s*:\s*([1-9][0-9]*(?:ms|s|m|h|d))\s*,\s*"
+    r"attempts\s*:\s*([1-9][0-9]*)\s*\)$"
+)
 
 
 @dataclass(frozen=True)
@@ -297,7 +303,7 @@ def _canonical_core_context(project: CompilerProject) -> bool:
 
 
 def _consumer_execution_issues(project: CompilerProject, item, issues: list[CoreMaterializationIssue]) -> None:
-    """Close service materialization and block remaining execution clauses from silent loss."""
+    """Close proven consumer materialization and block remaining execution clauses from silent loss."""
     if not _canonical_core_context(project):
         return
     event = item.declaration.node.attrs.get("on")
@@ -351,11 +357,13 @@ def _consumer_execution_issues(project: CompilerProject, item, issues: list[Core
             continue
 
         if re.match(r"^retry(?:\s*:\s*|\s+)", clause) and "none" not in clause:
+            if _CONSUMER_EXPONENTIAL_RETRY.fullmatch(clause):
+                continue
             policy = "immediate" if "immediate" in clause else "exponential" if "exponential" in clause else "non-none"
             issue = _issue(
                 item,
-                f"consumer retry policy '{policy}' is grammatical but is not reliably materialized by the current Core Canonical IR projection",
-                "retry none until non-none consumer retry has verified Canonical IR projection",
+                f"consumer retry policy '{policy}' is not materializable by the closed Core Canonical IR contract",
+                "retry none or exponential(initial: DURATION, maxDelay: DURATION, attempts: POSITIVE_INT)",
                 child.span,
             )
             if issue:
