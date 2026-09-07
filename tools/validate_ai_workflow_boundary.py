@@ -4,13 +4,6 @@ import sys
 from dataclasses import dataclass
 from typing import Iterable
 
-AUTHORIZED_LEGACY_DELETIONS = {
-    ".ai/BACKLOG.md",
-    ".ai/CONTEXT.md",
-    ".ai/HANDOFF.md",
-    ".ai/TASK.md",
-}
-
 
 @dataclass(frozen=True)
 class NameStatusRecord:
@@ -58,13 +51,6 @@ def parse_name_status_z(raw: bytes) -> tuple[NameStatusRecord, ...]:
 def violations(records: Iterable[NameStatusRecord]) -> tuple[str, ...]:
     errors: list[str] = []
     for record in records:
-        status_kind = record.status[:1]
-        if status_kind == "D" and len(record.paths) == 1:
-            path = record.paths[0]
-            if _is_ai_path(path) and path not in AUTHORIZED_LEGACY_DELETIONS:
-                errors.append(f"unauthorized .ai deletion: {record.status} {path}")
-            continue
-
         ai_endpoints = [path for path in record.paths if _is_ai_path(path)]
         if ai_endpoints:
             rendered = " -> ".join(record.paths)

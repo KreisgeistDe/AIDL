@@ -11,22 +11,22 @@ Goal: turn the repository toolchain into a reproducible, installable, and protec
 - [x] **P1** Add a reproducible release workflow for CLI artifacts, JSON schemas, checksums, and release notes. *(M9-05 adds a versioned tag/version contract, deterministic same-commit double-build certification, complete tracked `spec/*.json` contract bundling, machine-readable release manifest, SHA-256 component/archive checksums, committed changelog-derived notes, and a read-only Actions dry run with publication disabled.)*
 - [ ] **P1** **M9-06** Protect `main` with required validation, compatibility, fixture, runtime, IntelliJ, and `.ai/**` boundary checks. *(The project-side required-check contract and deterministic drift validation are defined in `spec/m9-main-protection.json` and `docs/m9-main-protection.md`; completion still requires the active GitHub repository ruleset to require every contracted status check.)*
 - [x] **P2** Add contribution, security-reporting, support-status, and artifact provenance documentation. *(M9-07 adds repository-level contribution and security policies, an evidence-bounded support matrix, and provenance/integrity documentation tied exactly to the M9-05 deterministic bundle, manifest, checksums, source commit and dry-run workflow without claiming publication, signatures, SBOMs, attestations, or branch protection.)*
-- [x] **P1** **M9-08** Publish the first explicitly scoped toolchain pre-release without implying stability for unsupported language profiles. *(M9-08 defines `aidl-toolchain` `0.1.0rc1` / `aidl-toolchain-v0.1.0rc1`, extracts only scoped conformance-bounded notes, keeps PR builds read-only, and permits GitHub pre-release publication only after a verified exact-tag build; actual tag creation/publication is intentionally deferred until this green PR is integrated.)*
+- [ ] **P1** **M9-08** Publish the first explicitly scoped toolchain pre-release without implying stability for unsupported language profiles. *(The M9-08 implementation defines `aidl-toolchain` `0.1.0rc1` / `aidl-toolchain-v0.1.0rc1`, extracts only scoped conformance-bounded notes, keeps PR builds read-only, and permits GitHub pre-release publication only after a verified exact-tag build; actual tag creation and public publication remain externally blocked, so publication is not complete.)*
 
 ### M9-09 — Roadmap and Agent State Consistency
 
-- [ ] **P1** Make `TODO.md` the sole handwritten authority for roadmap order, milestone identity, and completion state; keep conformance manifests as the separate authority for implementation/support claims.
-- [ ] **P1** Eliminate independently maintained durable project `.ai/**` milestone/current-state documents, or derive any retained committed projection deterministically from the authoritative roadmap instead of maintaining a second handwritten roadmap.
-- [ ] **P1** Add deterministic offline CI validation for any committed project `.ai/**` current-state exposure so lagging, contradictory, or independently edited agent-facing milestone state is rejected without network access.
-- [ ] **P1** Reconcile legacy `BACKLOG`, `TASK`, `HANDOFF`, and applicable `CONTEXT` current-state content against `TODO.md` before it is frozen, removed, or replaced by deterministic generation.
-- [ ] **P1** Define the policy-safe maintenance path for that reconciliation or migration while preserving the rule that ordinary project PRs targeting `main` must continue to reject every `.ai/**` mutation.
+- [x] **P1** Make `TODO.md` the sole handwritten authority for roadmap order, milestone identity, and completion state; keep conformance manifests as the separate authority for implementation/support claims. *(The roadmap policy now states this split explicitly, and the offline repository-state validator checks both authority markers.)*
+- [x] **P1** Eliminate independently maintained durable project `.ai/**` milestone/current-state documents, or derive any retained committed projection deterministically from the authoritative roadmap instead of maintaining a second handwritten roadmap. *(The split-repository migration is already complete: the project tree contains no `.ai/**`; operational state lives only in `AIDL_channel@agents/channel`.)*
+- [x] **P1** Add deterministic offline CI validation for any committed project `.ai/**` current-state exposure so lagging, contradictory, or independently edited agent-facing milestone state is rejected without network access. *(`python3 -m tools.validate_repository_state` rejects tracked `.ai/**` paths and missing roadmap/channel/conformance authority markers, and standard Validation CI runs it without network access.)*
+- [x] **P1** Reconcile legacy `BACKLOG`, `TASK`, `HANDOFF`, and applicable `CONTEXT` current-state content against `TODO.md` before it is frozen, removed, or replaced by deterministic generation. *(This migration point is obsolete rather than pending: those legacy project files have already been removed, no project `.ai/**` projection remains to reconcile, and the boundary validator no longer carries deletion exceptions for them.)*
+- [x] **P1** Define the policy-safe maintenance path for that reconciliation or migration while preserving the rule that ordinary project PRs targeting `main` must continue to reject every `.ai/**` mutation. *(Project PRs now reject every `.ai/**` endpoint, including deletions and renames; operational or transport-workflow maintenance belongs only in `KreisgeistDe/AIDL_channel@agents/channel`.)*
 
 #### M9-09 acceptance criteria
 
-- [ ] `TODO.md` is the sole handwritten roadmap, milestone, and completion authority.
-- [ ] No committed agent-facing current-state projection lags or contradicts the authoritative roadmap.
-- [ ] Conformance manifests remain the separate implementation/support-claim authority and are not derived from roadmap completion state.
-- [ ] Roadmap/agent-state consistency validation is deterministic and offline.
+- [x] `TODO.md` is the sole handwritten roadmap, milestone, and completion authority.
+- [x] No committed agent-facing current-state projection lags or contradicts the authoritative roadmap.
+- [x] Conformance manifests remain the separate implementation/support-claim authority and are not derived from roadmap completion state.
+- [x] Roadmap/agent-state consistency validation is deterministic and offline.
 
 ### M9 acceptance criteria
 

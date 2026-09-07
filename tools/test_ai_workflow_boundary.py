@@ -2,11 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from tools.validate_ai_workflow_boundary import (
-    AUTHORIZED_LEGACY_DELETIONS,
-    parse_name_status_z,
-    violations,
-)
+from tools.validate_ai_workflow_boundary import parse_name_status_z, violations
 
 
 def _record(*fields: str) -> bytes:
@@ -14,17 +10,25 @@ def _record(*fields: str) -> bytes:
 
 
 class AiWorkflowBoundaryTests(unittest.TestCase):
-    def test_all_four_legacy_deletions_are_allowed(self) -> None:
-        raw = b"".join(_record("D", path) for path in sorted(AUTHORIZED_LEGACY_DELETIONS))
-        self.assertEqual(violations(parse_name_status_z(raw)), ())
+    def test_legacy_ai_deletions_are_rejected_after_split_repo_migration(self) -> None:
+        for path in (
+            ".ai/BACKLOG.md",
+            ".ai/CONTEXT.md",
+            ".ai/HANDOFF.md",
+            ".ai/TASK.md",
+        ):
+            with self.subTest(path=path):
+                errors = violations(parse_name_status_z(_record("D", path)))
+                self.assertEqual(len(errors), 1)
+                self.assertIn("unauthorized .ai mutation", errors[0])
 
     def test_unrelated_non_ai_change_is_allowed(self) -> None:
         self.assertEqual(violations(parse_name_status_z(_record("M", "README.md"))), ())
 
-    def test_unauthorized_ai_deletion_is_rejected(self) -> None:
+    def test_arbitrary_ai_deletion_is_rejected(self) -> None:
         errors = violations(parse_name_status_z(_record("D", ".ai/other.json")))
         self.assertEqual(len(errors), 1)
-        self.assertIn("unauthorized .ai deletion", errors[0])
+        self.assertIn("unauthorized .ai mutation", errors[0])
 
     def test_rename_from_non_ai_into_ai_is_rejected(self) -> None:
         errors = violations(

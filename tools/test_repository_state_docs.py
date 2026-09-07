@@ -11,6 +11,7 @@ from pathlib import Path
 from tools.aidl_cli import _parser
 from tools.cli_output_schema import CLI_OUTPUT_SCHEMA_ID, CLI_OUTPUT_SCHEMA_VERSION
 from tools.ir_version import CURRENT_IR_VERSION, IrVersion
+from tools.validate_repository_state import violations as repository_state_violations
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,6 +131,14 @@ class RepositoryStateDocumentationTest(unittest.TestCase):
         self.assertIn("## Installation aus einem Checkout", readme)
         self.assertIn("| Installierbares CLI-/Compiler-Artefakt |", coverage)
         self.assertNotIn("- installierbares CLI-/Compiler-Artefakt und Clean-Machine-Installation;", coverage)
+
+    def test_roadmap_and_agent_state_authority_is_offline_valid(self) -> None:
+        self.assertEqual(repository_state_violations(ROOT), ())
+
+    def test_repository_state_validator_rejects_project_ai_paths(self) -> None:
+        errors = repository_state_violations(ROOT, paths=("README.md", ".ai/TASK.md"))
+        self.assertEqual(len(errors), 1)
+        self.assertIn("project must not track .ai/** paths", errors[0])
 
 
 if __name__ == "__main__":
