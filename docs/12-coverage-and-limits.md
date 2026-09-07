@@ -42,11 +42,13 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 <!-- BEGIN GENERATED: core-supported-coverage -->
 | Core Supported feature | Category | Parse | Resolve | Validate | Ir |
 |---|---|---|---|---|---|
+| `decl.alias` | declaration | implemented | implemented | implemented | implemented |
 | `decl.api` | declaration | implemented | implemented | implemented | implemented |
 | `decl.entity` | declaration | implemented | implemented | implemented | implemented |
 | `decl.enum` | declaration | implemented | implemented | implemented | implemented |
 | `decl.event` | declaration | implemented | implemented | implemented | implemented |
 | `decl.mutation` | declaration | implemented | implemented | implemented | implemented |
+| `decl.opaque` | declaration | implemented | implemented | implemented | implemented |
 | `decl.query` | declaration | implemented | implemented | implemented | implemented |
 | `decl.service` | declaration | implemented | implemented | implemented | implemented |
 | `decl.topic` | declaration | implemented | implemented | implemented | implemented |
