@@ -9,7 +9,7 @@ The registry deliberately reuses existing executable regressions where they exer
 - Parse: `tools/test_aidl_parser.py`
 - Resolve: `tools/test_compiler_project.py`
 - Validate: `tools/test_m5_fixture_corpus.py` and `tools/test_core_typecheck.py`
-- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
+- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_api_contract_semantics.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
 - Generate: `tools/test_core_transaction_semantics.py` and `tools/test_m4_petstore.py`
 
 ## Transaction resource/outbox closure
@@ -37,6 +37,18 @@ Together with the existing deterministic negative diagnostics, that executable I
 
 No Generate or IDE cell is promoted, and no ownership syntax or policy behavior is changed by this closure.
 
+## API exposure/version/compatibility IR closure
+
+The accepted Core API contract already requires exactly one supported transport (`rest`, `rpc`, or `graphql`), a positive major version, one non-empty operation list whose explicit query/mutation mappings resolve uniquely to the matching declaration kind, and one compatibility mode from `none`, `backward`, `forward`, or `full`. Stable `AIDL-DIST412` diagnostics already reject missing, duplicate, invalid, unresolved, ambiguous, kind-mismatched, or duplicate operation mappings deterministically before Canonical IR is emitted.
+
+Canonical IR materializes those accepted facts directly as `transport`, `majorVersion`, `operations[]` with canonical operation declaration IDs, and `compatibility`. `tools/test_core_api_contract_semantics.py` proves the positive IR materialization using a valid RPC/version-2/full-compatibility variant of the existing M4 Petstore source and directly proves the negative boundary for invalid transport, version, unresolved operation exposure, and compatibility.
+
+That evidence justifies promoting only this one cell from `partial` to `implemented`:
+
+- `rule.api.exposure-version-compatibility`: IR
+
+The API declaration's Generate cell remains `partial`: the existing M4 generator is a deliberately bounded runtime slice and this closure does not manufacture general REST/RPC/GraphQL generation support. No IDE cell, syntax, or API policy behavior changes.
+
 No IDE cell is currently marked `implemented`, so the registry does not manufacture IDE completeness from workflow or documentation evidence. The same rule applies to every remaining `partial` or `missing` cell in any layer: executable tests may exist for a subset of behavior, but status remains open until the matrix can truthfully claim layer completeness.
 
-The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. This entity ownership block reduces the first acceptance gap by three additional IR cells and extends the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR, generator, and IDE capabilities that require independent implementation or narrower claim decisions before promotion.
+The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. The entity ownership block reduced the first acceptance gap by three additional IR cells and extended the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. This API block reduces the first gap by one additional IR cell and extends the third acceptance evidence to canonical transport, major-version, operation-exposure, and compatibility facts. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR, generator, and IDE capabilities that require independent implementation or narrower claim decisions before promotion.
