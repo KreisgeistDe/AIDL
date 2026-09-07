@@ -17,12 +17,14 @@
       {"path": "tools/test_compiler_diagnostics_m2_04.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_05.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_08.py", "type": "test"},
+      {"path": "tools/test_compiler_diagnostics_m2_09.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_10.py", "type": "test"},
       {"path": "tools/test_core_typecheck.py", "type": "test"}
     ],
     "ir-core": [
       {"path": "fixtures/valid/m4-minimal/snapshots/ir.json", "type": "snapshot"},
       {"path": "tools/test_core_api_contract_semantics.py", "type": "test"},
+      {"path": "tools/test_core_consumer_idempotency_semantics.py", "type": "test"},
       {"path": "tools/test_core_entity_ownership_semantics.py", "type": "test"},
       {"path": "tools/test_ir_semantic_projection.py", "type": "test"}
     ],
@@ -46,6 +48,7 @@
     "decl.transaction",
     "rule.api.exposure-version-compatibility",
     "rule.consumer.at-least-once",
+    "rule.consumer.idempotency",
     "rule.entity.cross-service-ref-rejected",
     "rule.entity.owner-local-access",
     "rule.entity.single-owner",
