@@ -58,6 +58,8 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 | `rule.query.side-effect-free` | rule | not-applicable | not-applicable | implemented | not-applicable |
 | `rule.transaction.cross-resource-rejected` | rule | not-applicable | not-applicable | implemented | not-applicable |
 | `rule.transaction.cross-service-rejected` | rule | not-applicable | not-applicable | implemented | not-applicable |
+| `rule.transaction.outbox-atomic` | rule | not-applicable | not-applicable | implemented | implemented |
+| `rule.transaction.resource-owner` | rule | not-applicable | not-applicable | implemented | implemented |
 | `rule.types.int-to-decimal-only` | rule | not-applicable | not-applicable | implemented | not-applicable |
 <!-- END GENERATED: core-supported-coverage -->
 
