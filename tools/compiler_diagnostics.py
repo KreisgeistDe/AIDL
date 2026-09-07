@@ -45,6 +45,10 @@ class AppDiagnosticCode(StrEnum):
     APP_CONTRACT = "AIDL-DIST414"
 
 
+class ConsumerDiagnosticCode(StrEnum):
+    CONSUMER_BINDING = "AIDL-DIST415"
+
+
 _APP_PROFILE = re.compile(
     r"^profile\s+([a-z][A-Za-z0-9_]*)\s+version\s+([1-9][0-9]*)$"
 )
@@ -54,6 +58,7 @@ _APP_TYPED_REFERENCE = re.compile(
 _APP_IDENTIFIER_VALUE = re.compile(
     r"^(defaultDeployment|compatibility)\s+[A-Za-z_][A-Za-z0-9_]*$"
 )
+_TOPIC_DELIVERY = re.compile(r"^delivery\s+([A-Za-z_][A-Za-z0-9_]*)$")
 
 
 def _profile_registry() -> dict[tuple[str, int], tuple[tuple[str, int], ...]]:
@@ -181,7 +186,154 @@ def _app_contract_diagnostics(
     return tuple(diagnostics)
 
 
-def _with_app_diagnostics(
+def _consumer_diagnostic(
+    consumer: CompilerDeclarationName,
+    location: Span,
+    message: str,
+) -> CompilerDiagnostic:
+    return CompilerDiagnostic(
+        code=ConsumerDiagnosticCode.CONSUMER_BINDING,
+        phase="policy",
+        severity=CompilerDiagnosticSeverity.ERROR,
+        message=message,
+        source_path=consumer.document.source_path,
+        location=location,
+        subject=CompilerDiagnosticSubject(
+            kind="consumer", name=consumer.declaration.name or "<unnamed>"
+        ),
+        expected=(
+            "consumer on EVENT from TOPIC where TOPIC contains EVENT and uses atLeastOnce delivery"
+        ),
+        docs="aidl://diagnostics/AIDL-DIST415",
+    )
+
+
+def _topic_delivery_values(topic: CompilerDeclaration) -> tuple[str, ...]:
+    values: list[str] = []
+    for child in topic.node.children:
+        if child.name is None:
+            continue
+        match = _TOPIC_DELIVERY.fullmatch(child.name.strip())
+        if match is not None:
+            values.append(match.group(1))
+    return tuple(values)
+
+
+def _topic_contains_event(
+    project: CompilerProject,
+    topic: CompilerDeclarationName,
+    event: CompilerDeclarationName,
+) -> bool:
+    event_identity = _declaration_identity(event)
+    for reference in _list_clause_references(topic.declaration, "events"):
+        resolved = _resolve_declaration_reference(
+            project,
+            topic,
+            reference,
+            frozenset({"event"}),
+        )
+        if len(resolved) == 1 and _declaration_identity(resolved[0]) == event_identity:
+            return True
+    return False
+
+
+def _consumer_binding_diagnostics(
+    project: CompilerProject,
+) -> tuple[CompilerDiagnostic, ...]:
+    """Validate the explicit Core consumer binding and at-least-once boundary."""
+
+    diagnostics: list[CompilerDiagnostic] = []
+    for consumer in project.declaration_names:
+        if consumer.declaration.kind != "consumer" or consumer.declaration.span is None:
+            continue
+
+        consumer_name = (
+            consumer.fully_qualified_name
+            or consumer.declaration.name
+            or "<unnamed>"
+        )
+        event_reference = consumer.declaration.node.attrs.get("on")
+        topic_reference = consumer.declaration.node.attrs.get("from")
+        if not isinstance(event_reference, str) or not event_reference.strip():
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' must declare 'on EVENT from TOPIC'",
+                )
+            )
+            continue
+        if not isinstance(topic_reference, str) or not topic_reference.strip():
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' must declare 'on EVENT from TOPIC'",
+                )
+            )
+            continue
+
+        events = _resolve_declaration_reference(
+            project,
+            consumer,
+            event_reference.strip(),
+            frozenset({"event"}),
+        )
+        if len(events) != 1:
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' event '{event_reference.strip()}' must resolve uniquely; found {len(events)} matching event declarations",
+                )
+            )
+
+        topics = _resolve_declaration_reference(
+            project,
+            consumer,
+            topic_reference.strip(),
+            frozenset({"topic"}),
+        )
+        if len(topics) != 1:
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' topic '{topic_reference.strip()}' must resolve uniquely; found {len(topics)} matching topic declarations",
+                )
+            )
+
+        if len(events) != 1 or len(topics) != 1:
+            continue
+
+        event = events[0]
+        topic = topics[0]
+        event_name = event.fully_qualified_name or event.declaration.name or "<unnamed>"
+        topic_name = topic.fully_qualified_name or topic.declaration.name or "<unnamed>"
+        if not _topic_contains_event(project, topic, event):
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' event '{event_name}' is not declared by topic '{topic_name}'",
+                )
+            )
+
+        delivery_values = _topic_delivery_values(topic.declaration)
+        if not delivery_values or any(value != "atLeastOnce" for value in delivery_values):
+            rendered = ", ".join(delivery_values) if delivery_values else "none"
+            diagnostics.append(
+                _consumer_diagnostic(
+                    consumer,
+                    consumer.declaration.span,
+                    f"consumer '{consumer_name}' requires topic '{topic_name}' delivery atLeastOnce; found {rendered}",
+                )
+            )
+
+    return tuple(diagnostics)
+
+
+def _with_core_contract_diagnostics(
     project: CompilerProject,
     base_diagnostics: Iterable[CompilerDiagnostic],
 ) -> tuple[CompilerDiagnostic, ...]:
@@ -193,6 +345,7 @@ def _with_app_diagnostics(
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
         diagnostics.extend(_app_contract_diagnostics(project))
+        diagnostics.extend(_consumer_binding_diagnostics(project))
     return tuple(diagnostics)
 
 
@@ -254,7 +407,7 @@ def collect_compiler_diagnostics(
 ) -> tuple[CompilerDiagnostic, ...]:
     return _with_type_diagnostics(
         project,
-        _with_app_diagnostics(
+        _with_core_contract_diagnostics(
             project,
             _base.collect_compiler_diagnostics(project, parser_diagnostics),
         ),
@@ -267,6 +420,6 @@ def load_compiler_analysis(paths: Iterable[Path]) -> CompilerAnalysis:
         project=analysis.project,
         diagnostics=_with_type_diagnostics(
             analysis.project,
-            _with_app_diagnostics(analysis.project, analysis.diagnostics),
+            _with_core_contract_diagnostics(analysis.project, analysis.diagnostics),
         ),
     )
