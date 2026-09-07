@@ -71,7 +71,7 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
             },
             app["auth"],
         )
-        self.assertEqual([], self._app_contract_diagnostics(text))
+        self.assertEqual((), self._app_contract_diagnostics(text))
 
     def test_normative_app_profile_contract_has_stable_source_diagnostics(self) -> None:
         cases = {
@@ -145,7 +145,7 @@ auth {
   provider oidc
 }
 """
-        self.assertEqual([], self._app_contract_diagnostics(text))
+        self.assertEqual((), self._app_contract_diagnostics(text))
 
     def test_missing_or_unresolved_required_app_references_fail_ir(self) -> None:
         text = SOURCE.read_text(encoding="utf-8")
