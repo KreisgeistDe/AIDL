@@ -91,7 +91,7 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
     def _source_with_start(self, kind: str, input_expression: str = "{ requestId: event.eventId }") -> str:
         source = _VALID_SOURCE.replace(
             "  retry: none\n}",
-            f"  retry: none\n  start: {kind} ReviewOrder({input_expression})\n}",
+            f"  retry: none\n  start: {kind} ReviewOrder({input_expression})\n}}",
             1,
         ).replace(
             "runs [consumer ApplyOrder]",
