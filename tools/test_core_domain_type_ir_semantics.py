@@ -270,7 +270,7 @@ export opaque GenericUse = GenericValue<string>
         with self.assertRaises(IrBuildError):
             build_canonical_ir(inline_enum)
 
-    def test_unmaterialized_constraint_forms_are_rejected_but_closed_constraints_remain_valid(self) -> None:
+    def test_unmaterialized_constraint_forms_are_rejected_before_ir(self) -> None:
         rejected = self._analysis(
             """
 
@@ -285,20 +285,18 @@ export alias DecimalLiteralConstraint = decimal(0.1)
         with self.assertRaises(IrBuildError):
             build_canonical_ir(rejected)
 
+    def test_plain_scalar_targets_remain_lossless(self) -> None:
         accepted = self._analysis(
             """
 
-export alias SizedText = string(1..80)
+export alias PlainText = string
 export opaque PlainInt = int
 export alias PlainDecimal = decimal
 """
         )
         self.assertEqual([], self._type_diagnostics(accepted))
         document = build_canonical_ir(accepted)
-        self.assertEqual(
-            {"kind": "scalar", "name": "string", "constraints": {"minLength": 1, "maxLength": 80}},
-            self._declaration(document, "alias", "SizedText")["target"],
-        )
+        self.assertEqual({"kind": "scalar", "name": "string"}, self._declaration(document, "alias", "PlainText")["target"])
         self.assertEqual({"kind": "scalar", "name": "int"}, self._declaration(document, "opaque", "PlainInt")["representation"])
         self.assertEqual({"kind": "scalar", "name": "decimal"}, self._declaration(document, "alias", "PlainDecimal")["target"])
         self.assertEqual((), self._schema_errors(document))
