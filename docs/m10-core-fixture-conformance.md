@@ -15,4 +15,6 @@ Evidence is catalogued once and referenced through `defaultEvidence`; the stable
 
 `tools/test_core_fixture_conformance.py` protects the coverage boundary with negative regressions for missing supported rows, accidental claims for partial rows, unknown evidence IDs, and missing IR/compatibility machine fixtures. The normal generic Python test discovery executes this test, while the existing repository spec-lint path invokes `python3 -m tools.conformance_manifest validate`, so both direct test execution and CI reject drift.
 
+The Topic Validate/IR closure promotes `decl.topic` into the derived Core Supported set. The existing M4 minimal source and committed IR snapshot provide positive and snapshot evidence; `tools/test_core_topic_materialization_contract.py` supplies the focused positive, negative, and semantic IR proof for the complete closed Topic contract; and the existing IR compatibility matrix/test remains the compatibility authority. No Topic Generate or IDE support is inferred from this fixture promotion.
+
 The existing fixture and compatibility harnesses remain authoritative for behavior. M10-05 only binds their evidence to the current Core Supported rows; it does not reinterpret those tests or add new language semantics.
