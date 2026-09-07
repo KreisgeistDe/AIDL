@@ -21,7 +21,7 @@ The table below is generated from `spec/conformance-manifest.json`. Run `python3
 | `profile.offline` | profile | partial | Offline profile support is partial: selected sync/conflict semantics are represented in compiler fixtures, but the complete offline multi-writer runtime is not implemented. |
 | `profile.realtime` | profile | specified | Realtime is currently a specified profile; no production channel runtime support is claimed. |
 | `profile.web` | profile | specified | Web is currently a specified profile; complete compiler, generator, and runtime conformance is not claimed. |
-| `release.bundle` | release | implemented | The reproducible release bundle is implemented as a dry run with manifest, SHA-256 checksums, tracked contracts, and publication disabled. |
+| `release.bundle` | release | implemented | The reproducible scoped prerelease bundle is implemented with manifest, SHA-256 checksums, tracked contracts, scoped notes, and public GitHub prerelease publication gated to the verified exact configured tag. |
 | `repository.main-protection` | repository | blocked | Native main branch protection remains blocked/open and must not be described as enforced. |
 | `runtime.m4-petstore` | runtime | implemented | The bounded M4 TypeScript/Fastify/PostgreSQL Petstore vertical slice is implemented and tested; it is not a general runtime for every profile. |
 | `tooling.cli` | tooling | implemented | The compiler-owned aidl CLI is implemented and installable for Python 3.12 with its registered command surface and versioned JSON output contracts. |
@@ -41,7 +41,7 @@ M10-02 is tracking work only. It does not implement missing type checking, gener
 
 The following versions are separate contracts and must not be conflated:
 
-- distribution/package baseline: `aidl-toolchain` `0.0.0`;
+- distribution/package pre-release: `aidl-toolchain` `0.1.0rc1`, published only from exact tag `aidl-toolchain-v0.1.0rc1` after verified tag CI;
 - Canonical IR: `0.3.0`;
 - current CLI JSON schema artifact: `7.0.0`;
 - profile registry: `0.3.0`, with independent profile majors;
@@ -52,13 +52,15 @@ A version number in one domain does not imply equal maturity or compatibility gu
 
 ## What "supported" means here
 
-A surface is considered implemented only for the bounded scope described by its manifest entry and only when the required path exists in current code with executable or machine-readable evidence. Documentation, grammar, schema representation, registry entries, or examples alone do not establish full end-to-end support.
+A surface is considered implemented only for the bounded scope described by its manifest entry and only when the required path exists in current code with executable or machine-readable evidence. Documentation, grammar, schema representation, registry entries, examples, or inclusion in a pre-release alone do not establish full end-to-end support.
 
-For the detailed capability boundary, see `docs/12-coverage-and-limits.md`. For the conformance contracts see `docs/conformance-manifest.md`; for package installation see `docs/m9-cli-packaging.md`; for release construction see `docs/m9-release-workflow.md`; for artifact integrity/provenance claims see `docs/artifact-provenance.md`.
+The `0.1.0rc1` pre-release does not promote any `partial`, `specified`, or `experimental` surface to stable support. In particular, all language profiles remain partial or specified as shown above; IntelliJ remains partial and LSP experimental. M9-06 native `main` protection remains administratively blocked/open.
+
+For the detailed capability boundary, see `docs/12-coverage-and-limits.md`. For the conformance contracts see `docs/conformance-manifest.md`; for package installation see `docs/m9-cli-packaging.md`; for release construction and publication see `docs/m9-release-workflow.md`; for artifact integrity/provenance claims see `docs/artifact-provenance.md`.
 
 ## Compatibility and change expectations
 
-Before 1.0, unsupported or explicitly experimental surfaces may change without a production-stability promise. Versioned machine contracts and compatibility rules should be changed deliberately and with matching tests. Contributors should not infer stability from a successful parse, an IR field, a manifest entry, or a profile name alone.
+Before 1.0, unsupported or explicitly experimental surfaces may change without a production-stability promise. Versioned machine contracts and compatibility rules should be changed deliberately and with matching tests. Contributors should not infer stability from a successful parse, an IR field, a manifest entry, a profile name, or the existence of a GitHub pre-release.
 
 ## Support requests
 
