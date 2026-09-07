@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "branch": "main",
+  "requiredPullRequestChecks": [
+    {
+      "context": "Compiler / Python",
+      "workflow": ".github/workflows/python-validation.yml"
+    },
+    {
+      "context": "Compatibility / Pull Request",
+      "workflow": ".github/workflows/python-validation.yml"
+    },
+    {
+      "context": "Golden Fixtures",
+      "workflow": ".github/workflows/python-validation.yml"
+    },
+    {
+      "context": "Petstore Runtime / PostgreSQL",
+      "workflow": ".github/workflows/python-validation.yml"
+    },
+    {
+      "context": "IntelliJ Plugin",
+      "workflow": ".github/workflows/python-validation.yml"
+    },
+    {
+      "context": "Reject .ai changes on project PRs",
+      "workflow": ".github/workflows/protect-ai-workflow-boundary.yml"
+    }
+  ],
+  "requiredRepositoryRules": [
+    "pull_request",
+    "required_status_checks",
+    "deletion",
+    "non_fast_forward",
+    "required_linear_history"
+  ],
+  "allowedMergeMethods": [
+    "squash"
+  ],
+  "requireReviewThreadResolution": true,
+  "allowBypass": false
+}
