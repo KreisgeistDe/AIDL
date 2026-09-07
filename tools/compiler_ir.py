@@ -213,6 +213,20 @@ def _type(item: CompilerDeclarationName, resolver: _Resolver, raw: str, owners: 
         result: dict[str, Any] = {"kind": "ref", "entityId": ident["declarationId"], "entityFqn": ident["fqn"], "ownerServiceId": owner}
     elif raw.startswith("[") and raw.endswith("]"):
         result = {"kind": "list", "element": _type(item, resolver, raw[1:-1], owners)}
+    elif (constructor := re.fullmatch(r"(set|map)<(.*)>", raw, re.S)):
+        arguments = _split(constructor.group(2))
+        if constructor.group(1) == "set":
+            if len(arguments) != 1:
+                raise IrBuildError(f"set type '{raw}' requires one type argument")
+            result = {"kind": "set", "element": _type(item, resolver, arguments[0], owners)}
+        else:
+            if len(arguments) != 2:
+                raise IrBuildError(f"map type '{raw}' requires two type arguments")
+            result = {
+                "kind": "map",
+                "key": _type(item, resolver, arguments[0], owners),
+                "value": _type(item, resolver, arguments[1], owners),
+            }
     elif raw.endswith(".id"):
         result = {"kind": "scalar", "name": "uuid"}
     else:
