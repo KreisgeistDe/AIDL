@@ -243,6 +243,10 @@ def _consumer_binding_diagnostics(
     """Validate the explicit Core consumer binding and at-least-once boundary."""
 
     diagnostics: list[CompilerDiagnostic] = []
+    has_messaging_context = any(
+        item.declaration.kind in {"event", "topic"}
+        for item in project.declaration_names
+    )
     for consumer in project.declaration_names:
         if consumer.declaration.kind != "consumer" or consumer.declaration.span is None:
             continue
@@ -255,6 +259,8 @@ def _consumer_binding_diagnostics(
         event_reference = consumer.declaration.node.attrs.get("on")
         topic_reference = consumer.declaration.node.attrs.get("from")
         if not isinstance(event_reference, str) or not event_reference.strip():
+            if not has_messaging_context:
+                continue
             diagnostics.append(
                 _consumer_diagnostic(
                     consumer,
