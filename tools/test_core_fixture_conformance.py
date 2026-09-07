@@ -29,10 +29,10 @@ class CoreFixtureConformanceTest(unittest.TestCase):
 
     def test_partial_core_row_cannot_be_claimed_as_fixture_complete(self) -> None:
         payload = copy.deepcopy(self.coverage)
-        payload["featureIds"].append("decl.alias")
+        payload["featureIds"].append("decl.value")
         payload["featureIds"].sort()
         errors = validate_core_fixture_data(payload, self.core, root=ROOT)
-        self.assertIn("Core fixture coverage contains non-supported ids: ['decl.alias']", errors)
+        self.assertIn("Core fixture coverage contains non-supported ids: ['decl.value']", errors)
 
     def test_unknown_evidence_reference_fails(self) -> None:
         payload = copy.deepcopy(self.coverage)
