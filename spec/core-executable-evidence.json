@@ -28,6 +28,7 @@
       "tools/test_compiler_project.py"
     ],
     "validate-core": [
+      "tools/test_core_app_ir_semantics.py",
       "tools/test_m5_fixture_corpus.py"
     ],
     "validate-types": [
