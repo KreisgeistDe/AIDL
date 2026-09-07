@@ -117,9 +117,13 @@ export api PublicApi {
         self.assertEqual(len(serialization), 3)
         self.assertTrue(all(d.docs == "aidl://diagnostics/AIDL-T004" for d in serialization))
 
-    def test_unresolved_nominal_does_not_gain_materialization_diagnostic(self) -> None:
+    def test_unresolved_alias_nominal_has_materialization_diagnostic(self) -> None:
         diagnostics = self._analysis("module test.materialization\nalias Broken = MissingValue\n")
-        self.assertFalse(any(d.code.value == "AIDL-T005" for d in diagnostics))
+        materialization = [d for d in diagnostics if d.code.value == "AIDL-T005"]
+        self.assertEqual(len(materialization), 1)
+        self.assertIn("may not fall back to a synthetic aidl.std identity", materialization[0].message)
+        self.assertEqual(materialization[0].phase, "type")
+        self.assertGreater(materialization[0].location.line, 0)
 
     def test_unresolved_declared_error_is_rejected_explicitly(self) -> None:
         diagnostics = self._analysis(
