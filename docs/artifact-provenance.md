@@ -1,78 +1,57 @@
 # Artifact provenance and integrity
 
-This document describes only the provenance evidence that the repository currently produces. It does not claim signatures, attestations, an SBOM, a transparency log, or public release publication.
+This document describes only provenance and publication evidence the repository currently implements. It does not claim signatures, attestations, an SBOM, or a transparency log.
 
 ## Current artifact boundary
 
-M9-05 builds a deterministic release bundle from one checked-out Git commit through `python3 -m tools.release_bundle reproduce --output release-dist`. The release control record is `release/release.json`; the package version comes from `pyproject.toml`; release notes come from committed `CHANGELOG.md`; JSON contracts are discovered from tracked root `spec/*.json` files.
+M9-08 builds a deterministic pre-release bundle from one checked-out Git commit through `python3 -m tools.release_bundle reproduce --output release-dist`. The release control record is `release/release.json`; package version comes from `pyproject.toml`; scoped release notes are extracted from committed `CHANGELOG.md`; JSON contracts are discovered from tracked root `spec/*.json` files.
 
-For the current baseline, `release/release.json` declares:
+The current contract declares distribution `aidl-toolchain`, version `0.1.0rc1`, tag `aidl-toolchain-v0.1.0rc1`, `CHANGELOG.md` as notes authority, `spec/*.json` as contract inventory, and publication `github-prerelease-on-tag`.
 
-- distribution `aidl-toolchain`;
-- version `0.0.0`;
-- tag identity `aidl-toolchain-v0.0.0`;
-- `CHANGELOG.md` as the notes source;
-- `spec/*.json` as the contract inventory;
-- publication `disabled`.
-
-The tag field is a release-contract identity. M9-05 does not create or move tags and does not publish a GitHub Release.
+The tag identity is exact. Pull requests, branch heads, and manual workflow runs do not create or move tags and cannot publish a GitHub Release. Publication is possible only from a tag-triggered run whose tag exactly matches the configured release tag and whose deterministic bundle job succeeded.
 
 ## Reproducibility evidence
 
-The release builder derives the source identity from the checked-out Git `HEAD`, derives `SOURCE_DATE_EPOCH` from that commit timestamp, sets `PYTHONHASHSEED=0`, and builds with the exact M9-04 build-backend pins. `reproduce` performs two independent builds from the same checkout and rejects any difference in the output file set or bytes.
+The release builder derives source identity and `SOURCE_DATE_EPOCH` from checked-out Git `HEAD`, sets `PYTHONHASHSEED=0`, and builds with the pinned M9-04 backend. `reproduce` performs two independent builds from the same checkout and rejects any output file-set or byte difference.
 
-The deterministic archive normalizes ordering, ownership, modes, timestamps, and the gzip header. This establishes same-commit reproducibility for the implemented builder under the validated environment; it is not a cryptographic signer identity or a claim that every possible build environment has been proven equivalent.
+The deterministic archive normalizes ordering, ownership, modes, timestamps, and gzip header. This establishes same-commit reproducibility under the validated environment; it is not a cryptographic signer identity or proof of equivalence across every build environment.
 
-## Manifest and checksums
+## Manifest, notes, and checksums
 
-The staged bundle contains a machine-readable `aidl-toolchain-<version>-release-manifest.json`. The manifest records:
+The staged bundle contains `aidl-toolchain-<version>-release-manifest.json`. It records schema version, distribution/version/tag, source commit and epoch, publication mode, wheel path/checksum, scoped release-notes path/source/checksum, and each tracked source contract path/release path/checksum.
 
-- schema version;
-- distribution, version, and configured tag identity;
-- source Git commit and source-date epoch;
-- publication state;
-- wheel path and SHA-256;
-- release-notes path, source path, and SHA-256;
-- each tracked source contract path, release path, and SHA-256.
+Only the current `## 0.1.0rc1 — scoped toolchain pre-release` changelog section is copied into release notes. Historical changelog sections are not part of the public notes payload.
 
-`SHA256SUMS` covers every staged release component except the checksum file itself. The sibling `<archive>.sha256` covers the deterministic `.tar.gz` archive. Validation also checks the exact expected stage/root file set, contract inventory, archive members, manifest values, and file bytes.
+`SHA256SUMS` covers every staged component except itself. The sibling `<archive>.sha256` covers the deterministic `.tar.gz`. Validation checks exact stage/root file sets, contract inventory, archive members, manifest values, scoped release-note bytes, and checksums.
 
-These SHA-256 values let a consumer detect byte changes relative to the manifest/checksum set. They do not authenticate who produced the files unless the source commit and checksum information are obtained through a separately trusted channel.
+These hashes detect byte changes relative to the manifest/checksum set. They do not authenticate a producer unless source identity and checksums are obtained through a separately trusted channel.
 
-## CI evidence
+## CI and public pre-release publication
 
-`.github/workflows/release.yml` runs `Release Bundle / Dry Run` for pull requests to `main`, matching `aidl-toolchain-v*` tags, and manual dispatch. It checks out the exact PR head or tag commit, verifies the release contract, runs the same-commit reproduction check, and uploads the deterministic output as a GitHub Actions artifact.
+`.github/workflows/release.yml` first runs a read-only `Release Bundle / Verify` job for pull requests, release tags, and manual dispatch. It checks out the exact source SHA, verifies the version/tag contract, reproduces the bundle, and uploads the verified output as an Actions artifact.
 
-The workflow has `contents: read` permission and no publication step. Its result is build/integrity evidence for that workflow run, not a public release or signed provenance statement.
+The dependent publication job has `contents: write` only when the event is a tag and the tag is exactly `aidl-toolchain-v0.1.0rc1`. It downloads that verified artifact and uses `gh release create --verify-tag --prerelease`. Therefore publication cannot occur from an untagged feature head or from a differently named tag.
+
+At implementation time there were no repository tags and no GitHub Releases. The first publication must happen only after the M9-08 PR is integrated: create and push `aidl-toolchain-v0.1.0rc1` at the integrated `main` commit containing this contract, then let the tag workflow verify and publish that exact commit.
 
 ## How to verify locally
 
-On a supported Python 3.12 environment with the repository's pinned build backend available:
+On supported Python 3.12 with the pinned build backend available:
 
 ```bash
 python3 -m tools.release_bundle verify-contract
 python3 -m tools.release_bundle reproduce --output release-dist
 ```
 
-For an actual tag-triggered source checkout, verification can additionally bind the expected tag identity:
+For the actual release-tag checkout, bind the expected tag identity:
 
 ```bash
-python3 -m tools.release_bundle --tag aidl-toolchain-v0.0.0 verify-contract
-python3 -m tools.release_bundle --tag aidl-toolchain-v0.0.0 reproduce --output release-dist
+python3 -m tools.release_bundle --tag aidl-toolchain-v0.1.0rc1 verify-contract
+python3 -m tools.release_bundle --tag aidl-toolchain-v0.1.0rc1 reproduce --output release-dist
 ```
-
-Inspect the generated manifest and compare SHA-256 values against the staged files/archive. The current tooling performs those consistency checks automatically during `reproduce`.
 
 ## Explicit non-claims
 
-The current repository does **not** yet provide or claim:
+The current repository does **not** claim cryptographic artifact/commit signing as part of this contract, Sigstore/SLSA attestations, an SBOM, a transparency-log entry, a hosted provenance service, general runtime support, stability for `partial`/`specified`/`experimental` surfaces, or native `main` protection as an enforced prerequisite.
 
-- public artifact publication or the first scoped pre-release;
-- cryptographic artifact or commit signing as part of this release contract;
-- Sigstore/SLSA or other attestations;
-- an SBOM;
-- a transparency-log entry;
-- a hosted provenance service;
-- native `main` branch protection as an enforced release prerequisite.
-
-Any future addition of those capabilities requires a separate roadmap change, implementation, validation, and updated documentation. M9-05 checksums and manifests must not be described as substitutes for signatures or attestations.
+M9-06 remains an administrative blocker. Checksums, deterministic builds, and GitHub pre-release publication must not be described as substitutes for signatures, attestations, or broader conformance.
