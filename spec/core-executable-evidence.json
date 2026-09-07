@@ -9,6 +9,7 @@
     "ir-core": [
       "tools/test_aidl_ir.py",
       "tools/test_core_api_contract_semantics.py",
+      "tools/test_core_app_ir_semantics.py",
       "tools/test_core_consumer_idempotency_semantics.py",
       "tools/test_core_domain_type_ir_semantics.py",
       "tools/test_core_entity_ownership_semantics.py",
