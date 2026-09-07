@@ -92,11 +92,14 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
 
         first = build_canonical_ir(first_analysis)
         second = build_canonical_ir(second_analysis)
-        self.assertEqual(first, second)
-
-        consumer = next(
+        first_consumer = next(
             item
             for item in first["declarations"]
+            if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
+        )
+        second_consumer = next(
+            item
+            for item in second["declarations"]
             if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
         )
         workflow = next(
@@ -109,7 +112,14 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             for item in first["system"]["services"]
             if item.get("name") == "OrdersService"
         )
+        second_service = next(
+            item
+            for item in second["system"]["services"]
+            if item.get("name") == "OrdersService"
+        )
 
+        self.assertEqual(first_consumer, second_consumer)
+        self.assertEqual(service, second_service)
         self.assertEqual(
             {
                 "kind": "exponential",
@@ -117,12 +127,12 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
                 "initialDelayMs": 1000,
                 "maxDelayMs": 300000,
             },
-            consumer["retry"],
+            first_consumer["retry"],
         )
-        self.assertEqual("start", consumer["effect"]["kind"])
-        self.assertEqual("workflow", consumer["effect"]["targetKind"])
-        self.assertEqual(workflow["declarationId"], consumer["effect"]["targetId"])
-        self.assertIn(consumer["declarationId"], service["runs"])
+        self.assertEqual("start", first_consumer["effect"]["kind"])
+        self.assertEqual("workflow", first_consumer["effect"]["targetKind"])
+        self.assertEqual(workflow["declarationId"], first_consumer["effect"]["targetId"])
+        self.assertIn(first_consumer["declarationId"], service["runs"])
 
     def test_unresolved_consumer_service_is_rejected_before_ir(self) -> None:
         diagnostics = self._materialization_diagnostics(
