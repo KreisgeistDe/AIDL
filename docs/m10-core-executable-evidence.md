@@ -9,7 +9,7 @@ The registry deliberately reuses existing executable regressions where they exer
 - Parse: `tools/test_aidl_parser.py`
 - Resolve: `tools/test_compiler_project.py`
 - Validate: `tools/test_m5_fixture_corpus.py` and `tools/test_core_typecheck.py`
-- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
+- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
 - Generate: `tools/test_core_transaction_semantics.py` and `tools/test_m4_petstore.py`
 
 ## Transaction resource/outbox closure
@@ -23,6 +23,20 @@ The Core transaction contract already requires one transaction resource owner an
 
 No source syntax, language semantic, support surface, or IDE status is widened by this closure.
 
+## Entity ownership IR closure
+
+The Core ownership contract already requires every persisted entity to have exactly one owner service, direct persisted access to stay owner-local, and direct entity `ref` fields not to cross service ownership boundaries. These rules are already enforced by stable compiler diagnostics: owner cardinality is rejected by `AIDL-DIST400`, cross-service refs by `AIDL-DIST401`, and transaction access outside the exposing service's ownership boundary by `AIDL-DIST402`.
+
+Canonical IR already materializes the accepted ownership facts rather than reparsing source: `system.services[].owns` contains the canonical entity declaration IDs, service `exposes` links operations to that same service boundary, write steps carry canonical `entityId` values, and a valid entity `ref` carries both its target `entityId` and `ownerServiceId`. `tools/test_core_entity_ownership_semantics.py` exercises those facts on an owner-local reference variant of the existing M4 Petstore source and proves that an exposed persistent write remains inside the service's canonical `owns` set.
+
+Together with the existing deterministic negative diagnostics, that executable IR materialization evidence justifies promoting only these three cells from `partial` to `implemented`:
+
+- `rule.entity.single-owner`: IR
+- `rule.entity.owner-local-access`: IR
+- `rule.entity.cross-service-ref-rejected`: IR
+
+No Generate or IDE cell is promoted, and no ownership syntax or policy behavior is changed by this closure.
+
 No IDE cell is currently marked `implemented`, so the registry does not manufacture IDE completeness from workflow or documentation evidence. The same rule applies to every remaining `partial` or `missing` cell in any layer: executable tests may exist for a subset of behavior, but status remains open until the matrix can truthfully claim layer completeness.
 
-This transaction block measurably reduces the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR and generator capabilities that require independent implementation or narrower claim decisions before promotion.
+The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. This entity ownership block reduces the first acceptance gap by three additional IR cells and extends the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR, generator, and IDE capabilities that require independent implementation or narrower claim decisions before promotion.
