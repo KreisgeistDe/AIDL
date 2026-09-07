@@ -70,7 +70,7 @@ def _split(value: str) -> list[str]:
         elif char in "([{<":
             stack.append(char)
             buf.append(char)
-        elif char in ")]}>":
+        elif char in ")]}>" :
             if stack and stack[-1] == pairs[char]:
                 stack.pop()
             buf.append(char)
@@ -198,7 +198,7 @@ def _take_type(tail: str) -> tuple[str, str]:
     for i, char in enumerate(tail):
         if char in "([<":
             stack.append(char)
-        elif char in ")]>":
+        elif char in ")]>" :
             if stack and stack[-1] == pairs[char]:
                 stack.pop()
         elif char.isspace() and not stack:
@@ -308,6 +308,32 @@ def _expr(raw: str) -> dict[str, Any]:
         return {"kind": "call", "function": raw[:-2], "arguments": []}
     if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*", raw): return {"kind": "symbol", "path": raw.split(".")}
     return {"kind": "symbol", "path": [re.sub(r"\s+", " ", raw)]}
+
+
+def _consumer_start_input(raw: str) -> dict[str, Any]:
+    raw = raw.strip()
+    if raw == "null":
+        return {"kind": "literal", "value": None}
+    if raw in {"true", "false"}:
+        return {"kind": "literal", "value": raw == "true"}
+    if re.fullmatch(r"-?\d+(?:\.\d+)?", raw):
+        return {"kind": "literal", "value": float(raw) if "." in raw else int(raw)}
+    if len(raw) > 1 and raw[0] == raw[-1] == '"':
+        return {"kind": "literal", "value": _unquote(raw)}
+    if re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*", raw):
+        return {"kind": "symbol", "path": raw.split(".")}
+    if raw.startswith("{") and raw.endswith("}"):
+        fields = []
+        for part in _split(raw[1:-1]):
+            if ":" not in part:
+                raise IrBuildError(f"unsupported consumer start input '{raw}'")
+            key, value = part.split(":", 1)
+            name = key.strip()
+            if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+                raise IrBuildError(f"unsupported consumer start input '{raw}'")
+            fields.append({"name": name, "value": _consumer_start_input(value)})
+        return {"kind": "record", "fields": fields}
+    raise IrBuildError(f"unsupported consumer start input '{raw}'")
 
 
 def _auth(item: CompilerDeclarationName) -> dict[str, Any]:
@@ -430,6 +456,29 @@ def _consumer_retry(value: str | None) -> dict[str, Any]:
     }
 
 
+def _consumer_start(item: CompilerDeclarationName, resolver: _Resolver, value: str | None) -> dict[str, Any] | None:
+    if not value:
+        return None
+    match = re.fullmatch(
+        r"(workflow|task)\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)\s*\((.*)\)",
+        value.strip(),
+        re.S,
+    )
+    if not match:
+        raise IrBuildError(f"unsupported consumer start '{value}'")
+    target_kind, raw_reference, raw_arguments = match.groups()
+    arguments = _split(raw_arguments)
+    if len(arguments) != 1:
+        raise IrBuildError(f"unsupported consumer start input '{raw_arguments}'")
+    reference = re.sub(r"\s*\.\s*", ".", raw_reference)
+    return {
+        "kind": "start",
+        "targetKind": target_kind,
+        "targetId": resolver.ref_id(item, reference, {target_kind}),
+        "input": _consumer_start_input(arguments[0]),
+    }
+
+
 def _declaration(item: CompilerDeclarationName, resolver: _Resolver, owners: Mapping[str, str]) -> dict[str, Any]:
     kind = item.declaration.kind; result = _identity(resolver, item); result["kind"] = kind
     if kind == "enum": result["values"] = list(item.declaration.node.attrs.get("cases") or [])
@@ -477,10 +526,8 @@ def _declaration(item: CompilerDeclarationName, resolver: _Resolver, owners: Map
     elif kind == "consumer":
         event, topic = item.declaration.node.attrs.get("on"), item.declaration.node.attrs.get("from")
         if not isinstance(event, str) or not isinstance(topic, str): raise IrBuildError(f"consumer '{item.declaration.name}' lacks binding")
-        result.update({"eventId": resolver.ref_id(item, event, {"event"}), "topicId": resolver.ref_id(item, topic, {"topic"}), "retry": _consumer_retry(_value(item.declaration.node, "retry")), "effect": None})
+        result.update({"eventId": resolver.ref_id(item, event, {"event"}), "topicId": resolver.ref_id(item, topic, {"topic"}), "retry": _consumer_retry(_value(item.declaration.node, "retry")), "effect": _consumer_start(item, resolver, _value(item.declaration.node, "start"))})
         if (idem := _idempotency(item, "consumer")): result["idempotency"] = idem
-        if (start := _value(item.declaration.node, "start")) and (match := re.match(r"^(workflow|saga|task)\s+([A-Za-z_][\w.-]*)\((.*)\)$", start, re.S)):
-            result["effect"] = {"kind": "start", "targetKind": match.group(1), "targetId": resolver.ref_id(item, match.group(2), {match.group(1)}), "input": _expr(match.group(3))}
     return result
 
 
