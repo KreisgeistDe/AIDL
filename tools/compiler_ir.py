@@ -186,8 +186,12 @@ def _identity(resolver: _Resolver, item: CompilerDeclarationName) -> dict[str, A
     return {**resolver.identity(item), "semanticHash": _ZERO_HASH}
 
 
+def _normalize_type_spacing(raw: str) -> str:
+    return re.sub(r"\s*([<>,?\[\]])\s*", r"\1", raw.strip())
+
+
 def _take_type(tail: str) -> tuple[str, str]:
-    tail = tail.strip()
+    tail = _normalize_type_spacing(tail)
     if tail.startswith("ref "):
         parts = tail.split(None, 2)
         return ("ref " + parts[1], parts[2] if len(parts) > 2 else "")
@@ -203,7 +207,7 @@ def _take_type(tail: str) -> tuple[str, str]:
 
 
 def _type(item: CompilerDeclarationName, resolver: _Resolver, raw: str, owners: Mapping[str, str]) -> dict[str, Any]:
-    raw = raw.strip(); nullable = raw.endswith("?")
+    raw = _normalize_type_spacing(raw); nullable = raw.endswith("?")
     if nullable: raw = raw[:-1]
     if raw.startswith("ref "):
         target = resolver.resolve(item, raw[4:], {"entity"})
