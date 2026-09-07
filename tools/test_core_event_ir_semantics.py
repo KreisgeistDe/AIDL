@@ -19,12 +19,15 @@ SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8
 
 
 class CoreEventIrSemanticsTests(unittest.TestCase):
-    def _analysis_for_source(self, source: str):
+    def _project_for_source(self, source: str) -> Path:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         project = Path(temporary.name)
         (project / "app.aidl").write_text(source, encoding="utf-8")
-        return load_compiler_analysis([project])
+        return project
+
+    def _analysis_for_source(self, source: str):
+        return load_compiler_analysis([self._project_for_source(source)])
 
     def _ir(self, source: str = SOURCE) -> dict:
         analysis = self._analysis_for_source(source)
@@ -59,8 +62,16 @@ class CoreEventIrSemanticsTests(unittest.TestCase):
             "export event SnapshotItemCreated version 1 {",
             "export event SnapshotItemCreated version 2 {",
         )
-        first = self._ir(source)
-        second = self._ir(source)
+        project = self._project_for_source(source)
+        first_analysis = load_compiler_analysis([project])
+        second_analysis = load_compiler_analysis([project])
+        for analysis in (first_analysis, second_analysis):
+            self.assertFalse(
+                any(diagnostic.severity.value == "error" for diagnostic in analysis.diagnostics),
+                [diagnostic.to_json() for diagnostic in analysis.diagnostics],
+            )
+        first = build_canonical_ir(first_analysis)
+        second = build_canonical_ir(second_analysis)
         self.assertEqual(first, second)
 
         event = self._event(first)
