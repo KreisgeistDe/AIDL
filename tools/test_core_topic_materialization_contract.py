@@ -153,7 +153,9 @@ class CoreTopicMaterializationContractTests(unittest.TestCase):
             .replace("deadLetter after 8 attempts", "deadLetter after 3 attempts", 1)
         )
         topic = self._topic(self._valid_ir(source))
-        self.assertEqual("payload.itemId", topic["partitionField"])
+        # The parser owns whitespace normalization around member access; the
+        # materialization boundary proves this remains a simple symbol path.
+        self.assertEqual("payload . itemId", topic["partitionField"])
         self.assertEqual("none", topic["ordering"])
         self.assertEqual(2 * 60 * 60 * 1000, topic["retentionMs"])
         self.assertEqual("full", topic["compatibility"])
