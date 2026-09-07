@@ -49,6 +49,9 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 | `decl.service` | declaration | implemented | implemented | implemented | implemented |
 | `decl.transaction` | declaration | implemented | implemented | implemented | implemented |
 | `rule.consumer.at-least-once` | rule | not-applicable | not-applicable | implemented | not-applicable |
+| `rule.entity.cross-service-ref-rejected` | rule | not-applicable | not-applicable | implemented | implemented |
+| `rule.entity.owner-local-access` | rule | not-applicable | not-applicable | implemented | implemented |
+| `rule.entity.single-owner` | rule | not-applicable | not-applicable | implemented | implemented |
 | `rule.module.cyclic-dependency` | rule | not-applicable | implemented | implemented | not-applicable |
 | `rule.module.duplicate-declaration` | rule | not-applicable | implemented | implemented | not-applicable |
 | `rule.module.unresolved-name` | rule | not-applicable | implemented | implemented | not-applicable |
