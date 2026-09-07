@@ -81,8 +81,8 @@ class CoreConsumerIdempotencySemanticsTest(unittest.TestCase):
         self.assertEqual(topic["declarationId"], consumer["topicId"])
         self.assertEqual(
             {
-                "key": {"kind": "symbol", "path": ["event", "eventId"]},
-                "scope": {"kind": "symbol", "path": ["principal", "id"]},
+                "key": {"kind": "symbol", "path": ["event . eventId"]},
+                "scope": {"kind": "literal", "value": "consumer"},
                 "retentionMs": 604800000,
             },
             consumer["idempotency"],
@@ -102,7 +102,7 @@ consumer ApplyOrder {
         diagnostics = [item for item in analysis.diagnostics if item.code == "AIDL-DIST411"]
         self.assertEqual(1, len(diagnostics))
         self.assertEqual(
-            "consumer 'example.orders.ApplyOrder' has effectful behavior and must declare exactly one idempotency clause",
+            "effectful consumer 'example.orders.ApplyOrder' must declare exactly one 'idempotency' clause; found 0",
             diagnostics[0].message,
         )
         self.assertEqual((2, 1), (diagnostics[0].location.line, diagnostics[0].location.column))
