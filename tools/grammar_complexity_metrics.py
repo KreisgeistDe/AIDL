@@ -26,16 +26,17 @@ def ebnf_sections(text: str) -> list[tuple[str, str]]:
     block: list[str] = []
     block_heading = heading
     for line in text.splitlines():
+        stripped = line.strip()
         if line.startswith("## "):
             heading = line[3:].strip()
-        if line.strip() == "~~~ebnf":
-            if not in_ebnf:
-                in_ebnf = True
-                block = []
-                block_heading = heading
-            else:
-                sections.append((block_heading, "\n".join(block)))
-                in_ebnf = False
+        if not in_ebnf and stripped == "~~~ebnf":
+            in_ebnf = True
+            block = []
+            block_heading = heading
+            continue
+        if in_ebnf and stripped == "~~~":
+            sections.append((block_heading, "\n".join(block)))
+            in_ebnf = False
             continue
         if in_ebnf:
             block.append(line)
@@ -159,7 +160,7 @@ def measure(path: Path = GRAMMAR) -> dict[str, object]:
     alternative_count = 0
     signatures: Counter[str] = Counter()
     marker_counts: Counter[str] = Counter()
-    for name, (_, rhs) in prods.items():
+    for _, rhs in prods.values():
         alts = split_top_level_alternatives(rhs)
         alternative_count += len(alts)
         for alt in alts:
