@@ -488,6 +488,69 @@ def _consumer_execution_issues(project: CompilerProject, item, issues: list[Core
                 issues.append(issue)
 
 
+def _enum_issues(item, issues: list[CoreMaterializationIssue]) -> None:
+    entries = item.declaration.node.attrs.get("enumCases")
+    if not isinstance(entries, list):
+        issue = _issue(
+            item,
+            "enum case syntax is not preserved by the compiler parser state",
+            "one or more unassigned, uniquely named enum cases",
+        )
+        if issue:
+            issues.append(issue)
+        return
+    if not entries:
+        issue = _issue(
+            item,
+            "enum must contain at least one case before Canonical IR materialization",
+            "one or more unassigned, uniquely named enum cases",
+        )
+        if issue:
+            issues.append(issue)
+        return
+
+    seen: set[str] = set()
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("malformed") is not False:
+            raw = entry.get("raw", "") if isinstance(entry, dict) else ""
+            issue = _issue(
+                item,
+                f"enum case syntax '{raw}' is malformed and cannot be materialized losslessly",
+                "enum case IDENTIFIER or IDENTIFIER = STRING",
+            )
+            if issue:
+                issues.append(issue)
+            continue
+        name = entry.get("name")
+        if not isinstance(name, str) or not name:
+            issue = _issue(
+                item,
+                "enum case is missing a stable identifier",
+                "non-empty enum case identifier",
+            )
+            if issue:
+                issues.append(issue)
+            continue
+        if name in seen:
+            issue = _issue(
+                item,
+                f"enum contains duplicate case identity '{name}'",
+                "unique enum case identifiers",
+            )
+            if issue:
+                issues.append(issue)
+        seen.add(name)
+        assigned = entry.get("assignedValue")
+        if assigned is not None:
+            issue = _issue(
+                item,
+                f"enum case '{name}' declares wire value {assigned}, but the closed Core Canonical IR stores case names only",
+                "unassigned enum case until wire-value semantics have a Canonical IR representation",
+            )
+            if issue:
+                issues.append(issue)
+
+
 def collect_core_materialization_issues(project: CompilerProject) -> tuple[CoreMaterializationIssue, ...]:
     """Return deterministic errors for Core facts that would otherwise be widened or dropped."""
     issues: list[CoreMaterializationIssue] = []
@@ -512,6 +575,8 @@ def collect_core_materialization_issues(project: CompilerProject) -> tuple[CoreM
             _error_name_issues(project, item, issues)
         if declaration.kind == "consumer":
             _consumer_execution_issues(project, item, issues)
+        if declaration.kind == "enum":
+            _enum_issues(item, issues)
 
     document_order = {document.source_path: index for index, document in enumerate(project.documents)}
     issues.sort(
