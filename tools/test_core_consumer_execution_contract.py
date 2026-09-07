@@ -70,6 +70,21 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
             and diagnostic.subject.kind == "consumer"
         )
 
+    def _consumer_ir(self, text: str):
+        analysis = self._analysis(text)
+        errors = [
+            item.to_json()
+            for item in analysis.diagnostics
+            if item.severity == CompilerDiagnosticSeverity.ERROR
+        ]
+        self.assertEqual([], errors)
+        ir = build_canonical_ir(analysis)
+        return next(
+            item
+            for item in ir["declarations"]
+            if item.get("kind") == "consumer" and item.get("name") == "ApplyOrder"
+        )
+
     def test_service_binding_is_preserved_deterministically(self) -> None:
         first_analysis = self._analysis(_VALID_SOURCE)
         second_analysis = self._analysis(_VALID_SOURCE)
@@ -129,11 +144,30 @@ class CoreConsumerExecutionContractTest(unittest.TestCase):
         self.assertEqual(1, len(diagnostics))
         self.assertIn("does not list consumer", diagnostics[0].message)
 
-    def test_exponential_retry_is_rejected_until_ir_projection_is_verified(self) -> None:
+    def test_exponential_retry_is_preserved_deterministically_in_ir(self) -> None:
+        source = _VALID_SOURCE.replace(
+            "retry: none",
+            "retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)",
+            1,
+        )
+        first = self._consumer_ir(source)
+        second = self._consumer_ir(source)
+        self.assertEqual(first, second)
+        self.assertEqual(
+            {
+                "kind": "exponential",
+                "attempts": 8,
+                "initialDelayMs": 1000,
+                "maxDelayMs": 300000,
+            },
+            first["retry"],
+        )
+
+    def test_malformed_exponential_retry_is_rejected_before_ir(self) -> None:
         diagnostics = self._materialization_diagnostics(
             _VALID_SOURCE.replace(
                 "retry: none",
-                "retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)",
+                "retry: exponential(initial: 0s, maxDelay: 5m, attempts: 8)",
                 1,
             )
         )
