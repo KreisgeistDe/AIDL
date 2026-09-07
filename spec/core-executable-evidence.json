@@ -12,6 +12,7 @@
       "tools/test_core_consumer_idempotency_semantics.py",
       "tools/test_core_domain_type_ir_semantics.py",
       "tools/test_core_entity_ownership_semantics.py",
+      "tools/test_core_enum_ir_semantics.py",
       "tools/test_core_error_contract_ir_semantics.py",
       "tools/test_core_event_ir_semantics.py",
       "tools/test_core_topic_delivery_ir_semantics.py",
