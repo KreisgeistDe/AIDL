@@ -36,8 +36,8 @@ export value SnapshotValueContract {
   sensitiveLabel: string sensitive
   mutableCount: int mutable
   generatedToken: uuid generated
-  labels: set<string> required
-  lookup: map<string, uuid?> required
+  labels: set<string>
+  lookup: map<string, uuid?>
 }
 """
         )
@@ -90,6 +90,7 @@ export value SnapshotValueContract {
             {"kind": "set", "element": {"kind": "scalar", "name": "string"}},
             value["fields"][5]["type"],
         )
+        self.assertTrue(value["fields"][5]["required"])
         self.assertEqual(
             {
                 "kind": "map",
@@ -98,6 +99,7 @@ export value SnapshotValueContract {
             },
             value["fields"][6]["type"],
         )
+        self.assertTrue(value["fields"][6]["required"])
         self.assertEqual((), self._schema_errors(first))
 
     def test_closed_ir_schema_rejects_missing_or_malformed_value_field_contract(self) -> None:
