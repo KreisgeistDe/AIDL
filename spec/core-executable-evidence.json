@@ -40,6 +40,7 @@
       "tools/test_m5_fixture_corpus.py"
     ],
     "validate-types": [
+      "tools/test_core_domain_type_ir_semantics.py",
       "tools/test_core_typecheck.py",
       "tools/test_reference_app_core_typecheck.py"
     ]
