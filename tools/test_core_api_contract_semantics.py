@@ -12,9 +12,30 @@ from tools.m4_petstore import SOURCE
 class CoreApiContractSemanticsTest(unittest.TestCase):
     def test_ir_preserves_valid_api_exposure_version_and_compatibility(self) -> None:
         text = SOURCE.read_text(encoding="utf-8")
-        text = text.replace("  transport rest\n", "  transport rpc\n", 1)
-        text = text.replace("  version 1\n", "  version 2\n", 1)
-        text = text.replace("  compatibility backward\n", "  compatibility full\n", 1)
+        original_api = (
+            "export api PetstoreApi {\n"
+            "  transport rest\n"
+            "  version 1\n"
+            "  operations [mutation createPet]\n"
+            "  auth inherit\n"
+            "  errors problemDetails\n"
+            "  compatibility backward\n"
+            "  rateLimit principal 300 per 1m burst 50\n"
+            "}\n"
+        )
+        varied_api = (
+            "export api PetstoreApi {\n"
+            "  transport rpc\n"
+            "  version 2\n"
+            "  operations [mutation createPet]\n"
+            "  auth inherit\n"
+            "  errors problemDetails\n"
+            "  compatibility full\n"
+            "  rateLimit principal 300 per 1m burst 50\n"
+            "}\n"
+        )
+        self.assertIn(original_api, text)
+        text = text.replace(original_api, varied_api, 1)
 
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "app.aidl"
