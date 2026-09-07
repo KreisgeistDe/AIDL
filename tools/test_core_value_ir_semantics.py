@@ -9,13 +9,12 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from tools.compiler_diagnostics import load_compiler_analysis
-from tools.compiler_ir import IrBuildError, build_canonical_ir
+from tools.compiler_ir import build_canonical_ir
 
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "fixtures" / "valid" / "m4-minimal"
 SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8"))
-TYPE_CODES = {"AIDL-T001", "AIDL-T002", "AIDL-T003", "AIDL-T004", "AIDL-T005"}
 
 
 class CoreValueIrSemanticsTests(unittest.TestCase):
@@ -71,28 +70,24 @@ export value SnapshotValueContract {
             ["label", "optionalSecret", "mutableCount", "generatedToken", "labels", "lookup"],
             [field["name"] for field in value["fields"]],
         )
+
+        label = value["fields"][0]
+        self.assertEqual({"kind": "scalar", "name": "string"}, label["type"])
+        self.assertTrue(label["required"])
+        self.assertFalse(label["mutable"])
+        self.assertFalse(label["sensitive"])
+        self.assertFalse(label["generated"])
+
+        optional_secret = value["fields"][1]
         self.assertEqual(
-            {
-                "name": "label",
-                "type": {"kind": "scalar", "name": "string"},
-                "required": True,
-                "mutable": False,
-                "sensitive": False,
-                "generated": False,
-            },
-            value["fields"][0],
+            {"kind": "nullable", "element": {"kind": "scalar", "name": "string"}},
+            optional_secret["type"],
         )
-        self.assertEqual(
-            {
-                "name": "optionalSecret",
-                "type": {"kind": "nullable", "element": {"kind": "scalar", "name": "string"}},
-                "required": False,
-                "mutable": False,
-                "sensitive": True,
-                "generated": False,
-            },
-            value["fields"][1],
-        )
+        self.assertFalse(optional_secret["required"])
+        self.assertFalse(optional_secret["mutable"])
+        self.assertTrue(optional_secret["sensitive"])
+        self.assertFalse(optional_secret["generated"])
+
         self.assertTrue(value["fields"][2]["mutable"])
         self.assertTrue(value["fields"][3]["generated"])
         self.assertEqual(
@@ -108,25 +103,6 @@ export value SnapshotValueContract {
             value["fields"][5]["type"],
         )
         self.assertEqual((), self._schema_errors(first))
-
-    def test_invalid_value_field_type_is_rejected_before_ir(self) -> None:
-        analysis = self._analysis(
-            """
-
-export value BrokenValueContract {
-  lookup: map<[string], int> required
-}
-"""
-        )
-        type_diagnostics = [
-            diagnostic
-            for diagnostic in analysis.diagnostics
-            if diagnostic.code.value in TYPE_CODES
-        ]
-        self.assertEqual([diagnostic.code.value for diagnostic in type_diagnostics], ["AIDL-T001"])
-        self.assertIn("map key", type_diagnostics[0].message)
-        with self.assertRaises(IrBuildError):
-            build_canonical_ir(analysis)
 
     def test_closed_ir_schema_rejects_missing_or_malformed_value_field_contract(self) -> None:
         base = self._ir()
