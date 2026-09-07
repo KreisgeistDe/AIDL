@@ -32,6 +32,9 @@ jobs:
       - name: Validate main protection contract
         run: python3 -m tools.validate_main_protection_contract
 
+      - name: Validate roadmap and agent-state consistency
+        run: python3 -m tools.validate_repository_state
+
       - name: Set up Node 22 for generated TypeScript compile regression
         uses: actions/setup-node@v5
         with:
