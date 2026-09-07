@@ -411,6 +411,25 @@ def _root_effect(item: CompilerDeclarationName, resolver: _Resolver) -> dict[str
     raise IrBuildError(f"mutation '{item.declaration.name}' has no projectable root effect")
 
 
+def _consumer_retry(value: str | None) -> dict[str, Any]:
+    if not value or value.strip() == "none":
+        return {"kind": "none"}
+    match = re.fullmatch(
+        r"exponential\s*\(\s*initial\s*:\s*([1-9][0-9]*(?:ms|s|m|h|d))\s*,\s*"
+        r"maxDelay\s*:\s*([1-9][0-9]*(?:ms|s|m|h|d))\s*,\s*"
+        r"attempts\s*:\s*([1-9][0-9]*)\s*\)",
+        value.strip(),
+    )
+    if not match:
+        raise IrBuildError(f"unsupported consumer retry policy '{value}'")
+    return {
+        "kind": "exponential",
+        "attempts": int(match.group(3)),
+        "initialDelayMs": _ms(match.group(1)),
+        "maxDelayMs": _ms(match.group(2)),
+    }
+
+
 def _declaration(item: CompilerDeclarationName, resolver: _Resolver, owners: Mapping[str, str]) -> dict[str, Any]:
     kind = item.declaration.kind; result = _identity(resolver, item); result["kind"] = kind
     if kind == "enum": result["values"] = list(item.declaration.node.attrs.get("cases") or [])
@@ -458,11 +477,7 @@ def _declaration(item: CompilerDeclarationName, resolver: _Resolver, owners: Map
     elif kind == "consumer":
         event, topic = item.declaration.node.attrs.get("on"), item.declaration.node.attrs.get("from")
         if not isinstance(event, str) or not isinstance(topic, str): raise IrBuildError(f"consumer '{item.declaration.name}' lacks binding")
-        retry = _value(item.declaration.node, "retry"); retry_ir: dict[str, Any] = {"kind": "none"}
-        if retry and (match := re.search(r"exponential\(.*?attempts\s*:\s*(\d+).*?\)", retry)):
-            initial = re.search(r"initial\s*:\s*([^,\s)]+)", retry); maximum = re.search(r"maxDelay\s*:\s*([^,\s)]+)", retry)
-            retry_ir = {"kind": "exponential", "attempts": int(match.group(1)), "initialDelayMs": _ms(initial.group(1) if initial else "1s"), "maxDelayMs": _ms(maximum.group(1) if maximum else "1s")}
-        result.update({"eventId": resolver.ref_id(item, event, {"event"}), "topicId": resolver.ref_id(item, topic, {"topic"}), "retry": retry_ir, "effect": None})
+        result.update({"eventId": resolver.ref_id(item, event, {"event"}), "topicId": resolver.ref_id(item, topic, {"topic"}), "retry": _consumer_retry(_value(item.declaration.node, "retry")), "effect": None})
         if (idem := _idempotency(item, "consumer")): result["idempotency"] = idem
         if (start := _value(item.declaration.node, "start")) and (match := re.match(r"^(workflow|saga|task)\s+([A-Za-z_][\w.-]*)\((.*)\)$", start, re.S)):
             result["effect"] = {"kind": "start", "targetKind": match.group(1), "targetId": resolver.ref_id(item, match.group(2), {match.group(1)}), "input": _expr(match.group(3))}
