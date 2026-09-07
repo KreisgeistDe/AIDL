@@ -44,6 +44,7 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 |---|---|---|---|---|---|
 | `decl.api` | declaration | implemented | implemented | implemented | implemented |
 | `decl.entity` | declaration | implemented | implemented | implemented | implemented |
+| `decl.event` | declaration | implemented | implemented | implemented | implemented |
 | `decl.mutation` | declaration | implemented | implemented | implemented | implemented |
 | `decl.query` | declaration | implemented | implemented | implemented | implemented |
 | `decl.service` | declaration | implemented | implemented | implemented | implemented |
