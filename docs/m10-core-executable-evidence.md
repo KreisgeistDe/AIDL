@@ -9,7 +9,7 @@ The registry deliberately reuses existing executable regressions where they exer
 - Parse: `tools/test_aidl_parser.py`
 - Resolve: `tools/test_compiler_project.py`
 - Validate: `tools/test_m5_fixture_corpus.py` and `tools/test_core_typecheck.py`
-- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_api_contract_semantics.py`, `tools/test_core_consumer_idempotency_semantics.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_topic_delivery_ir_semantics.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
+- Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_api_contract_semantics.py`, `tools/test_core_consumer_idempotency_semantics.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_event_ir_semantics.py`, `tools/test_core_topic_delivery_ir_semantics.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
 - Generate: `tools/test_core_transaction_semantics.py` and `tools/test_m4_petstore.py`
 
 ## Transaction resource/outbox closure
@@ -61,6 +61,14 @@ That evidence justifies promoting only this one cell from `partial` to `implemen
 
 Generate remains `partial`: `tools/generate_postgres_idempotency.py` is deliberately scoped to transactional mutations with a resolved PostgreSQL transaction resource and does not implement consumer runtime idempotency. No consumer runtime, general distributed profile, IDE cell, source syntax, or language semantic is widened by this closure.
 
+## Event version/schema IR evidence
+
+The accepted Core event contract requires versioned event declarations together with event identity/schema metadata. Canonical IR already carries the event major version and canonical field schema, including field names, materialized field types, and requiredness; the closed IR schema requires a positive major version and at least one valid event field.
+
+`tools/test_core_event_ir_semantics.py` exercises the existing M4 minimal fixture end to end. It proves deterministic source-to-IR preservation of the event major version and ordered event field schema, and proves the negative IR boundary by showing the closed schema rejects a zero major version, an empty event schema, and an empty field name.
+
+This closure intentionally does not promote `decl.event/ir`: it proves the accepted version/schema metadata subset but does not claim every broader Event Validate/IR/Generate behavior is complete. No syntax, language semantics, generator behavior, or IDE status is widened.
+
 ## Topic delivery metadata IR evidence
 
 The accepted Core topic contract requires at-least-once delivery together with partitioning, ordering, retention, compatibility, and dead-letter metadata. Canonical IR already materializes those source facts as `delivery`, `partitionField`, `ordering`, `retentionMs`, `compatibility`, and `deadLetterAttempts`, while the closed IR schema constrains each field to the supported Core contract.
@@ -71,4 +79,4 @@ This closure intentionally does not promote `decl.topic/ir`: it proves one compl
 
 No IDE cell is currently marked `implemented`, so the registry does not manufacture IDE completeness from workflow or documentation evidence. The same rule applies to every remaining `partial` or `missing` cell in any layer: executable tests may exist for a subset of behavior, but status remains open until the matrix can truthfully claim layer completeness.
 
-The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. The entity ownership block reduced the first acceptance gap by three additional IR cells and extended the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. The API block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical transport, major-version, operation-exposure, and compatibility facts. The consumer-idempotency block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical idempotency key, scope, and retention facts. The topic-delivery block adds focused positive/negative evidence for six accepted downstream-relevant Topic IR facts without claiming whole-cell completeness. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR, generator, and IDE capabilities that require independent implementation or narrower claim decisions before promotion.
+The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. The entity ownership block reduced the first acceptance gap by three additional IR cells and extended the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. The API block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical transport, major-version, operation-exposure, and compatibility facts. The consumer-idempotency block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical idempotency key, scope, and retention facts. The event-version/schema block adds focused positive/negative evidence for accepted versioned event schema facts without claiming whole-cell completeness. The topic-delivery block adds focused positive/negative evidence for six accepted downstream-relevant Topic IR facts without claiming whole-cell completeness. Neither acceptance criterion is complete: other Core matrix cells remain `partial` or `missing`, including unrelated IR, generator, and IDE capabilities that require independent implementation or narrower claim decisions before promotion.
