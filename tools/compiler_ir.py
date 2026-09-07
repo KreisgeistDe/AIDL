@@ -18,6 +18,7 @@ _DECL_KINDS = {
     "workflow", "saga", "task",
 }
 _SCALARS = {"string", "int", "decimal", "bool", "uuid", "date", "datetime", "duration", "revision", "email", "url", "bytes"}
+_FIELD_MODIFIERS = {"required", "mutable", "sensitive", "generated", "primary", "concurrencyToken", "immutable", "default", "onDelete"}
 
 
 class IrBuildError(ValueError):
@@ -187,22 +188,24 @@ def _identity(resolver: _Resolver, item: CompilerDeclarationName) -> dict[str, A
 
 
 def _normalize_type_spacing(raw: str) -> str:
-    return re.sub(r"\s*([<>,?\[\]])\s*", r"\1", raw.strip())
+    return re.sub(r"\s*([<>,?()\[\]])\s*", r"\1", raw.strip())
 
 
 def _take_type(tail: str) -> tuple[str, str]:
-    tail = _normalize_type_spacing(tail)
-    if tail.startswith("ref "):
-        parts = tail.split(None, 2)
-        return ("ref " + parts[1], parts[2] if len(parts) > 2 else "")
+    tail = tail.strip()
     stack: list[str] = []
     pairs = {")": "(", "]": "[", ">": "<"}
     for i, char in enumerate(tail):
-        if char in "([<": stack.append(char)
+        if char in "([<":
+            stack.append(char)
         elif char in ")]>":
-            if stack and stack[-1] == pairs[char]: stack.pop()
+            if stack and stack[-1] == pairs[char]:
+                stack.pop()
         elif char.isspace() and not stack:
-            return tail[:i], tail[i + 1:].strip()
+            rest = tail[i:].lstrip()
+            modifier = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\b", rest)
+            if modifier and modifier.group(1) in _FIELD_MODIFIERS:
+                return tail[:i].strip(), rest
     return tail, ""
 
 
