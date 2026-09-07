@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import copy
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -13,12 +14,23 @@ from tools.compiler_ir import build_canonical_ir
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "fixtures" / "valid" / "m4-minimal"
+SOURCE = (PROJECT / "app.aidl").read_text(encoding="utf-8")
 SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8"))
 
 
 class CoreEventIrSemanticsTests(unittest.TestCase):
-    def _ir(self) -> dict:
-        analysis = load_compiler_analysis([PROJECT])
+    def _project_for_source(self, source: str) -> Path:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        project = Path(temporary.name)
+        (project / "app.aidl").write_text(source, encoding="utf-8")
+        return project
+
+    def _analysis_for_source(self, source: str):
+        return load_compiler_analysis([self._project_for_source(source)])
+
+    def _ir(self, source: str = SOURCE) -> dict:
+        analysis = self._analysis_for_source(source)
         self.assertFalse(
             any(diagnostic.severity.value == "error" for diagnostic in analysis.diagnostics),
             [diagnostic.to_json() for diagnostic in analysis.diagnostics],
@@ -36,13 +48,36 @@ class CoreEventIrSemanticsTests(unittest.TestCase):
         validator = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
         return tuple(validator.iter_errors(document))
 
-    def test_event_version_and_schema_are_materialized_from_source(self) -> None:
-        first = self._ir()
-        second = self._ir()
+    def _materialization_errors(self, source: str) -> list[dict]:
+        analysis = self._analysis_for_source(source)
+        return [
+            diagnostic.to_json()
+            for diagnostic in analysis.diagnostics
+            if diagnostic.code.value == "AIDL-T005"
+            and diagnostic.subject.kind == "event"
+        ]
+
+    def test_event_version_identity_and_schema_are_materialized_from_source(self) -> None:
+        source = SOURCE.replace(
+            "export event SnapshotItemCreated version 1 {",
+            "export event SnapshotItemCreated version 2 {",
+        )
+        project = self._project_for_source(source)
+        first_analysis = load_compiler_analysis([project])
+        second_analysis = load_compiler_analysis([project])
+        for analysis in (first_analysis, second_analysis):
+            self.assertFalse(
+                any(diagnostic.severity.value == "error" for diagnostic in analysis.diagnostics),
+                [diagnostic.to_json() for diagnostic in analysis.diagnostics],
+            )
+        first = build_canonical_ir(first_analysis)
+        second = build_canonical_ir(second_analysis)
         self.assertEqual(first, second)
 
         event = self._event(first)
-        self.assertEqual(1, event["majorVersion"])
+        self.assertEqual(2, event["majorVersion"])
+        self.assertEqual("fixtures.valid.m4minimal.SnapshotItemCreated", event["fqn"])
+        self.assertEqual("fixtures.valid.m4minimal.SnapshotItemCreated@2", event["declarationId"])
         self.assertEqual(
             ["eventId", "itemId", "occurredAt"],
             [field["name"] for field in event["fields"]],
@@ -55,6 +90,39 @@ class CoreEventIrSemanticsTests(unittest.TestCase):
         self.assertEqual("datetime", event["fields"][2]["type"]["name"])
         self.assertTrue(all(field["required"] for field in event["fields"]))
         self.assertEqual((), self._schema_errors(first))
+
+    def test_event_materialization_rejects_non_lossless_source_before_ir(self) -> None:
+        variants = {
+            "missing-version": SOURCE.replace(
+                "export event SnapshotItemCreated version 1 {",
+                "export event SnapshotItemCreated {",
+            ),
+            "zero-version": SOURCE.replace(
+                "export event SnapshotItemCreated version 1 {",
+                "export event SnapshotItemCreated version 0 {",
+            ),
+            "malformed-version": SOURCE.replace(
+                "export event SnapshotItemCreated version 1 {",
+                "export event SnapshotItemCreated version nope {",
+            ),
+            "evolves": SOURCE.replace(
+                "export event SnapshotItemCreated version 1 {",
+                "export event SnapshotItemCreated version 1 evolves PreviousSnapshotItemCreated {",
+            ),
+            "malformed-body": SOURCE.replace(
+                "  eventId: OperationId required\n",
+                "  eventId OperationId required\n",
+            ),
+            "dropped-modifier": SOURCE.replace(
+                "  itemId: uuid required\n",
+                "  itemId: uuid required immutable\n",
+            ),
+        }
+        for name, source in variants.items():
+            with self.subTest(name=name):
+                errors = self._materialization_errors(source)
+                self.assertTrue(errors, name)
+                self.assertTrue(all(error["code"] == "AIDL-T005" for error in errors))
 
     def test_ir_schema_rejects_invalid_event_version_and_schema(self) -> None:
         base = self._ir()

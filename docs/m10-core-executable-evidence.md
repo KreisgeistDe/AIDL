@@ -8,7 +8,7 @@ The registry deliberately reuses existing executable regressions where they exer
 
 - Parse: `tools/test_aidl_parser.py`
 - Resolve: `tools/test_compiler_project.py`
-- Validate: `tools/test_m5_fixture_corpus.py`, `tools/test_core_topic_materialization_contract.py`, and `tools/test_core_typecheck.py`
+- Validate: `tools/test_m5_fixture_corpus.py`, `tools/test_core_event_ir_semantics.py`, `tools/test_core_topic_materialization_contract.py`, and `tools/test_core_typecheck.py`
 - Canonical IR: `tools/test_aidl_ir.py`, `tools/test_core_api_contract_semantics.py`, `tools/test_core_consumer_idempotency_semantics.py`, `tools/test_core_entity_ownership_semantics.py`, `tools/test_core_error_contract_ir_semantics.py`, `tools/test_core_event_ir_semantics.py`, `tools/test_core_topic_delivery_ir_semantics.py`, `tools/test_core_topic_materialization_contract.py`, `tools/test_core_transaction_semantics.py`, and `tools/test_ir_schema.py`
 - Generate: `tools/test_core_transaction_semantics.py` and `tools/test_m4_petstore.py`
 
@@ -69,13 +69,20 @@ Canonical IR materializes the accepted runtime-facing subset directly as `code`,
 
 This closure intentionally does not promote `decl.error/ir`: it proves the typed error contract metadata subset but does not claim every broader Error Validate/IR/Generate behavior is complete. No source syntax, language semantics, generator behavior, or IDE status is widened.
 
-## Event version/schema IR evidence
+## Event Validate/IR closure
 
-The accepted Core event contract requires versioned event declarations together with event identity/schema metadata. Canonical IR already carries the event major version and canonical field schema, including field names, materialized field types, and requiredness; the closed IR schema requires a positive major version and at least one valid event field.
+The accepted Core event contract requires versioned event declarations together with event identity/schema metadata. Before this closure, the parser allowed an event without `version`, allowed non-positive or otherwise malformed version tokens, and also recorded an optional `evolves` clause; `tools/compiler_ir.py` then defaulted an absent or invalid source version to `majorVersion=1` and did not project `evolves`. Generic event-body nodes that were not recognized as fields could likewise be skipped by the IR field projection. Those behaviors prevented a whole-cell Core Event claim because accepted source facts could be defaulted or dropped.
 
-`tools/test_core_event_ir_semantics.py` exercises the existing M4 minimal fixture end to end. It proves deterministic source-to-IR preservation of the event major version and ordered event field schema, and proves the negative IR boundary by showing the closed schema rejects a zero major version, an empty event schema, and an empty field name.
+`tools/compiler_event_materialization.py` now places the existing `AIDL-T005` materialization boundary in front of every event in the closed Core project context. A Core event must carry an explicit positive major version, must not use `evolves` until event-evolution IR semantics are implemented, must contain at least one materializable field, and every body entry must be a losslessly projectable field. Duplicate field names, nullable-plus-required contradictions, malformed body entries, and field modifiers that Canonical IR would drop are rejected before IR rather than silently normalized away.
 
-This closure intentionally does not promote `decl.event/ir`: it proves the accepted version/schema metadata subset but does not claim every broader Event Validate/IR/Generate behavior is complete. No syntax, language semantics, generator behavior, or IDE status is widened.
+`tools/test_core_event_ir_semantics.py` proves the boundary directly from source. Its positive case uses an explicit version 2 and proves deterministic `majorVersion`, canonical FQN/declaration identity, ordered field names, materialized field types, requiredness, and full-document validity against `spec/ir.schema.json`. Its negative matrix proves stable `AIDL-T005` rejection for missing, zero, malformed version, `evolves`, malformed body entries, and dropped field modifiers. The existing closed-schema mutations continue to prove that zero versions, empty event schemas, and empty field names are invalid IR.
+
+This executable evidence justifies promoting exactly these two cells from `partial` to `implemented`:
+
+- `decl.event`: Validate
+- `decl.event`: IR
+
+`decl.event/generate` and `decl.event/ide` remain `partial`. No grammar, IR schema shape, event-evolution semantics, generator/runtime behavior, Consumer semantics, Module/Import/App claim model, M16.5 work, or IDE behavior is widened by this closure.
 
 ## Topic Validate/IR closure
 
@@ -94,4 +101,4 @@ This executable evidence justifies promoting exactly these two cells from `parti
 
 No IDE cell is currently marked `implemented`, so the registry does not manufacture IDE completeness from workflow or documentation evidence. The same rule applies to every remaining `partial` or `missing` cell in any layer: executable tests may exist for a subset of behavior, but status remains open until the matrix can truthfully claim layer completeness.
 
-The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. The entity ownership block reduced the first acceptance gap by three additional IR cells and extended the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. The API block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical transport, major-version, operation-exposure, and compatibility facts. The consumer-idempotency block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical idempotency key, scope, and retention facts. The error-contract and event-version/schema blocks add focused evidence without claiming whole-cell completeness. The Topic block now closes both `decl.topic/validate` and `decl.topic/ir`, adds the declaration to the Core Supported fixture set, and removes Topic defaulting/widening from the remaining Canonical-IR preservation gap. M10 criteria 1 and 3 remain open only for unrelated partial Core rows that require independent closure or explicit claim-model decisions.
+The transaction block reduced the first M10 acceptance gap by four partial layer cells and the third acceptance gap by preserving two required transaction semantic facts in Canonical IR. The entity ownership block reduced the first acceptance gap by three additional IR cells and extended the third acceptance evidence to canonical owner-service, owner-local access, and ref-owner facts. The API block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical transport, major-version, operation-exposure, and compatibility facts. The consumer-idempotency block reduced the first gap by one additional IR cell and extended the third acceptance evidence to canonical idempotency key, scope, and retention facts. The error-contract block adds focused evidence without claiming whole-cell completeness. The Event block now closes both `decl.event/validate` and `decl.event/ir`, adds the declaration to the Core Supported fixture set, and removes Event version defaulting and unsupported body/evolution dropping from the Canonical-IR preservation gap. The Topic block closes both `decl.topic/validate` and `decl.topic/ir`, adds the declaration to the Core Supported fixture set, and removes Topic defaulting/widening from the remaining Canonical-IR preservation gap. M10 criteria 1 and 3 remain open only for unrelated partial Core rows that require independent closure or explicit claim-model decisions.

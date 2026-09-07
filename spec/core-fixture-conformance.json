@@ -8,6 +8,7 @@
     "positive-core": [
       {"path": "fixtures/valid/m4-minimal/app.aidl", "type": "fixture"},
       {"path": "tools/test_m5_fixture_corpus.py", "type": "test"},
+      {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"}
     ],
     "negative-core": [
@@ -20,6 +21,7 @@
       {"path": "tools/test_compiler_diagnostics_m2_08.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_09.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_10.py", "type": "test"},
+      {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
       {"path": "tools/test_core_typecheck.py", "type": "test"}
     ],
@@ -28,6 +30,7 @@
       {"path": "tools/test_core_api_contract_semantics.py", "type": "test"},
       {"path": "tools/test_core_consumer_idempotency_semantics.py", "type": "test"},
       {"path": "tools/test_core_entity_ownership_semantics.py", "type": "test"},
+      {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
       {"path": "tools/test_ir_semantic_projection.py", "type": "test"}
     ],
@@ -45,6 +48,7 @@
   "featureIds": [
     "decl.api",
     "decl.entity",
+    "decl.event",
     "decl.mutation",
     "decl.query",
     "decl.service",

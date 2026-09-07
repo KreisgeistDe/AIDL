@@ -17,6 +17,7 @@ try:
     from . import compiler_diagnostics_base as _base
     from .aidl_parser import Diagnostic as ParserDiagnostic
     from .compiler_core_materialization import collect_core_materialization_issues
+    from .compiler_event_materialization import collect_event_materialization_issues
     from .compiler_project import CompilerProject
     from .compiler_topic_materialization import collect_topic_materialization_issues
     from .compiler_typecheck import collect_type_issues
@@ -24,6 +25,7 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
     import compiler_diagnostics_base as _base
     from aidl_parser import Diagnostic as ParserDiagnostic
     from compiler_core_materialization import collect_core_materialization_issues
+    from compiler_event_materialization import collect_event_materialization_issues
     from compiler_project import CompilerProject
     from compiler_topic_materialization import collect_topic_materialization_issues
     from compiler_typecheck import collect_type_issues
@@ -371,6 +373,7 @@ def _with_type_diagnostics(
         issues = (
             *collect_type_issues(project),
             *collect_core_materialization_issues(project),
+            *collect_event_materialization_issues(project),
             *collect_topic_materialization_issues(project),
         )
         for issue in issues:
