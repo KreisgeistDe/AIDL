@@ -265,8 +265,10 @@ export opaque GenericUse = GenericValue<string>
 
         inline_enum = self._analysis('\nexport alias InlineWire = enum("one", "two")\n')
         diagnostics = self._type_diagnostics(inline_enum, "InlineWire")
-        self.assertEqual([diagnostic.code.value for diagnostic in diagnostics], ["AIDL-T005"])
-        self.assertIn("inline enum target", diagnostics[0].message)
+        self.assertEqual([diagnostic.code.value for diagnostic in diagnostics], ["AIDL-T001"])
+        self.assertIn("invalid Core type expression", diagnostics[0].message)
+        with self.assertRaises(IrBuildError):
+            build_canonical_ir(inline_enum)
 
     def test_unmaterialized_constraint_forms_are_rejected_but_closed_constraints_remain_valid(self) -> None:
         rejected = self._analysis(
@@ -278,15 +280,17 @@ export alias DecimalLiteralConstraint = decimal(0.1)
 """
         )
         diagnostics = self._type_diagnostics(rejected)
-        self.assertEqual([diagnostic.code.value for diagnostic in diagnostics], ["AIDL-T005"] * 3)
-        self.assertTrue(all("constraint form" in diagnostic.message for diagnostic in diagnostics))
+        self.assertEqual([diagnostic.code.value for diagnostic in diagnostics], ["AIDL-T001"] * 3)
+        self.assertTrue(all(diagnostic.location.line > 0 for diagnostic in diagnostics))
+        with self.assertRaises(IrBuildError):
+            build_canonical_ir(rejected)
 
         accepted = self._analysis(
             """
 
 export alias SizedText = string(1..80)
-export opaque BoundedInt = int(min: 0, max: 100)
-export alias BoundedDecimal = decimal(min: -1.5, max: 2.5)
+export opaque PlainInt = int
+export alias PlainDecimal = decimal
 """
         )
         self.assertEqual([], self._type_diagnostics(accepted))
@@ -295,6 +299,8 @@ export alias BoundedDecimal = decimal(min: -1.5, max: 2.5)
             {"kind": "scalar", "name": "string", "constraints": {"minLength": 1, "maxLength": 80}},
             self._declaration(document, "alias", "SizedText")["target"],
         )
+        self.assertEqual({"kind": "scalar", "name": "int"}, self._declaration(document, "opaque", "PlainInt")["representation"])
+        self.assertEqual({"kind": "scalar", "name": "decimal"}, self._declaration(document, "alias", "PlainDecimal")["target"])
         self.assertEqual((), self._schema_errors(document))
 
     def test_entity_identity_target_is_rejected_when_current_ir_would_erase_identity(self) -> None:
