@@ -10,7 +10,14 @@ from tools.m4_petstore import SOURCE
 
 
 class CoreEntityOwnershipSemanticsTest(unittest.TestCase):
-    def _ir_with_owner_local_ref(self) -> dict:
+    def _analysis(self, text: str):
+        directory = tempfile.TemporaryDirectory()
+        self.addCleanup(directory.cleanup)
+        source = Path(directory.name) / "app.aidl"
+        source.write_text(text, encoding="utf-8")
+        return load_compiler_analysis([source])
+
+    def _owner_local_ref_source(self) -> str:
         text = SOURCE.read_text(encoding="utf-8")
         text = text.replace(
             "export entity RunnablePet {\n",
@@ -27,23 +34,21 @@ class CoreEntityOwnershipSemanticsTest(unittest.TestCase):
             "}\n\nexport event RunnablePetCreated",
             1,
         )
-        text = text.replace(
+        return text.replace(
             "  owns [RunnablePet]\n",
             "  owns [RunnablePet, RunnableCustomer]\n",
             1,
         )
 
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "app.aidl"
-            source.write_text(text, encoding="utf-8")
-            analysis = load_compiler_analysis([source])
-            errors = [
-                item.to_json()
-                for item in analysis.diagnostics
-                if item.severity == CompilerDiagnosticSeverity.ERROR
-            ]
-            self.assertEqual([], errors)
-            return build_canonical_ir(analysis)
+    def _ir_with_owner_local_ref(self) -> dict:
+        analysis = self._analysis(self._owner_local_ref_source())
+        errors = [
+            item.to_json()
+            for item in analysis.diagnostics
+            if item.severity == CompilerDiagnosticSeverity.ERROR
+        ]
+        self.assertEqual([], errors)
+        return build_canonical_ir(analysis)
 
     def test_ir_preserves_single_owner_and_owner_local_ref_boundary(self) -> None:
         ir = self._ir_with_owner_local_ref()
@@ -88,6 +93,59 @@ class CoreEntityOwnershipSemanticsTest(unittest.TestCase):
         ]
         self.assertEqual(1, len(writes))
         self.assertIn(writes[0]["entityId"], service["owns"])
+
+    def test_single_owner_violation_is_rejected_before_ir_materialization(self) -> None:
+        text = SOURCE.read_text(encoding="utf-8").replace(
+            "  owns [RunnablePet]\n", "  owns []\n", 1
+        )
+        analysis = self._analysis(text)
+        self.assertIn("AIDL-DIST400", [item.code.value for item in analysis.diagnostics])
+
+    def test_cross_service_ref_is_rejected_before_ir_materialization(self) -> None:
+        text = self._owner_local_ref_source().replace(
+            "  owns [RunnablePet, RunnableCustomer]\n",
+            "  owns [RunnablePet]\n",
+            1,
+        )
+        text = text.replace(
+            "export system PetstoreSystem {\n",
+            "export service CustomerService {\n"
+            "  owns [RunnableCustomer]\n"
+            "  uses []\n"
+            "  exposes []\n"
+            "  runs []\n"
+            "}\n\n"
+            "export system PetstoreSystem {\n",
+            1,
+        ).replace(
+            "  services [PetstoreService]\n",
+            "  services [PetstoreService, CustomerService]\n",
+            1,
+        )
+        analysis = self._analysis(text)
+        self.assertIn("AIDL-DIST401", [item.code.value for item in analysis.diagnostics])
+
+    def test_foreign_owner_persistent_access_is_rejected_before_ir_materialization(self) -> None:
+        text = SOURCE.read_text(encoding="utf-8").replace(
+            "  owns [RunnablePet]\n", "  owns []\n", 1
+        )
+        text = text.replace(
+            "export system PetstoreSystem {\n",
+            "export service ForeignPetService {\n"
+            "  owns [RunnablePet]\n"
+            "  uses []\n"
+            "  exposes []\n"
+            "  runs []\n"
+            "}\n\n"
+            "export system PetstoreSystem {\n",
+            1,
+        ).replace(
+            "  services [PetstoreService]\n",
+            "  services [PetstoreService, ForeignPetService]\n",
+            1,
+        )
+        analysis = self._analysis(text)
+        self.assertIn("AIDL-DIST402", [item.code.value for item in analysis.diagnostics])
 
 
 if __name__ == "__main__":
