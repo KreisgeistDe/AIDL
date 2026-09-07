@@ -4,7 +4,11 @@
 
 `TODO.md` is the sole handwritten authority for roadmap order, milestone identity, and completion state. Operational execution state remains on `agents/channel`; committed legacy project `.ai/**` current-state files are not a second roadmap authority.
 
+The project tree is intentionally `.ai/**`-free. Every project PR targeting `main` must reject any `.ai/**` endpoint, including additions, modifications, deletions, copies, and renames; the former one-time legacy deletion exceptions are obsolete because those files no longer exist in the project repository. Operational state and any maintenance of the transport workflow belong only in `KreisgeistDe/AIDL_channel@agents/channel`, never in a project PR.
+
 `spec/conformance-manifest.json` is the separate authoritative versioned implementation/support source. New or changed support claims must update a stable manifest surface ID, use only the schema-defined status vocabulary, and carry repository-relative evidence that passes `python3 -m tools.conformance_manifest validate`. Roadmap completion alone never promotes a support claim.
+
+The offline repository-state check `python3 -m tools.validate_repository_state` enforces the `.ai/**`-free project invariant and the roadmap, channel, and conformance authority markers. It requires no network access and runs in standard validation CI.
 
 M10-01 records repository-level support surfaces only. M10-02 provides the exhaustive Parse/Resolve/Validate/IR/Generate/IDE matrix for every Core declaration and semantic rule; incomplete rows or evidence remain explicit in that matrix and must not be interpreted as full layer completeness. Public wording in `SUPPORT.md` is drift-checked against each manifest `supportStatement`.
 
