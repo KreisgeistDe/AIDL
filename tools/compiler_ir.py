@@ -188,7 +188,7 @@ def _identity(resolver: _Resolver, item: CompilerDeclarationName) -> dict[str, A
 
 
 def _normalize_type_spacing(raw: str) -> str:
-    return re.sub(r"\s*([<>,?\[\]])\s*", r"\1", raw.strip())
+    return re.sub(r"\s*([<>,?()\[\]])\s*", r"\1", raw.strip())
 
 
 def _take_type(tail: str) -> tuple[str, str]:
