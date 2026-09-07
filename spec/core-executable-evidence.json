@@ -8,6 +8,7 @@
     ],
     "ir-core": [
       "tools/test_aidl_ir.py",
+      "tools/test_core_entity_ownership_semantics.py",
       "tools/test_core_transaction_semantics.py",
       "tools/test_ir_schema.py"
     ],
