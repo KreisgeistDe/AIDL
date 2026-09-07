@@ -28,12 +28,6 @@ FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.+)$", re.S)
 _CONSUMER_SERVICE = re.compile(
     r"^service\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)$"
 )
-_CONSUMER_START = re.compile(
-    r"^start\s*:\s*(workflow|task|mutation)\s+"
-    r"([A-Za-z_][A-Za-z0-9_]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_]*)*)\s*\(",
-    re.S,
-)
-_POSITIVE_DURATION = re.compile(r"^[1-9][0-9]*(?:ms|s|m|h|d)$")
 
 
 @dataclass(frozen=True)
@@ -303,7 +297,7 @@ def _canonical_core_context(project: CompilerProject) -> bool:
 
 
 def _consumer_execution_issues(project: CompilerProject, item, issues: list[CoreMaterializationIssue]) -> None:
-    """Reject only consumer execution facts that a full Core IR build would lose or widen."""
+    """Close service materialization and block remaining execution clauses from silent loss."""
     if not _canonical_core_context(project):
         return
     event = item.declaration.node.attrs.get("on")
@@ -356,75 +350,30 @@ def _consumer_execution_issues(project: CompilerProject, item, issues: list[Core
                         issues.append(issue)
             continue
 
-        if "retry" in clause and "immediate" in clause:
+        if re.match(r"^retry(?:\s*:\s*|\s+)", clause) and "none" not in clause:
+            policy = "immediate" if "immediate" in clause else "exponential" if "exponential" in clause else "non-none"
             issue = _issue(
                 item,
-                "consumer retry policy 'immediate' is grammatical but not representable by the closed Core Canonical IR retry contract",
-                "retry none or fully specified exponential retry until immediate retry has a canonical IR representation",
+                f"consumer retry policy '{policy}' is grammatical but is not reliably materialized by the current Core Canonical IR projection",
+                "retry none until non-none consumer retry has verified Canonical IR projection",
                 child.span,
             )
             if issue:
                 issues.append(issue)
             continue
 
-        if "retry" in clause and "exponential" in clause:
-            match = re.search(r"exponential\s*\((.*)\)", clause, re.S)
-            arguments: dict[str, str] = {}
-            if match:
-                for part in _split(match.group(1)):
-                    if ":" not in part:
-                        continue
-                    key, value = (piece.strip() for piece in part.split(":", 1))
-                    if key and key not in arguments:
-                        arguments[key] = value
-            valid = (
-                set(arguments) == {"initial", "maxDelay", "attempts"}
-                and _POSITIVE_DURATION.fullmatch(arguments.get("initial", "")) is not None
-                and _POSITIVE_DURATION.fullmatch(arguments.get("maxDelay", "")) is not None
-                and re.fullmatch(r"[1-9][0-9]*", arguments.get("attempts", "")) is not None
+        if re.match(r"^start(?:\s*:\s*|\s+)", clause):
+            issue = _issue(
+                item,
+                "consumer start is grammatical but is not yet accepted by the verified Core Canonical IR materialization boundary",
+                "no consumer start until target resolution and effect projection are executable evidence",
+                child.span,
             )
-            if not valid:
-                issue = _issue(
-                    item,
-                    "consumer exponential retry must declare positive initial, maxDelay, and attempts values that Canonical IR can preserve",
-                    "exponential(initial: POSITIVE_DURATION, maxDelay: POSITIVE_DURATION, attempts: POSITIVE_INT)",
-                    child.span,
-                )
-                if issue:
-                    issues.append(issue)
+            if issue:
+                issues.append(issue)
             continue
 
-        start_match = _CONSUMER_START.match(clause)
-        if start_match:
-            target_kind, target_reference = start_match.groups()
-            target_reference = re.sub(r"\s*\.\s*", ".", target_reference)
-            if target_kind == "mutation":
-                issue = _issue(
-                    item,
-                    "consumer start mutation is grammatical but not representable by the closed Core Canonical IR start effect",
-                    "start workflow or task until mutation start has a canonical IR representation",
-                    child.span,
-                )
-                if issue:
-                    issues.append(issue)
-            else:
-                targets = tuple(
-                    candidate
-                    for candidate in _resolve(project, item, target_reference)
-                    if candidate.declaration.kind == target_kind
-                )
-                if len(targets) != 1:
-                    issue = _issue(
-                        item,
-                        f"consumer start {target_kind} target '{target_reference}' must resolve uniquely before Canonical IR materialization; found {len(targets)} declarations",
-                        f"one resolved {target_kind} target",
-                        child.span,
-                    )
-                    if issue:
-                        issues.append(issue)
-            continue
-
-        if re.match(r"^call\s*:", clause):
+        if re.match(r"^call(?:\s*:\s*|\s+)", clause):
             issue = _issue(
                 item,
                 "consumer call is grammatical but its execution contract is not materialized by the closed Core Canonical IR",
