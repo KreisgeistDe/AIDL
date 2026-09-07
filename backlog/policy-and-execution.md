@@ -14,9 +14,11 @@ M10-01 records repository-level support surfaces only. M10-02 provides the exhau
 
 The language specification is normative design input, not implementation status. Syntax or semantics documented in `docs/` remain **specified** unless conformance authority and executable evidence justify a stronger claim. Likewise, adding or completing M17+ roadmap tasks does not itself change `spec/conformance-manifest.json`, Core/profile conformance status, generator/runtime support, editor support, or release readiness.
 
+M16.5 is a planning/decision gate between agent-construction evaluation and broad M17–M20 language expansion. It is additive: existing M1–M21 milestone identities and completion states remain unchanged. M16.5 may inventory, compare, and approve future normalization candidates, but it does not itself define replacement syntax, alter parser/semantic/IR behavior, or authorize a breaking source change. Any compatibility-sensitive normalization requires a separate versioned language decision plus M7-owned compatibility classification, migration/deprecation evidence, implementation, fixtures, and conformance updates.
+
 M17–M20 separate missing language/compiler/Canonical-IR planning from existing runtime and ecosystem milestones. In particular, M12 remains distributed-runtime authority, M13 offline-runtime authority, M14 media/cloud/realtime runtime and bounded provider authority, and M15 adapter-ecosystem/1.0-readiness authority. Those milestones may consume M17–M20 language contracts but must not redefine them locally. M21 extends conformance certification beyond Core only after applicable language, generator, runtime, compatibility, and editor evidence exists.
 
-M7 remains the semantic compatibility-classification authority. Later evolution work may reconcile specified terminology and add missing evolution facts, but must project through one versioned compatibility authority rather than introducing a second classifier.
+M7 remains the semantic compatibility-classification authority. Later evolution work may reconcile specified terminology and add missing evolution facts, but must project through one versioned compatibility authority rather than introducing a second classifier. M16.5 normalization candidates that alter accepted source forms are subject to the same M7 authority and must carry an explicit migration/deprecation contract before implementation.
 
 A feature should not be described as fully supported until the applicable manifest scope and its required semantic validation, IR representation, and executable evidence justify that claim.
 
@@ -35,9 +37,15 @@ A core language feature is considered complete when:
 
 For M17+ profile/language surfaces, the same discipline applies with explicit applicability: Parse/Resolve/Validate/IR evidence is required for a supported language-semantic claim; Generate, Runtime, and IDE evidence is additionally required whenever the public support statement includes those layers. A surface may remain specified, experimental, partial, or blocked without pretending every layer is applicable or complete.
 
+## Language-surface normalization gate
+
+Before broad M17–M20 expansion, M16.5 must disposition the measured construction hotspots from `docs/grammar-complexity-review.md` and the deterministic `tools/grammar_complexity_metrics.py` baseline. The gate covers at least colonized versus uncolonized leaves; recurring `auth`, `errors`, `retry`, `timeout`, `consistency`, and `idempotency` variants; compact versus structured forms; `profileProperty`, `uiStatement`, and `testStatement`; compound word-order mini-languages; and confusable declaration families.
+
+A disposition may keep existing syntax, improve documentation/tooling, make contextual schemas compiler-discoverable, or nominate a compatibility-sensitive normalization candidate. It must never smuggle a syntax choice into roadmap prose. Any adopted change must be evaluated against the same model- and vendor-neutral M16 construction task corpus before and after, using semantic end-state checks and measured compile success, semantic correctness, unnecessary edits, repair loops, regressions, parse/validation success, invented syntax, wrong placement, diagnostics density, and semantic-fact recall. Results are evidence only after execution; the roadmap defines measurements, not scores.
+
 ## Recommended execution order
 
-Existing milestone identity and ordering remain unchanged:
+Existing M1–M21 milestone identities and completion states remain unchanged; M16.5 is an additive gate and does not renumber them:
 
 1. M9 — Release and quality baseline
 2. M10 — Core conformance closure
@@ -47,13 +55,14 @@ Existing milestone identity and ordering remain unchanged:
 6. M14 — Media, cloud, and realtime vertical slice
 7. M15 — Adapter ecosystem and 1.0 readiness
 8. M16 — Agent Construction and Verification
-9. M17 — Extended Type System and Standard Library
-10. M18 — Advanced Backend Language
-11. M19 — Frontend Language
-12. M20 — Distributed, Sync, Resource, Deployment, and Evolution Language Contracts
-13. M21 — Full-Language Conformance Closure
+9. M16.5 — Language Surface Normalization Gate
+10. M17 — Extended Type System and Standard Library
+11. M18 — Advanced Backend Language
+12. M19 — Frontend Language
+13. M20 — Distributed, Sync, Resource, Deployment, and Evolution Language Contracts
+14. M21 — Full-Language Conformance Closure
 
-M17+ are appended rather than inserted into or substituted for M12–M16. Scheduling may execute prerequisites earlier when explicitly dispatched, but roadmap identity/order and the ownership boundaries above remain stable.
+M17+ remain separate from and do not substitute for M12–M16 runtime/ecosystem ownership. Scheduling may execute prerequisites earlier when explicitly dispatched, but broad M17–M20 language-surface expansion should not bypass M16.5 normalization disposition. Roadmap identity/order and the ownership boundaries above remain stable.
 
 Do not expand the language surface merely to advance a later milestone. Promote a capability only when its required parser, semantic, IR, fixture, runtime or explicit capability-failure, and editor boundaries can advance coherently.
 
