@@ -16,7 +16,7 @@ class GrammarComplexityMetricsTests(unittest.TestCase):
         self.assertGreater(first["syntax_word_terminals"], 100)
         self.assertGreater(first["productions"], 100)
         self.assertGreater(first["production_alternatives"], first["productions"])
-        self.assertIn("idempotencyClause", first["inline_block_dual_productions"])
+        self.assertIn("profileProperty", first["inline_block_dual_productions"])
         print("GRAMMAR_COMPLEXITY_METRICS=" + json.dumps(first, sort_keys=True))
 
 
