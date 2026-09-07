@@ -113,5 +113,41 @@ class ContextualKeywordRegressionTest(unittest.TestCase):
         )
 
 
+class EnumParserStateTest(unittest.TestCase):
+    def test_enum_cases_preserve_assignment_and_malformed_source_state(self) -> None:
+        source = """module example.enums
+export enum State {
+  Draft,
+  Published = "published",
+  Broken = 7
+}
+"""
+        program, diagnostics, _ = aidl_parser.parse_text(source)
+
+        self.assertEqual([], diagnostics)
+        enum = next(child for child in program.children if child.kind == "enum")
+        self.assertEqual(["Draft", "Published", "Broken"], enum.attrs["cases"])
+        self.assertEqual(
+            [
+                {"raw": "Draft", "name": "Draft", "assignedValue": None, "malformed": False},
+                {"raw": 'Published = "published"', "name": "Published", "assignedValue": '"published"', "malformed": False},
+                {"raw": "Broken = 7", "name": "Broken", "malformed": True},
+            ],
+            enum.attrs["enumCases"],
+        )
+
+    def test_enum_trailing_comma_is_retained_as_malformed_case_state(self) -> None:
+        program, diagnostics, _ = aidl_parser.parse_text("module example.enums\nenum State { Draft, }\n")
+        self.assertEqual([], diagnostics)
+        enum = next(child for child in program.children if child.kind == "enum")
+        self.assertEqual(
+            [
+                {"raw": "Draft", "name": "Draft", "assignedValue": None, "malformed": False},
+                {"raw": ",", "malformed": True},
+            ],
+            enum.attrs["enumCases"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
