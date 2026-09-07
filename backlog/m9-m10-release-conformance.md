@@ -50,6 +50,6 @@ Goal: make support claims mechanically traceable across specification, compiler,
 ### M10 acceptance criteria
 
 - [ ] Every Core support claim links to executable evidence at each required implementation layer.
-- [ ] All three reference applications either pass full Core type checking or report stable diagnostics for profile capabilities not yet implemented.
+- [x] All three reference applications either pass full Core type checking or report stable diagnostics for profile capabilities not yet implemented. *(The full `examples/petstore`, `examples/calendar-offline`, and `examples/videohub` source trees are loaded by compiler-owned Core typechecking evidence. `tools/test_reference_app_core_typecheck.py` certifies each full application has more than five AIDL sources, produces identical Core type diagnostics under directory loading and reversed explicit source order, and emits no `AIDL-T001` through `AIDL-T005`; the existing negative Core type regressions remain linked through the same `validate-types` evidence class.)*
 - [ ] Canonical IR contains every accepted semantic fact required by downstream tools; no supported source construct is silently discarded.
 - [x] Conformance and performance baselines are deterministic and enforced in CI. *(Conformance manifest/core-fixture checks and the M10-07 deterministic performance baseline gate run in repository CI; timing SLAs remain explicitly out of scope.)*
