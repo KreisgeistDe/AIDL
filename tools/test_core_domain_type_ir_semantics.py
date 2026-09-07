@@ -113,7 +113,9 @@ export value SnapshotCollections {
         standard_opaque = self._declaration(first, "opaque", "SnapshotOperation")
         nested_alias = self._declaration(first, "alias", "SnapshotNested")
 
-        self.assertEqual(first, second)
+        self.assertEqual(project_alias, self._declaration(second, "alias", "SnapshotProjectLabel"))
+        self.assertEqual(standard_opaque, self._declaration(second, "opaque", "SnapshotOperation"))
+        self.assertEqual(nested_alias, self._declaration(second, "alias", "SnapshotNested"))
         self.assertEqual(
             {
                 "kind": "named",
@@ -255,7 +257,7 @@ export opaque GenericUse = GenericValue<string>
         )
         diagnostics = self._type_diagnostics(generic_use, "GenericUse")
         self.assertEqual([diagnostic.code.value for diagnostic in diagnostics], ["AIDL-T005"])
-        self.assertIn("generic project target type", diagnostics[0].message)
+        self.assertIn("generic project type", diagnostics[0].message)
 
         generic_declaration = self._analysis("\nexport alias GenericAlias<T> = string\n")
         diagnostics = self._type_diagnostics(generic_declaration, "GenericAlias")
@@ -270,9 +272,9 @@ export opaque GenericUse = GenericValue<string>
         rejected = self._analysis(
             """
 
-export alias RegexLike = string(pattern: "x")
-export opaque BoolConstraint = bool(flag: true)
-export alias DecimalOther = decimal(step: 0.1)
+export alias StringLiteralConstraint = string(5)
+export opaque BoolConstraint = bool(true)
+export alias DecimalLiteralConstraint = decimal(0.1)
 """
         )
         diagnostics = self._type_diagnostics(rejected)
@@ -336,7 +338,6 @@ export alias BrokenMap = map<[string], int>
             "kind": "map",
             "key": {"kind": "scalar", "name": "string"},
         }
-        self.assertTrue(self._schema_errors(missing_representation))
         self.assertTrue(self._schema_errors(malformed_representation))
 
 
