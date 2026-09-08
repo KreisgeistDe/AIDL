@@ -131,7 +131,15 @@ def _auth_value_diagnostics(project: CompilerProject) -> tuple[CompilerDiagnosti
                 if child.name is None or child.span is None:
                     continue
                 clause = child.name.strip()
-                if clause.startswith("subject "):
+                if _auth_clause_kind(clause) == "provider" and child.kind == "blockClause":
+                    diagnostics.append(
+                        _previous._app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' auth provider must be a leaf clause; provider block configuration is not represented by the current Canonical IR app.auth contract",
+                        )
+                    )
+                elif clause.startswith("subject "):
                     if _previous._AUTH_SUBJECT_ALIAS.search(clause) is None and _AUTH_SUBJECT.fullmatch(clause) is None:
                         diagnostics.append(
                             _previous._app_diagnostic(
