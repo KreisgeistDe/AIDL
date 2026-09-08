@@ -27,12 +27,17 @@ class CoreFixtureConformanceTest(unittest.TestCase):
         errors = validate_core_fixture_data(payload, self.core, root=ROOT)
         self.assertIn(f"Core fixture coverage missing supported ids: ['{removed}']", errors)
 
-    def test_partial_core_row_cannot_be_claimed_as_fixture_complete(self) -> None:
-        payload = copy.deepcopy(self.coverage)
-        payload["featureIds"].append("decl.consumer")
-        payload["featureIds"].sort()
-        errors = validate_core_fixture_data(payload, self.core, root=ROOT)
-        self.assertIn("Core fixture coverage contains non-supported ids: ['decl.consumer']", errors)
+    def test_consumer_is_fixture_complete_after_validate_ir_promotion(self) -> None:
+        self.assertIn("decl.consumer", self.coverage["featureIds"])
+        row = next(item for item in self.core["features"] if item["id"] == "decl.consumer")
+        self.assertEqual("implemented", row["layerStatus"]["validate"])
+        self.assertEqual("implemented", row["layerStatus"]["ir"])
+        paths = {
+            entry["path"]
+            for category in ("positive-core", "negative-core", "ir-core")
+            for entry in self.coverage["evidenceCatalog"][category]
+        }
+        self.assertIn("tools/test_core_consumer_materialization_closure.py", paths)
 
     def test_unknown_evidence_reference_fails(self) -> None:
         payload = copy.deepcopy(self.coverage)
