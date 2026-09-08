@@ -7,6 +7,13 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from tools.ir_compatibility import classify_ir_diff, ir_compatibility_to_json
+from tools.ir_diff import IrDiffError, diff_canonical_ir, semantic_ir_diff_to_json
+from tools.ir_migration_guidance import (
+    build_ir_migration_guidance,
+    ir_migration_guidance_to_json,
+)
+
 
 EXIT_PASS = 0
 EXIT_INPUT_ERROR = 1
@@ -207,29 +214,127 @@ def _load_targets(config_path: Path) -> list[dict[str, str]]:
     return normalized
 
 
-def _run_authoritative_diff(old_path: Path, new_path: Path) -> tuple[int, Mapping[str, Any]]:
+def _repository_root_for(path: Path) -> Path:
+    start = path if path.is_dir() else path.parent
+    for candidate in (start, *start.parents):
+        if (candidate / "tools" / "aidl_cli.py").is_file():
+            return candidate
+    raise CompatibilityCiError(f"cannot locate repository root for compatibility input: {path}")
+
+
+def _run_ir_with_own_compiler(
+    root: Path,
+    path: Path,
+    side: str,
+) -> tuple[Mapping[str, Any] | None, Mapping[str, Any] | None]:
+    try:
+        relative = path.relative_to(root)
+    except ValueError as exc:
+        raise CompatibilityCiError(f"{side} compatibility input is outside its repository root: {path}") from exc
     command = [
         sys.executable,
         "-m",
         "tools.aidl_cli",
-        "diff",
-        "--old",
-        str(old_path),
-        "--new",
-        str(new_path),
+        "ir",
+        str(relative),
         "--format",
         "json",
     ]
-    completed = subprocess.run(command, check=False, capture_output=True, text=True)
+    completed = subprocess.run(
+        command,
+        cwd=root,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
     try:
         payload = json.loads(completed.stdout)
     except json.JSONDecodeError as exc:
         raise CompatibilityCiError(
-            f"aidl diff did not emit a JSON envelope for {old_path} -> {new_path}: {exc}"
+            f"{side} compiler did not emit a JSON IR envelope for {path}: {exc}"
         ) from exc
-    if not isinstance(payload, Mapping):
-        raise CompatibilityCiError("aidl diff JSON envelope must be an object")
-    return completed.returncode, payload
+    envelope = _require_mapping(payload, f"{side} IR envelope")
+    if envelope.get("command") != "ir":
+        raise CompatibilityCiError(f"{side} compiler emitted a non-IR envelope")
+    if envelope.get("ok") is not True:
+        diagnostics = envelope.get("diagnostics")
+        error = envelope.get("error")
+        if isinstance(diagnostics, list) and diagnostics:
+            failure = {
+                "kind": "compiler",
+                "message": f"{side} project has compiler errors",
+                "side": side,
+            }
+        elif isinstance(error, Mapping):
+            failure = {
+                "kind": str(error.get("kind") or "irBuild"),
+                "message": str(error.get("message") or f"{side} IR build failed"),
+                "side": side,
+            }
+        else:
+            failure = {
+                "kind": "irBuild",
+                "message": f"{side} IR build failed",
+                "side": side,
+            }
+        return None, {
+            "command": "diff",
+            "diagnostics": diagnostics if isinstance(diagnostics, list) else [],
+            "ok": False,
+            "error": failure,
+        }
+    if completed.returncode != 0:
+        raise CompatibilityCiError(
+            f"{side} compiler returned {completed.returncode} despite a successful IR envelope"
+        )
+    result = _require_mapping(envelope.get("result"), f"{side} IR result")
+    return result, None
+
+
+def _run_authoritative_diff(old_path: Path, new_path: Path) -> tuple[int, Mapping[str, Any]]:
+    old_root = _repository_root_for(old_path)
+    new_root = _repository_root_for(new_path)
+    old_document, failure = _run_ir_with_own_compiler(old_root, old_path, "old")
+    if failure is not None:
+        return EXIT_INPUT_ERROR, failure
+    new_document, failure = _run_ir_with_own_compiler(new_root, new_path, "new")
+    if failure is not None:
+        return EXIT_INPUT_ERROR, failure
+    assert old_document is not None and new_document is not None
+    try:
+        changes = diff_canonical_ir(old_document, new_document)
+    except IrDiffError as exc:
+        message = str(exc)
+        side = "comparison"
+        for candidate in ("old", "new"):
+            prefix = f"{candidate}:"
+            if message.startswith(prefix):
+                side = candidate
+                message = message[len(prefix):].lstrip()
+                break
+        return EXIT_INPUT_ERROR, {
+            "command": "diff",
+            "diagnostics": [],
+            "ok": False,
+            "error": {"kind": "diffInput", "message": message, "side": side},
+        }
+    classifications = classify_ir_diff(changes, old_document, new_document)
+    guidance = build_ir_migration_guidance(
+        changes,
+        classifications,
+        old_document,
+        new_document,
+    )
+    return EXIT_PASS, {
+        "command": "diff",
+        "diagnostics": [],
+        "ok": True,
+        "result": {
+            "changes": semantic_ir_diff_to_json(changes),
+            "classifications": ir_compatibility_to_json(classifications),
+            "guidance": ir_migration_guidance_to_json(guidance),
+        },
+    }
 
 
 def run_targets(baseline_root: Path, current_root: Path, config_path: Path) -> dict[str, Any]:
