@@ -237,7 +237,15 @@ def _app_contract_diagnostics(
             typed = _APP_TYPED_REFERENCE.fullmatch(clause)
             if typed is not None:
                 clause_name, reference = typed.groups()
-                if clause_name == "system":
+                if clause_name == "frontend":
+                    diagnostics.append(
+                        _app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' frontend clause is not represented by the current Canonical IR app contract",
+                        )
+                    )
+                elif clause_name == "system":
                     singleton_clauses["system"].append((reference, child.span))
                 elif clause_name == "api":
                     api_clauses.append((reference, child.span))
@@ -256,7 +264,15 @@ def _app_contract_diagnostics(
             identifier = _APP_IDENTIFIER_VALUE.fullmatch(clause)
             if identifier is not None:
                 clause_name, reference = identifier.groups()
-                if clause_name == "defaultDeployment":
+                if clause_name == "compatibility":
+                    diagnostics.append(
+                        _app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' compatibility clause is not represented by the current Canonical IR app contract",
+                        )
+                    )
+                elif clause_name == "defaultDeployment":
                     singleton_clauses["defaultDeployment"].append(
                         (reference, child.span)
                     )
