@@ -49,6 +49,8 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 | `decl.enum` | declaration | implemented | implemented | implemented | implemented |
 | `decl.error` | declaration | implemented | implemented | implemented | implemented |
 | `decl.event` | declaration | implemented | implemented | implemented | implemented |
+| `decl.import` | declaration | implemented | implemented | not-applicable | not-applicable |
+| `decl.module` | declaration | implemented | implemented | implemented | not-applicable |
 | `decl.mutation` | declaration | implemented | implemented | implemented | implemented |
 | `decl.opaque` | declaration | implemented | implemented | implemented | implemented |
 | `decl.query` | declaration | implemented | implemented | implemented | implemented |

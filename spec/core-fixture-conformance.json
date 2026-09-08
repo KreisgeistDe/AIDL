@@ -13,6 +13,7 @@
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_error_contract_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
+      {"path": "tools/test_core_module_import_claim_model.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
       {"path": "tools/test_core_value_ir_semantics.py", "type": "test"}
     ],
@@ -31,6 +32,7 @@
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_error_contract_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
+      {"path": "tools/test_core_module_import_claim_model.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
       {"path": "tools/test_core_typecheck.py", "type": "test"},
       {"path": "tools/test_core_value_ir_semantics.py", "type": "test"}
@@ -45,6 +47,7 @@
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_error_contract_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
+      {"path": "tools/test_core_module_import_claim_model.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
       {"path": "tools/test_core_value_ir_semantics.py", "type": "test"},
       {"path": "tools/test_ir_semantic_projection.py", "type": "test"}
@@ -68,6 +71,8 @@
     "decl.enum",
     "decl.error",
     "decl.event",
+    "decl.import",
+    "decl.module",
     "decl.mutation",
     "decl.opaque",
     "decl.query",

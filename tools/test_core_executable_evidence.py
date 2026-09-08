@@ -47,6 +47,23 @@ class CoreExecutableEvidenceTests(unittest.TestCase):
         )
         self.assertEqual((), violations(self.evidence, self.core, root=ROOT))
 
+    def test_module_import_claim_model_has_focused_evidence(self) -> None:
+        module = next(item for item in self.core["features"] if item["id"] == "decl.module")
+        import_ = next(item for item in self.core["features"] if item["id"] == "decl.import")
+        self.assertEqual("implemented", module["layerStatus"]["validate"])
+        self.assertEqual("not-applicable", module["layerStatus"]["ir"])
+        self.assertEqual("not-applicable", import_["layerStatus"]["validate"])
+        self.assertEqual("not-applicable", import_["layerStatus"]["ir"])
+        self.assertEqual(["validate-core"], module["layerEvidence"]["validate"])
+        self.assertEqual(["spec-core"], module["layerEvidence"]["ir"])
+        self.assertEqual(["spec-core"], import_["layerEvidence"]["validate"])
+        self.assertEqual(["spec-core"], import_["layerEvidence"]["ir"])
+        focused = "tools/test_core_module_import_claim_model.py"
+        self.assertIn(focused, self.evidence["evidence"]["resolve-core"])
+        self.assertIn(focused, self.evidence["evidence"]["validate-core"])
+        self.assertIn(focused, self.evidence["evidence"]["ir-core"])
+        self.assertEqual((), violations(self.evidence, self.core, root=ROOT))
+
     def test_missing_test_path_is_rejected(self) -> None:
         candidate = copy.deepcopy(self.evidence)
         candidate["evidence"]["ir-core"] = ["tools/test_missing_core_ir.py"]
