@@ -60,7 +60,7 @@ def _issue(item, node, message: str, expected: str) -> ValueMaterializationIssue
 def _normalize_type_spacing(text: str) -> str:
     text = re.sub(r"\s*\.\s*", ".", text.strip())
     text = re.sub(r"\s*<\s*", "<", text)
-    text = re.sub(r"\s*>\s*", ">", text)
+    text = re.sub(r"\s*>", ">", text)
     text = re.sub(r"\[\s*", "[", text)
     text = re.sub(r"\s*\]", "]", text)
     text = re.sub(r"\s*\?", "?", text)
