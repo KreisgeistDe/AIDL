@@ -9,6 +9,8 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from tools.compiler_diagnostics import CompilerDiagnosticSeverity, load_compiler_analysis
 from tools.compiler_ir import build_canonical_ir
+from tools.compiler_m1_resolution import collect_m1_resolution_diagnostics
+from tools.test_aidl_ir import _MINIMAL_PROJECT
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -45,23 +47,32 @@ class CoreModuleImportClaimModelTest(unittest.TestCase):
         )
 
     @staticmethod
+    def _m1_diagnostics(analysis, code: str):
+        return tuple(
+            diagnostic
+            for diagnostic in collect_m1_resolution_diagnostics(analysis.project)
+            if diagnostic.code.value == code
+        )
+
+    @staticmethod
     def _declaration(document: dict, name: str) -> dict:
         return next(item for item in document["declarations"] if item.get("name") == name)
 
     def test_leading_modules_and_explicit_wildcard_imports_preserve_same_identity(self) -> None:
         sources = {
-            "a_types.aidl": """module example.types
+            "a_app.aidl": _MINIMAL_PROJECT,
+            "b_types.aidl": """module example.types
 export value Shared {
   id: uuid required
 }
 """,
-            "b_explicit.aidl": """module example.explicit
+            "c_explicit.aidl": """module example.explicit
 import example.types.Shared
 value UsesExplicit {
   shared: Shared required
 }
 """,
-            "c_wildcard.aidl": """module example.wildcard
+            "d_wildcard.aidl": """module example.wildcard
 import example.types.*
 value UsesWildcard {
   shared: Shared required
@@ -74,7 +85,13 @@ value UsesWildcard {
         self.assertEqual([], [item.to_json() for item in self._errors(first_analysis)])
         self.assertEqual([], [item.to_json() for item in self._errors(second_analysis)])
 
-        explicit_resolution, wildcard_resolution = first_analysis.project.import_resolutions
+        resolutions = {
+            resolution.document.module.name: resolution
+            for resolution in first_analysis.project.import_resolutions
+            if resolution.document.module is not None
+        }
+        explicit_resolution = resolutions["example.explicit"]
+        wildcard_resolution = resolutions["example.wildcard"]
         self.assertEqual("example.types.Shared", explicit_resolution.import_.name)
         self.assertEqual("example.types.*", wildcard_resolution.import_.name)
         self.assertFalse(explicit_resolution.import_.wildcard)
@@ -128,7 +145,7 @@ value UsesWildcard {
         for name, (source, fragment, location) in cases.items():
             with self.subTest(name=name):
                 analysis = self._analysis({"case.aidl": source})
-                diagnostics = self._diagnostics(analysis, "AIDL-R003")
+                diagnostics = self._diagnostics(analysis, "AIDL-R005")
                 self.assertTrue(any(fragment in item.message for item in diagnostics))
                 matching = next(item for item in diagnostics if fragment in item.message)
                 self.assertEqual(location, (matching.location.line, matching.location.column))
@@ -144,10 +161,10 @@ value UsesWildcard {
             with self.subTest(name=name):
                 analysis = self._analysis({"client.aidl": source})
                 self.assertEqual(1, len(self._diagnostics(analysis, "AIDL-R001")))
-                self.assertEqual((), self._diagnostics(analysis, "AIDL-R003"))
-                self.assertEqual((), self._diagnostics(analysis, "AIDL-R004"))
+                self.assertEqual((), self._diagnostics(analysis, "AIDL-R005"))
+                self.assertEqual((), self._m1_diagnostics(analysis, "AIDL-R004"))
 
-    def test_direct_and_multi_module_cycles_are_deterministic_and_source_located(self) -> None:
+    def test_direct_and_multi_module_cycles_keep_existing_m1_diagnostic_owner(self) -> None:
         direct = self._analysis(
             {
                 "self.aidl": """module cycle.self
@@ -158,10 +175,13 @@ export value A {
 """
             }
         )
-        direct_cycle = self._diagnostics(direct, "AIDL-R004")
+        direct_cycle = self._m1_diagnostics(direct, "AIDL-R004")
         self.assertEqual(1, len(direct_cycle))
-        self.assertEqual((2, 1), (direct_cycle[0].location.line, direct_cycle[0].location.column))
-        self.assertIn("cycle.self", direct_cycle[0].message)
+        self.assertEqual((1, 1), (direct_cycle[0].location.line, direct_cycle[0].location.column))
+        self.assertEqual(
+            "cyclic module dependency: cycle.self -> cycle.self",
+            direct_cycle[0].message,
+        )
 
         sources = {
             "a.aidl": """module cycle.a
@@ -186,12 +206,15 @@ export value C {
         paths = self._paths(sources)
         first = load_compiler_analysis(paths)
         second = load_compiler_analysis(paths)
-        first_cycles = [item.to_json() for item in self._diagnostics(first, "AIDL-R004")]
-        second_cycles = [item.to_json() for item in self._diagnostics(second, "AIDL-R004")]
+        first_cycles = [item.to_json() for item in self._m1_diagnostics(first, "AIDL-R004")]
+        second_cycles = [item.to_json() for item in self._m1_diagnostics(second, "AIDL-R004")]
         self.assertEqual(first_cycles, second_cycles)
         self.assertEqual(1, len(first_cycles))
-        self.assertIn("cycle.a, cycle.b, cycle.c", first_cycles[0]["message"])
-        self.assertEqual(2, first_cycles[0]["location"]["line"])
+        self.assertEqual(
+            "cyclic module dependency: cycle.a -> cycle.b -> cycle.c -> cycle.a",
+            first_cycles[0]["message"],
+        )
+        self.assertEqual(1, first_cycles[0]["location"]["line"])
         self.assertEqual(1, first_cycles[0]["location"]["column"])
 
 
