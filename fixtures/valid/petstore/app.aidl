@@ -10,8 +10,8 @@ app PetstoreApp {
 }
 
 auth {
-  provider oidc config("ISSUER")
-  subject claim "sub" as SubjectId
+  provider oidc
+  subject claim "sub"
   roles [user]
   scopes [pets.write]
   serviceIdentities required
