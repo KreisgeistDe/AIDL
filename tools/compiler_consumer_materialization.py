@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import re
 
-from .compiler_core_materialization import CoreMaterializationIssue
+try:
+    from .compiler_core_materialization import CoreMaterializationIssue
+except ImportError:  # pragma: no cover - direct tools/ execution/import path
+    from compiler_core_materialization import CoreMaterializationIssue
 
 
 _INLINE_IDEMPOTENCY = re.compile(
