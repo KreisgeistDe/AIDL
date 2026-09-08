@@ -31,10 +31,20 @@ class CoreExecutableEvidenceTests(unittest.TestCase):
         self.assertEqual(["spec-core"], row["layerEvidence"]["parse"])
         self.assertEqual((), violations(self.evidence, candidate, root=ROOT))
 
-    def test_partial_cells_are_not_promoted_by_evidence_registry(self) -> None:
+    def test_consumer_validate_and_ir_are_promoted_by_focused_evidence(self) -> None:
         row = next(item for item in self.core["features"] if item["id"] == "decl.consumer")
-        self.assertEqual("partial", row["layerStatus"]["ir"])
-        self.assertIn("ir-core", self.evidence["evidence"])
+        self.assertEqual("implemented", row["layerStatus"]["validate"])
+        self.assertEqual("implemented", row["layerStatus"]["ir"])
+        self.assertIn("validate-core", row["layerEvidence"]["validate"])
+        self.assertIn("ir-core", row["layerEvidence"]["ir"])
+        self.assertIn(
+            "tools/test_core_consumer_materialization_closure.py",
+            self.evidence["evidence"]["validate-core"],
+        )
+        self.assertIn(
+            "tools/test_core_consumer_materialization_closure.py",
+            self.evidence["evidence"]["ir-core"],
+        )
         self.assertEqual((), violations(self.evidence, self.core, root=ROOT))
 
     def test_missing_test_path_is_rejected(self) -> None:
