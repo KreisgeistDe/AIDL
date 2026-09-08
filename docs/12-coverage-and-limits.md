@@ -53,6 +53,7 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 | `decl.service` | declaration | implemented | implemented | implemented | implemented |
 | `decl.topic` | declaration | implemented | implemented | implemented | implemented |
 | `decl.transaction` | declaration | implemented | implemented | implemented | implemented |
+| `decl.value` | declaration | implemented | implemented | implemented | implemented |
 | `rule.api.exposure-version-compatibility` | rule | not-applicable | not-applicable | implemented | implemented |
 | `rule.consumer.at-least-once` | rule | not-applicable | not-applicable | implemented | not-applicable |
 | `rule.consumer.idempotency` | rule | not-applicable | not-applicable | implemented | implemented |
