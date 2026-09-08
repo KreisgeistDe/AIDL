@@ -22,6 +22,7 @@ try:
     from .compiler_project import CompilerProject
     from .compiler_topic_materialization import collect_topic_materialization_issues
     from .compiler_typecheck import collect_type_issues
+    from .compiler_value_materialization import collect_value_materialization_issues
 except ImportError:  # pragma: no cover - direct tools/ execution/import path
     import compiler_diagnostics_base as _base
     from aidl_parser import Diagnostic as ParserDiagnostic
@@ -31,6 +32,7 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
     from compiler_project import CompilerProject
     from compiler_topic_materialization import collect_topic_materialization_issues
     from compiler_typecheck import collect_type_issues
+    from compiler_value_materialization import collect_value_materialization_issues
 
 # Preserve every existing public and test-visible helper without reimplementing
 # M1/M2 policy semantics here.
@@ -378,6 +380,7 @@ def _with_type_diagnostics(
             *collect_core_materialization_issues(project),
             *collect_event_materialization_issues(project),
             *collect_topic_materialization_issues(project),
+            *collect_value_materialization_issues(project),
         )
         for issue in issues:
             diagnostics.append(
