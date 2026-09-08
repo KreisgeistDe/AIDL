@@ -236,7 +236,7 @@ export value BrokenValue {{
             """
 
 export value BrokenValue {
-  labels: set<string, int>
+  labels: map<[string], int>
 }
 """
         )
