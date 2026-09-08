@@ -76,11 +76,10 @@ def _app_cardinality_diagnostics(project: CompilerProject) -> tuple[CompilerDiag
                 message=f"project must declare exactly one app; found {len(apps)}",
             ),
         )
-    has_app_project_context = any(
-        item.declaration.kind in {"auth", "system", "deployment"}
-        for item in project.declaration_names
+    has_app_auth_context = any(
+        item.declaration.kind == "auth" for item in project.declaration_names
     )
-    if not has_app_project_context:
+    if not has_app_auth_context:
         return ()
     document = min(project.documents, key=lambda item: item.source_path.as_posix())
     if document.span is None:
