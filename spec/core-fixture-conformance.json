@@ -11,7 +11,8 @@
       {"path": "tools/test_core_domain_type_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
-      {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"}
+      {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
+      {"path": "tools/test_core_value_ir_semantics.py", "type": "test"}
     ],
     "negative-core": [
       {"path": "tools/test_aidl_check.py", "type": "test"},
@@ -27,7 +28,8 @@
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
-      {"path": "tools/test_core_typecheck.py", "type": "test"}
+      {"path": "tools/test_core_typecheck.py", "type": "test"},
+      {"path": "tools/test_core_value_ir_semantics.py", "type": "test"}
     ],
     "ir-core": [
       {"path": "fixtures/valid/m4-minimal/snapshots/ir.json", "type": "snapshot"},
@@ -38,6 +40,7 @@
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_event_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_topic_materialization_contract.py", "type": "test"},
+      {"path": "tools/test_core_value_ir_semantics.py", "type": "test"},
       {"path": "tools/test_ir_semantic_projection.py", "type": "test"}
     ],
     "compatibility-core": [
@@ -63,6 +66,7 @@
     "decl.service",
     "decl.topic",
     "decl.transaction",
+    "decl.value",
     "rule.api.exposure-version-compatibility",
     "rule.consumer.at-least-once",
     "rule.consumer.idempotency",

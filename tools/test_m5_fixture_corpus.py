@@ -42,7 +42,12 @@ class M5FixtureCorpusTest(unittest.TestCase):
             self.assertEqual(set(snapshots) - self._SNAPSHOT_KINDS, set())
             self.assertIn("diagnostics", snapshots)
             if case["suite"] == "valid":
-                self.assertEqual(expected, [])
+                if expected:
+                    self.assertEqual(
+                        set(snapshots),
+                        {"diagnostics"},
+                        "diagnostic-only valid fixtures may document stable unsupported-profile diagnostics but cannot claim IR/plan/generated validity",
+                    )
             else:
                 self.assertTrue(expected)
                 self.assertEqual(set(snapshots), {"diagnostics"})
