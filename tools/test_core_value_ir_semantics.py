@@ -9,7 +9,7 @@ from pathlib import Path
 from jsonschema import Draft202012Validator, FormatChecker
 
 from tools.compiler_diagnostics import load_compiler_analysis
-from tools.compiler_ir import build_canonical_ir
+from tools.compiler_ir import IrBuildError, build_canonical_ir
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,6 +30,10 @@ class CoreValueIrSemanticsTests(unittest.TestCase):
         analysis = self._analysis(
             """
 
+export value SnapshotReferenceTarget {
+  id: uuid
+}
+
 export value SnapshotValueContract {
   label: string required
   optionalLabel: string?
@@ -42,6 +46,9 @@ export value SnapshotValueContract {
   optionalSecret: string? sensitive
   requiredLabels: set<string> required
   nestedLookup: map<string, set<uuid?>?>? generated
+  related: SnapshotReferenceTarget
+  primaryLike: uuid primary
+  revisionToken: revision concurrencyToken
 }
 """
         )
@@ -84,6 +91,9 @@ export value SnapshotValueContract {
                 "optionalSecret",
                 "requiredLabels",
                 "nestedLookup",
+                "related",
+                "primaryLike",
+                "revisionToken",
             ],
             [field["name"] for field in value["fields"]],
         )
@@ -127,6 +137,17 @@ export value SnapshotValueContract {
             fields["lookup"]["type"],
         )
         self.assertTrue(fields["lookup"]["required"])
+        self.assertEqual(
+            {
+                "kind": "named",
+                "declarationId": "example.petstore.SnapshotReferenceTarget@1",
+                "fqn": "example.petstore.SnapshotReferenceTarget",
+                "typeArguments": [],
+            },
+            fields["related"]["type"],
+        )
+        self.assertTrue(fields["primaryLike"]["primary"])
+        self.assertTrue(fields["revisionToken"]["concurrencyToken"])
         self.assertEqual((), self._schema_errors(first))
 
     def test_value_type_and_modifier_combinations_are_split_without_losing_semantics(self) -> None:
@@ -171,6 +192,67 @@ export value SnapshotValueContract {
         )
         self.assertFalse(nested_lookup["required"])
         self.assertTrue(nested_lookup["generated"])
+
+    def test_value_rejects_every_non_materialized_body_fact_before_ir(self) -> None:
+        cases = {
+            "invariant": "invariant NonEmpty: label != \"\"",
+            "non-field": "notAField",
+            "duplicate": "label: string\n  label: string",
+            "nullable-required": "label: string? required",
+            "clientGenerated": "label: string clientGenerated",
+            "immutable": "label: string immutable",
+            "unique": "label: string unique",
+            "default": "label: string default \"x\"",
+            "onDelete": "label: string onDelete restrict",
+            "via": "label: string via codec",
+            "repeated-modifier": "label: string mutable mutable",
+        }
+        for name, body in cases.items():
+            with self.subTest(name=name):
+                analysis = self._analysis(
+                    f"""
+
+export value BrokenValue {{
+  {body}
+}}
+"""
+                )
+                diagnostics = [
+                    diagnostic
+                    for diagnostic in analysis.diagnostics
+                    if diagnostic.code.value == "AIDL-T005"
+                    and diagnostic.subject is not None
+                    and diagnostic.subject.kind == "value"
+                    and diagnostic.subject.name == "BrokenValue"
+                ]
+                self.assertTrue(diagnostics, [d.to_json() for d in analysis.diagnostics])
+                self.assertTrue(all(d.phase == "type" for d in diagnostics))
+                self.assertTrue(all(d.location.line > 0 and d.location.column > 0 for d in diagnostics))
+                with self.assertRaises(IrBuildError):
+                    build_canonical_ir(analysis)
+
+    def test_malformed_type_remains_owned_by_earlier_type_diagnostic(self) -> None:
+        analysis = self._analysis(
+            """
+
+export value BrokenValue {
+  labels: set<string, int>
+}
+"""
+        )
+        codes = [diagnostic.code.value for diagnostic in analysis.diagnostics]
+        self.assertIn("AIDL-T001", codes)
+        value_t005 = [
+            diagnostic
+            for diagnostic in analysis.diagnostics
+            if diagnostic.code.value == "AIDL-T005"
+            and diagnostic.subject is not None
+            and diagnostic.subject.kind == "value"
+            and diagnostic.subject.name == "BrokenValue"
+        ]
+        self.assertEqual(value_t005, [])
+        with self.assertRaises(IrBuildError):
+            build_canonical_ir(analysis)
 
     def test_closed_ir_schema_rejects_missing_or_malformed_value_field_contract(self) -> None:
         base = self._ir()
