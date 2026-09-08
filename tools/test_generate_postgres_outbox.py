@@ -120,8 +120,8 @@ app RecoveryApp {
 }
 
 auth {
-  provider oidc config("ISSUER")
-  subject claim "sub" as SubjectId
+  provider oidc
+  subject claim "sub"
   roles [user]
   scopes [things.write]
   serviceIdentities required
