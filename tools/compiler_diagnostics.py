@@ -54,8 +54,7 @@ class CoreTypeDiagnosticCode(StrEnum):
 
 
 class ModuleDiagnosticCode(StrEnum):
-    MODULE_STRUCTURE = "AIDL-R003"
-    MODULE_CYCLE = "AIDL-R004"
+    MODULE_STRUCTURE = "AIDL-R005"
 
 
 class AppDiagnosticCode(StrEnum):
@@ -388,7 +387,6 @@ def _with_core_contract_diagnostics(
         CompilerDiagnosticCode.UNRESOLVED_IMPORT.value,
         CompilerDiagnosticCode.DUPLICATE_DECLARATION.value,
         ModuleDiagnosticCode.MODULE_STRUCTURE.value,
-        ModuleDiagnosticCode.MODULE_CYCLE.value,
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
         diagnostics.extend(_app_contract_diagnostics(project))
@@ -406,7 +404,6 @@ def _with_type_diagnostics(
         CompilerDiagnosticCode.UNRESOLVED_IMPORT.value,
         CompilerDiagnosticCode.DUPLICATE_DECLARATION.value,
         ModuleDiagnosticCode.MODULE_STRUCTURE.value,
-        ModuleDiagnosticCode.MODULE_CYCLE.value,
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
         issues = (
