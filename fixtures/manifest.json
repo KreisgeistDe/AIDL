@@ -47,7 +47,14 @@
       "id": "valid-calendar-offline",
       "suite": "valid",
       "path": "valid/calendar-offline",
-      "expectedDiagnostics": [],
+      "expectedDiagnostics": [
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":8,"column":3},
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":11,"column":3},
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":12,"column":3},
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":14,"column":3},
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":63,"column":3},
+        {"code":"AIDL-T005","file":"domain/calendar.aidl","line":65,"column":3}
+      ],
       "snapshots": {
         "diagnostics": "snapshots/diagnostics.json"
       }
