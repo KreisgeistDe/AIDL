@@ -37,6 +37,7 @@
       "tools/test_core_enum_ir_semantics.py",
       "tools/test_core_event_ir_semantics.py",
       "tools/test_core_topic_materialization_contract.py",
+      "tools/test_core_value_ir_semantics.py",
       "tools/test_m5_fixture_corpus.py"
     ],
     "validate-types": [
