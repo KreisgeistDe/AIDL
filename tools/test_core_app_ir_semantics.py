@@ -21,47 +21,6 @@ CONFORMANCE = json.loads(
 VALIDATOR = Draft202012Validator(SCHEMA, format_checker=FormatChecker())
 
 
-_MINIMAL_MULTI_API = """module example.app
-
-app ExampleApp {
-  profile core version 1
-  system ExampleSystem
-  api FirstApi
-  api SecondApi
-  defaultDeployment local
-}
-
-export api FirstApi {
-  transport rest
-  version 1
-  operations []
-  auth inherit
-  errors problemDetails
-  compatibility backward
-}
-
-export api SecondApi {
-  transport rpc
-  version 1
-  operations []
-  auth inherit
-  errors problemDetails
-  compatibility backward
-}
-
-export system ExampleSystem {
-  services []
-  resources []
-  apis [FirstApi, SecondApi]
-}
-
-export deployment local for ExampleSystem {
-  environment test
-  target process
-}
-"""
-
-
 class CoreAppIrSemanticsTest(unittest.TestCase):
     def _analysis(self, text: str):
         with tempfile.TemporaryDirectory() as directory:
@@ -86,12 +45,51 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
             if diagnostic.code.value == "AIDL-DIST414"
         )
 
+    def _line_of(self, text: str, needle: str, occurrence: int = 1) -> int:
+        seen = 0
+        for line, value in enumerate(text.splitlines(), start=1):
+            if needle in value:
+                seen += 1
+                if seen == occurrence:
+                    return line
+        self.fail(f"missing expected source line containing {needle!r}")
+
+    def _multi_api_text(self) -> str:
+        text = SOURCE.read_text(encoding="utf-8")
+        text = text.replace(
+            "  api PetstoreApi\n",
+            "  api PetstoreApi\n  api PetstoreAdminApi\n",
+            1,
+        )
+        second_api = """export api PetstoreAdminApi {
+  transport rpc
+  version 1
+  operations [mutation createPet]
+  auth inherit
+  errors problemDetails
+  compatibility backward
+}
+
+"""
+        text = text.replace(
+            "export resource PetstoreDb sql {\n",
+            second_api + "export resource PetstoreDb sql {\n",
+            1,
+        )
+        text = text.replace(
+            "  apis [PetstoreApi]\n",
+            "  apis [PetstoreApi, PetstoreAdminApi]\n",
+            1,
+        )
+        return text
+
     def _assert_single_app_diagnostic(
         self,
         text: str,
         *,
         line: int,
         message_fragment: str,
+        subject_name: str = "PetstoreApp",
     ) -> None:
         analysis = self._analysis(text)
         diagnostics = tuple(
@@ -106,8 +104,16 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
         self.assertEqual("error", diagnostic.severity.value)
         self.assertIn(message_fragment, diagnostic.message)
         self.assertEqual(
-            {"kind": "app", "name": "ExampleApp"},
+            {"kind": "app", "name": subject_name},
             diagnostic.subject.to_json(),
+        )
+        self.assertEqual(
+            [],
+            [
+                item.code.value
+                for item in analysis.diagnostics
+                if item.severity.value == "error" and item.code.value != "AIDL-DIST414"
+            ],
         )
         with self.assertRaises(IrBuildError):
             build_canonical_ir(analysis)
@@ -151,23 +157,33 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
         self.assertEqual((), self._app_contract_diagnostics(text))
 
     def test_multi_api_app_projection_is_deterministic_schema_valid_and_source_mapped(self) -> None:
+        text = self._multi_api_text()
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "app.aidl"
-            source.write_text(_MINIMAL_MULTI_API, encoding="utf-8")
+            source.write_text(text, encoding="utf-8")
             first_analysis = load_compiler_analysis([source])
             second_analysis = load_compiler_analysis([source])
+            self.assertEqual((), first_analysis.diagnostics)
+            self.assertEqual((), second_analysis.diagnostics)
             first = build_canonical_ir(first_analysis)
             second = build_canonical_ir(second_analysis)
 
         self.assertEqual(first, second)
         self.assertEqual([], list(VALIDATOR.iter_errors(first)))
         self.assertEqual(
-            ["example.app.FirstApi@1", "example.app.SecondApi@1"],
+            ["petstore.m4.PetstoreApi@1", "petstore.m4.PetstoreAdminApi@1"],
             first["app"]["apiIds"],
         )
-        self.assertEqual("example.app.ExampleSystem@1", first["app"]["systemId"])
-        self.assertEqual("example.app.local@1", first["app"]["defaultDeploymentId"])
-        self.assertEqual([{"id": "core", "major": 1}], first["profiles"])
+        self.assertEqual("petstore.m4.PetstoreSystem@1", first["app"]["systemId"])
+        self.assertEqual("petstore.m4.local@1", first["app"]["defaultDeploymentId"])
+        self.assertEqual(
+            [
+                {"id": "core", "major": 1},
+                {"id": "distributed", "major": 1},
+                {"id": "cloud", "major": 1},
+            ],
+            first["profiles"],
+        )
 
         app_item = next(
             item
@@ -179,7 +195,7 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
             for entry in first["sourceMap"]["entries"]
             if entry["nodePath"] == "/app"
         )
-        self.assertEqual("example.app.ExampleApp@1", app_entry["originalDeclarationId"])
+        self.assertEqual("petstore.m4.PetstoreApp@1", app_entry["originalDeclarationId"])
         self.assertEqual(str(source), app_entry["span"]["file"])
         self.assertEqual(app_item.declaration.span.line, app_entry["span"]["startLine"])
         self.assertEqual(app_item.declaration.span.column, app_entry["span"]["startColumn"])
@@ -244,13 +260,14 @@ deployment local for ExampleSystem {}
                 """module example.app
 app ExampleApp {
   profile core version 1
+  system ExampleSystem
   system exampleSystem
   defaultDeployment local
 }
 system ExampleSystem {}
 deployment local for ExampleSystem {}
 """,
-                4,
+                5,
                 "clause is not a normative app clause",
             ),
         }
@@ -260,62 +277,78 @@ deployment local for ExampleSystem {}
                     text,
                     line=line,
                     message_fragment=message_fragment,
+                    subject_name="ExampleApp",
                 )
 
     def test_structural_app_materialization_failures_are_diagnosed_before_ir(self) -> None:
-        cases = {
-            "parser-only header version": (
-                _MINIMAL_MULTI_API.replace("app ExampleApp {", "app ExampleApp version 2 {", 1),
-                3,
-                "header version is parser-only",
-            ),
-            "duplicate profile": (
-                _MINIMAL_MULTI_API.replace(
-                    "  profile core version 1\n",
-                    "  profile core version 1\n  profile core version 1\n",
-                    1,
-                ),
-                5,
-                "repeats profile 'core@1'",
-            ),
-            "missing system": (
-                _MINIMAL_MULTI_API.replace("  system ExampleSystem\n", "", 1),
-                3,
-                "must declare exactly one system clause; found 0",
-            ),
-            "repeated system": (
-                _MINIMAL_MULTI_API.replace(
-                    "  system ExampleSystem\n",
-                    "  system ExampleSystem\n  system ExampleSystem\n",
-                    1,
-                ),
-                6,
-                "must declare exactly one system clause; found 2",
-            ),
-            "missing default deployment": (
-                _MINIMAL_MULTI_API.replace("  defaultDeployment local\n", "", 1),
-                3,
-                "must declare exactly one defaultDeployment clause; found 0",
-            ),
-            "repeated default deployment": (
-                _MINIMAL_MULTI_API.replace(
-                    "  defaultDeployment local\n",
-                    "  defaultDeployment local\n  defaultDeployment local\n",
-                    1,
-                ),
-                9,
-                "must declare exactly one defaultDeployment clause; found 2",
-            ),
-            "duplicate api": (
-                _MINIMAL_MULTI_API.replace(
-                    "  api SecondApi\n",
-                    "  api FirstApi\n  api SecondApi\n",
-                    1,
-                ),
-                7,
-                "repeats api reference 'FirstApi'",
-            ),
-        }
+        base = self._multi_api_text()
+        cases = {}
+
+        changed = base.replace("app PetstoreApp {", "app PetstoreApp version 2 {", 1)
+        cases["parser-only header version"] = (
+            changed,
+            self._line_of(changed, "app PetstoreApp version 2"),
+            "header version is parser-only",
+        )
+
+        changed = base.replace(
+            "  profile core version 1\n",
+            "  profile core version 1\n  profile core version 1\n",
+            1,
+        )
+        cases["duplicate profile"] = (
+            changed,
+            self._line_of(changed, "profile core version 1", 2),
+            "repeats profile 'core@1'",
+        )
+
+        changed = base.replace("  system PetstoreSystem\n", "", 1)
+        cases["missing system"] = (
+            changed,
+            self._line_of(changed, "app PetstoreApp"),
+            "must declare exactly one system clause; found 0",
+        )
+
+        changed = base.replace(
+            "  system PetstoreSystem\n",
+            "  system PetstoreSystem\n  system PetstoreSystem\n",
+            1,
+        )
+        cases["repeated system"] = (
+            changed,
+            self._line_of(changed, "system PetstoreSystem", 2),
+            "must declare exactly one system clause; found 2",
+        )
+
+        changed = base.replace("  defaultDeployment local\n", "", 1)
+        cases["missing default deployment"] = (
+            changed,
+            self._line_of(changed, "app PetstoreApp"),
+            "must declare exactly one defaultDeployment clause; found 0",
+        )
+
+        changed = base.replace(
+            "  defaultDeployment local\n",
+            "  defaultDeployment local\n  defaultDeployment local\n",
+            1,
+        )
+        cases["repeated default deployment"] = (
+            changed,
+            self._line_of(changed, "defaultDeployment local", 2),
+            "must declare exactly one defaultDeployment clause; found 2",
+        )
+
+        changed = base.replace(
+            "  api PetstoreAdminApi\n",
+            "  api PetstoreApi\n  api PetstoreAdminApi\n",
+            1,
+        )
+        cases["duplicate api"] = (
+            changed,
+            self._line_of(changed, "api PetstoreApi", 2),
+            "repeats api reference 'PetstoreApi'",
+        )
+
         for name, (text, line, message_fragment) in cases.items():
             with self.subTest(name=name):
                 self._assert_single_app_diagnostic(
@@ -325,38 +358,51 @@ deployment local for ExampleSystem {}
                 )
 
     def test_app_references_reject_unresolved_and_wrong_kind_before_ir(self) -> None:
-        cases = {
-            "unresolved system": (
-                _MINIMAL_MULTI_API.replace("  system ExampleSystem\n", "  system MissingSystem\n", 1),
-                5,
-                "system reference 'MissingSystem' is unresolved",
-            ),
-            "unresolved api": (
-                _MINIMAL_MULTI_API.replace("  api FirstApi\n", "  api MissingApi\n", 1),
-                6,
-                "api reference 'MissingApi' is unresolved",
-            ),
-            "unresolved deployment": (
-                _MINIMAL_MULTI_API.replace("  defaultDeployment local\n", "  defaultDeployment missing\n", 1),
-                8,
-                "defaultDeployment reference 'missing' is unresolved",
-            ),
-            "wrong-kind system": (
-                _MINIMAL_MULTI_API.replace("  system ExampleSystem\n", "  system FirstApi\n", 1),
-                5,
-                "system reference 'FirstApi' must target system; found api",
-            ),
-            "wrong-kind api": (
-                _MINIMAL_MULTI_API.replace("  api FirstApi\n", "  api ExampleSystem\n", 1),
-                6,
-                "api reference 'ExampleSystem' must target api; found system",
-            ),
-            "wrong-kind deployment": (
-                _MINIMAL_MULTI_API.replace("  defaultDeployment local\n", "  defaultDeployment FirstApi\n", 1),
-                8,
-                "defaultDeployment reference 'FirstApi' must target deployment; found api",
-            ),
-        }
+        base = self._multi_api_text()
+        cases = {}
+
+        changed = base.replace("  system PetstoreSystem\n", "  system MissingSystem\n", 1)
+        cases["unresolved system"] = (
+            changed,
+            self._line_of(changed, "system MissingSystem"),
+            "system reference 'MissingSystem' is unresolved",
+        )
+
+        changed = base.replace("  api PetstoreApi\n", "  api MissingApi\n", 1)
+        cases["unresolved api"] = (
+            changed,
+            self._line_of(changed, "api MissingApi"),
+            "api reference 'MissingApi' is unresolved",
+        )
+
+        changed = base.replace("  defaultDeployment local\n", "  defaultDeployment missing\n", 1)
+        cases["unresolved deployment"] = (
+            changed,
+            self._line_of(changed, "defaultDeployment missing"),
+            "defaultDeployment reference 'missing' is unresolved",
+        )
+
+        changed = base.replace("  system PetstoreSystem\n", "  system PetstoreApi\n", 1)
+        cases["wrong-kind system"] = (
+            changed,
+            self._line_of(changed, "system PetstoreApi"),
+            "system reference 'PetstoreApi' must target system; found api",
+        )
+
+        changed = base.replace("  api PetstoreApi\n", "  api PetstoreSystem\n", 1)
+        cases["wrong-kind api"] = (
+            changed,
+            self._line_of(changed, "api PetstoreSystem"),
+            "api reference 'PetstoreSystem' must target api; found system",
+        )
+
+        changed = base.replace("  defaultDeployment local\n", "  defaultDeployment PetstoreApi\n", 1)
+        cases["wrong-kind deployment"] = (
+            changed,
+            self._line_of(changed, "defaultDeployment PetstoreApi"),
+            "defaultDeployment reference 'PetstoreApi' must target deployment; found api",
+        )
+
         for name, (text, line, message_fragment) in cases.items():
             with self.subTest(name=name):
                 self._assert_single_app_diagnostic(
@@ -366,20 +412,24 @@ deployment local for ExampleSystem {}
                 )
 
     def test_ambiguous_imported_app_reference_is_diagnosed_at_clause(self) -> None:
+        base = SOURCE.read_text(encoding="utf-8")
+        app_text = base.replace(
+            "module petstore.m4\n",
+            "module petstore.m4\nimport first.system.*\nimport second.system.*\n",
+            1,
+        ).replace(
+            "  system PetstoreSystem\n",
+            "  system SharedSystem\n",
+            1,
+        )
+        app_text = app_text.replace(
+            "export system PetstoreSystem {\n",
+            "export system PetstoreSystemOriginal {\n",
+            1,
+        )
         analysis = self._analysis_sources(
             {
-                "app.aidl": """module example.app
-import first.system.*
-import second.system.*
-app ExampleApp {
-  profile core version 1
-  system SharedSystem
-  api LocalApi
-  defaultDeployment local
-}
-export api LocalApi {}
-deployment local for SharedSystem {}
-""",
+                "app.aidl": app_text,
                 "first.aidl": """module first.system
 export system SharedSystem {}
 """,
@@ -394,7 +444,10 @@ export system SharedSystem {}
             if diagnostic.code.value == "AIDL-DIST414"
         )
         self.assertEqual(1, len(diagnostics))
-        self.assertEqual(6, diagnostics[0].location.line)
+        self.assertEqual(
+            self._line_of(app_text, "system SharedSystem"),
+            diagnostics[0].location.line,
+        )
         self.assertIn(
             "system reference 'SharedSystem' must resolve uniquely to system; found 2 matching declarations",
             diagnostics[0].message,
@@ -403,11 +456,11 @@ export system SharedSystem {}
             build_canonical_ir(analysis)
 
     def test_partial_auth_remains_open_and_app_claims_remain_partial(self) -> None:
-        text = _MINIMAL_MULTI_API + """
-auth {
-  provider oidc
-}
-"""
+        text = self._multi_api_text().replace(
+            "auth {\n  provider oidc config(\"ISSUER\")\n  subject claim \"sub\" as SubjectId\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n",
+            "auth {\n  provider oidc\n}\n",
+            1,
+        )
         self.assertEqual((), self._app_contract_diagnostics(text))
         app_row = next(
             feature
