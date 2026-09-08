@@ -74,6 +74,8 @@ _APP_TYPED_REFERENCE = re.compile(
 _APP_IDENTIFIER_VALUE = re.compile(
     r"^(defaultDeployment|compatibility)\s+([A-Za-z_][A-Za-z0-9_]*)$"
 )
+_AUTH_PROVIDER = re.compile(r"^provider\s+[A-Za-z_][A-Za-z0-9_]*$")
+_AUTH_SUBJECT_ALIAS = re.compile(r"\s+as\s+[A-Za-z_][A-Za-z0-9_]*\s*$")
 _TOPIC_DELIVERY = re.compile(r"^delivery\s+([A-Za-z_][A-Za-z0-9_]*)$")
 
 
@@ -358,6 +360,30 @@ def _app_contract_diagnostics(
                     location,
                 )
             )
+
+        for declaration in app.document.declarations:
+            if declaration.kind != "auth":
+                continue
+            for child in declaration.node.children:
+                if child.name is None or child.span is None:
+                    continue
+                clause = child.name.strip()
+                if clause.startswith("provider ") and _AUTH_PROVIDER.fullmatch(clause) is None:
+                    diagnostics.append(
+                        _app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' auth provider configuration is not represented by the current Canonical IR app.auth contract",
+                        )
+                    )
+                elif clause.startswith("subject ") and _AUTH_SUBJECT_ALIAS.search(clause) is not None:
+                    diagnostics.append(
+                        _app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' auth subject alias/type is not represented by the current Canonical IR app.auth contract",
+                        )
+                    )
 
     return tuple(diagnostics)
 
