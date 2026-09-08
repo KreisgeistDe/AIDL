@@ -138,7 +138,15 @@ def collect_value_materialization_issues(
             try:
                 parsed_type = parse_type(type_expression)
             except TypeSyntaxError:
-                continue  # Existing AIDL-T001 type checking is authoritative.
+                issue = _issue(
+                    item,
+                    node,
+                    f"value field '{field_name}' type '{type_expression}' is not losslessly materialized by the current Canonical IR Value field contract",
+                    "a Core type form accepted and losslessly materialized by the current Canonical IR",
+                )
+                if issue:
+                    issues.append(issue)
+                continue
 
             modifier_words = re.findall(r"[A-Za-z_][A-Za-z0-9_]*", modifiers)
             unsupported = next(
