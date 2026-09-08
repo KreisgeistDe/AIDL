@@ -57,8 +57,18 @@ def _issue(item, node, message: str, expected: str) -> ValueMaterializationIssue
     )
 
 
+def _normalize_type_spacing(text: str) -> str:
+    text = re.sub(r"\s*\.\s*", ".", text.strip())
+    text = re.sub(r"\s*<\s*", "<", text)
+    text = re.sub(r"\s*>\s*", ">", text)
+    text = re.sub(r"\[\s*", "[", text)
+    text = re.sub(r"\s*\]", "]", text)
+    text = re.sub(r"\s*\?", "?", text)
+    return text
+
+
 def _take_type(tail: str) -> tuple[str, str]:
-    tail = tail.strip()
+    tail = _normalize_type_spacing(tail)
     if tail.startswith("ref "):
         parts = tail.split(None, 2)
         return "ref " + parts[1], parts[2] if len(parts) > 2 else ""
