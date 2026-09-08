@@ -69,10 +69,10 @@ _APP_PROFILE = re.compile(
     r"^profile\s+([a-z][A-Za-z0-9_]*)\s+version\s+([1-9][0-9]*)$"
 )
 _APP_TYPED_REFERENCE = re.compile(
-    r"^(system|frontend|api)\s+[A-Z][A-Za-z0-9_]*$"
+    r"^(system|frontend|api)\s+([A-Z][A-Za-z0-9_]*)$"
 )
 _APP_IDENTIFIER_VALUE = re.compile(
-    r"^(defaultDeployment|compatibility)\s+[A-Za-z_][A-Za-z0-9_]*$"
+    r"^(defaultDeployment|compatibility)\s+([A-Za-z_][A-Za-z0-9_]*)$"
 )
 _TOPIC_DELIVERY = re.compile(r"^delivery\s+([A-Za-z_][A-Za-z0-9_]*)$")
 
@@ -113,16 +113,62 @@ def _app_diagnostic(
             kind="app", name=app.declaration.name or "<unnamed>"
         ),
         expected=(
-            "at least one explicit registered profile selection and only normative app clauses"
+            "losslessly materializable normative app structure and uniquely resolved app references"
         ),
         docs="aidl://diagnostics/AIDL-DIST414",
     )
 
 
+def _app_reference_candidates(
+    project: CompilerProject,
+    app: CompilerDeclarationName,
+    reference: str,
+) -> tuple[CompilerDeclarationName, ...]:
+    kinds = frozenset(
+        item.declaration.kind for item in project.declaration_names
+    )
+    return _resolve_declaration_reference(project, app, reference, kinds)
+
+
+def _validate_app_reference(
+    project: CompilerProject,
+    app: CompilerDeclarationName,
+    app_name: str,
+    clause_name: str,
+    reference: str,
+    expected_kind: str,
+    location: Span,
+) -> tuple[CompilerDiagnostic, ...]:
+    candidates = _app_reference_candidates(project, app, reference)
+    matching = tuple(
+        candidate
+        for candidate in candidates
+        if candidate.declaration.kind == expected_kind
+    )
+    if len(matching) == 1 and len(candidates) == 1:
+        return ()
+    if not candidates:
+        message = (
+            f"app '{app_name}' {clause_name} reference '{reference}' is unresolved"
+        )
+    elif not matching:
+        kinds = ", ".join(candidate.declaration.kind for candidate in candidates)
+        message = (
+            f"app '{app_name}' {clause_name} reference '{reference}' must target "
+            f"{expected_kind}; found {kinds}"
+        )
+    else:
+        message = (
+            f"app '{app_name}' {clause_name} reference '{reference}' must resolve "
+            f"uniquely to {expected_kind}; found {len(matching)} matching declarations"
+        )
+    return (_app_diagnostic(app, location, message),)
+
+
 def _app_contract_diagnostics(
     project: CompilerProject,
 ) -> tuple[CompilerDiagnostic, ...]:
-    """Validate only App rules explicitly fixed by Core grammar/profile registry."""
+    """Validate the bounded lossless App structure/reference pre-IR contract."""
 
     registry = _profile_registry()
     diagnostics: list[CompilerDiagnostic] = []
@@ -131,8 +177,24 @@ def _app_contract_diagnostics(
             continue
 
         app_name = app.fully_qualified_name or app.declaration.name or "<unnamed>"
+        if app.declaration.node.attrs.get("version") is not None:
+            diagnostics.append(
+                _app_diagnostic(
+                    app,
+                    app.declaration.span,
+                    f"app '{app_name}' header version is parser-only and is not represented by the current Canonical IR app contract",
+                )
+            )
+
         profile_clauses: list[tuple[tuple[str, int], Span]] = []
+        seen_profiles: set[tuple[str, int]] = set()
         saw_profile_clause = False
+        singleton_clauses: dict[str, list[tuple[str, Span]]] = {
+            "system": [],
+            "defaultDeployment": [],
+        }
+        api_clauses: list[tuple[str, Span]] = []
+        seen_apis: set[str] = set()
 
         for child in app.declaration.node.children:
             if child.name is None or child.span is None:
@@ -152,6 +214,16 @@ def _app_contract_diagnostics(
                     continue
                 key = (match.group(1), int(match.group(2)))
                 profile_clauses.append((key, child.span))
+                if key in seen_profiles:
+                    diagnostics.append(
+                        _app_diagnostic(
+                            app,
+                            child.span,
+                            f"app '{app_name}' repeats profile '{key[0]}@{key[1]}'",
+                        )
+                    )
+                else:
+                    seen_profiles.add(key)
                 if key not in registry:
                     diagnostics.append(
                         _app_diagnostic(
@@ -162,11 +234,34 @@ def _app_contract_diagnostics(
                     )
                 continue
 
-            if (
-                _APP_TYPED_REFERENCE.fullmatch(clause) is not None
-                or _APP_IDENTIFIER_VALUE.fullmatch(clause) is not None
-            ):
+            typed = _APP_TYPED_REFERENCE.fullmatch(clause)
+            if typed is not None:
+                clause_name, reference = typed.groups()
+                if clause_name == "system":
+                    singleton_clauses["system"].append((reference, child.span))
+                elif clause_name == "api":
+                    api_clauses.append((reference, child.span))
+                    if reference in seen_apis:
+                        diagnostics.append(
+                            _app_diagnostic(
+                                app,
+                                child.span,
+                                f"app '{app_name}' repeats api reference '{reference}'",
+                            )
+                        )
+                    else:
+                        seen_apis.add(reference)
                 continue
+
+            identifier = _APP_IDENTIFIER_VALUE.fullmatch(clause)
+            if identifier is not None:
+                clause_name, reference = identifier.groups()
+                if clause_name == "defaultDeployment":
+                    singleton_clauses["defaultDeployment"].append(
+                        (reference, child.span)
+                    )
+                continue
+
             diagnostics.append(
                 _app_diagnostic(
                     app,
@@ -198,6 +293,55 @@ def _app_contract_diagnostics(
                         f"app '{app_name}' profile '{key[0]}@{key[1]}' requires explicit profile '{required[0]}@{required[1]}'",
                     )
                 )
+
+        expected_singletons = {
+            "system": "system",
+            "defaultDeployment": "deployment",
+        }
+        for clause_name, expected_kind in expected_singletons.items():
+            clauses = singleton_clauses[clause_name]
+            if not clauses:
+                diagnostics.append(
+                    _app_diagnostic(
+                        app,
+                        app.declaration.span,
+                        f"app '{app_name}' must declare exactly one {clause_name} clause; found 0",
+                    )
+                )
+                continue
+            if len(clauses) > 1:
+                diagnostics.append(
+                    _app_diagnostic(
+                        app,
+                        clauses[1][1],
+                        f"app '{app_name}' must declare exactly one {clause_name} clause; found {len(clauses)}",
+                    )
+                )
+            for reference, location in clauses:
+                diagnostics.extend(
+                    _validate_app_reference(
+                        project,
+                        app,
+                        app_name,
+                        clause_name,
+                        reference,
+                        expected_kind,
+                        location,
+                    )
+                )
+
+        for reference, location in api_clauses:
+            diagnostics.extend(
+                _validate_app_reference(
+                    project,
+                    app,
+                    app_name,
+                    "api",
+                    reference,
+                    "api",
+                    location,
+                )
+            )
 
     return tuple(diagnostics)
 
