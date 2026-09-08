@@ -31,9 +31,14 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "app.aidl"
             source.write_text(text, encoding="utf-8")
-            analysis = load_compiler_analysis([source])
-            self.assertEqual((), analysis.diagnostics)
-            return build_canonical_ir(analysis), str(source)
+            first_analysis = load_compiler_analysis([source])
+            second_analysis = load_compiler_analysis([source])
+            self.assertEqual((), first_analysis.diagnostics)
+            self.assertEqual((), second_analysis.diagnostics)
+            first = build_canonical_ir(first_analysis)
+            second = build_canonical_ir(second_analysis)
+            self.assertEqual(first, second)
+            return first, str(source)
 
     def _line_of(self, text: str, needle: str) -> int:
         for line, value in enumerate(text.splitlines(), start=1):
@@ -171,21 +176,19 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
         )
         for text, roles, scopes, service_identities in variants:
             with self.subTest(serviceIdentities=service_identities, roles=roles, scopes=scopes):
-                first, source_path = self._ir(text)
-                second, _ = self._ir(text)
-                self.assertEqual(first, second)
-                self.assertEqual([], list(VALIDATOR.iter_errors(first)))
-                self.assertEqual("oidc", first["app"]["auth"]["provider"])
-                self.assertEqual("sub", first["app"]["auth"]["subjectClaim"])
-                self.assertEqual(roles, first["app"]["auth"]["roles"])
-                self.assertEqual(scopes, first["app"]["auth"]["scopes"])
+                ir, source_path = self._ir(text)
+                self.assertEqual([], list(VALIDATOR.iter_errors(ir)))
+                self.assertEqual("oidc", ir["app"]["auth"]["provider"])
+                self.assertEqual("sub", ir["app"]["auth"]["subjectClaim"])
+                self.assertEqual(roles, ir["app"]["auth"]["roles"])
+                self.assertEqual(scopes, ir["app"]["auth"]["scopes"])
                 self.assertEqual(
                     service_identities,
-                    first["app"]["auth"]["serviceIdentities"],
+                    ir["app"]["auth"]["serviceIdentities"],
                 )
                 app_entry = next(
                     entry
-                    for entry in first["sourceMap"]["entries"]
+                    for entry in ir["sourceMap"]["entries"]
                     if entry["nodePath"] == "/app"
                 )
                 self.assertEqual("petstore.m4.PetstoreApp@1", app_entry["originalDeclarationId"])
