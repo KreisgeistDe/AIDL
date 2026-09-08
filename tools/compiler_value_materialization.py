@@ -7,10 +7,12 @@ from pathlib import Path
 
 try:
     from .compiler_core_materialization import collect_core_materialization_issues
+    from .compiler_error_materialization import collect_error_materialization_issues
     from .compiler_project import CompilerProject
     from .compiler_typecheck import TypeSyntaxError, collect_type_issues, parse_type
 except ImportError:  # pragma: no cover
     from compiler_core_materialization import collect_core_materialization_issues
+    from compiler_error_materialization import collect_error_materialization_issues
     from compiler_project import CompilerProject
     from compiler_typecheck import TypeSyntaxError, collect_type_issues, parse_type
 
@@ -219,6 +221,10 @@ def collect_value_materialization_issues(
                 )
                 if issue:
                     issues.append(issue)
+
+    # Keep the diagnostics fan-in stable while giving Error its own isolated
+    # pre-IR boundary. compiler_diagnostics already consumes this collector.
+    issues.extend(collect_error_materialization_issues(project))
 
     document_order = {
         document.source_path: index for index, document in enumerate(project.documents)
