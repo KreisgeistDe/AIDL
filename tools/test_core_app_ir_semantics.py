@@ -488,7 +488,7 @@ export system SharedSystem {}
         with self.assertRaises(IrBuildError):
             build_canonical_ir(analysis)
 
-    def test_partial_auth_remains_open_and_app_claims_remain_partial(self) -> None:
+    def test_partial_auth_remains_rejected_and_app_claims_are_closed(self) -> None:
         text = self._multi_api_text().replace(
             "auth {\n  provider oidc config(\"ISSUER\")\n  subject claim \"sub\" as SubjectId\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n",
             "auth {\n  provider oidc\n}\n",
@@ -500,8 +500,8 @@ export system SharedSystem {}
             for feature in CONFORMANCE["features"]
             if feature["id"] == "decl.app"
         )
-        self.assertEqual("partial", app_row["layerStatus"]["validate"])
-        self.assertEqual("partial", app_row["layerStatus"]["ir"])
+        self.assertEqual("implemented", app_row["layerStatus"]["validate"])
+        self.assertEqual("implemented", app_row["layerStatus"]["ir"])
 
     def test_closed_schema_rejects_malformed_app_profiles_and_auth(self) -> None:
         document = self._build(SOURCE.read_text(encoding="utf-8"))

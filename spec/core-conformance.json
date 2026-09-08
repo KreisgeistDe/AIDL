@@ -8,9 +8,9 @@
     "spec-core": [{"path": "docs/aidl-core-subset.md", "type": "documentation"}],
     "parse-core": [{"path": "tools/aidl_parser.py", "type": "source"}, {"path": "tools/compiler_ast.py", "type": "source"}],
     "resolve-core": [{"path": "tools/compiler_project.py", "type": "source"}],
-    "validate-core": [{"path": "tools/compiler_diagnostics.py", "type": "source"}, {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}],
+    "validate-core": [{"path": "tools/compiler_diagnostics.py", "type": "source"}, {"path": "tools/test_m5_fixture_corpus.py", "type": "test"}, {"path": "tools/test_core_app_project_losslessness.py", "type": "test"}],
     "validate-types": [{"path": "tools/compiler_typecheck.py", "type": "source"}, {"path": "tools/test_core_typecheck.py", "type": "test"}],
-    "ir-core": [{"path": "tools/compiler_ir.py", "type": "source"}, {"path": "spec/ir.schema.json", "type": "schema"}],
+    "ir-core": [{"path": "tools/compiler_ir.py", "type": "source"}, {"path": "spec/ir.schema.json", "type": "schema"}, {"path": "tools/test_core_app_project_losslessness.py", "type": "test"}],
     "generate-core": [{"path": "tools/generate_m4.py", "type": "source"}, {"path": "tools/test_m4_petstore.py", "type": "test"}],
     "ide-core": [{"path": "plugins/intellij/AGENTS.md", "type": "documentation"}, {"path": ".github/workflows/python-validation.yml", "type": "workflow"}]
   },
@@ -19,7 +19,7 @@
   "features": [
     {"id":"decl.alias","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"partial","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core","validate-types"],"ir":["ir-core"],"generate":["generate-core"],"ide":["ide-core"]}},
     {"id":"decl.api","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"partial","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core","validate-types"],"ir":["ir-core"],"generate":["generate-core"],"ide":["ide-core"]}},
-    {"id":"decl.app","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"partial","ir":"partial","generate":"not-applicable","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core"],"ir":["ir-core"],"generate":["spec-core"],"ide":["ide-core"]}},
+    {"id":"decl.app","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"not-applicable","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core"],"ir":["ir-core"],"generate":["spec-core"],"ide":["ide-core"]}},
     {"id":"decl.consumer","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"partial","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core"],"ir":["ir-core"],"generate":["generate-core"],"ide":["ide-core"]}},
     {"id":"decl.entity","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"implemented","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core","validate-types"],"ir":["ir-core"],"generate":["generate-core"],"ide":["ide-core"]}},
     {"id":"decl.enum","category":"declaration","layerStatus":{"parse":"implemented","resolve":"implemented","validate":"implemented","ir":"implemented","generate":"partial","ide":"partial"},"layerEvidence":{"parse":["parse-core"],"resolve":["resolve-core"],"validate":["validate-core"],"ir":["ir-core"],"generate":["generate-core"],"ide":["ide-core"]}},

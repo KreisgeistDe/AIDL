@@ -67,7 +67,7 @@ class CoreAppAuthCardinalityTest(unittest.TestCase):
         base = SOURCE.read_text(encoding="utf-8")
         cases: list[tuple[str, int, str]] = []
         doubled = base.replace(AUTH_BLOCK, AUTH_BLOCK + "\n" + AUTH_BLOCK, 1)
-        cases.append((doubled, self._line_of_occurrence(doubled, "auth {", 2), "must declare at most one auth block; found 2"))
+        cases.append((doubled, self._line_of_occurrence(doubled, "auth {", 2), "must declare at most one project auth block; found 2"))
 
         required = (
             ("provider", "  provider oidc\n"),
@@ -132,10 +132,10 @@ class CoreAppAuthCardinalityTest(unittest.TestCase):
             with self.subTest(needle=needle):
                 self._assert_one_rejection(text, self._line_of_occurrence(text, needle), fragment)
 
-    def test_decl_app_claim_remains_partial_until_non_cardinality_auth_value_forms_are_closed(self) -> None:
+    def test_decl_app_claim_is_closed_after_project_and_auth_value_closure(self) -> None:
         row = next(feature for feature in CONFORMANCE["features"] if feature["id"] == "decl.app")
-        self.assertEqual("partial", row["layerStatus"]["validate"])
-        self.assertEqual("partial", row["layerStatus"]["ir"])
+        self.assertEqual("implemented", row["layerStatus"]["validate"])
+        self.assertEqual("implemented", row["layerStatus"]["ir"])
 
 
 if __name__ == "__main__":

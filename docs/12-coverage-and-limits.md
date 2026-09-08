@@ -44,6 +44,7 @@ Die folgende Tabelle wird aus `spec/core-conformance.json` und dem daraus abgele
 |---|---|---|---|---|---|
 | `decl.alias` | declaration | implemented | implemented | implemented | implemented |
 | `decl.api` | declaration | implemented | implemented | implemented | implemented |
+| `decl.app` | declaration | implemented | implemented | implemented | implemented |
 | `decl.consumer` | declaration | implemented | implemented | implemented | implemented |
 | `decl.entity` | declaration | implemented | implemented | implemented | implemented |
 | `decl.enum` | declaration | implemented | implemented | implemented | implemented |
