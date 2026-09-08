@@ -140,8 +140,8 @@ export value SnapshotValueContract {
         self.assertEqual(
             {
                 "kind": "named",
-                "declarationId": "example.petstore.SnapshotReferenceTarget@1",
-                "fqn": "example.petstore.SnapshotReferenceTarget",
+                "declarationId": "fixtures.valid.m4minimal.SnapshotReferenceTarget@1",
+                "fqn": "fixtures.valid.m4minimal.SnapshotReferenceTarget",
                 "typeArguments": [],
             },
             fields["related"]["type"],
