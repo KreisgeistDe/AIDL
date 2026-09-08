@@ -102,6 +102,19 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
                     message_fragment=message_fragment,
                 )
 
+    def test_provider_block_clause_is_rejected_before_ir(self) -> None:
+        base = SOURCE.read_text(encoding="utf-8")
+        text = base.replace(
+            "  provider oidc\n",
+            '  provider oidc {\n    issuer "x"\n  }\n',
+            1,
+        )
+        self._assert_single_app_diagnostic(
+            text,
+            needle="provider oidc {",
+            message_fragment="auth provider must be a leaf clause",
+        )
+
     def test_unrepresented_auth_value_forms_are_rejected_before_ir(self) -> None:
         base = SOURCE.read_text(encoding="utf-8")
         cases = (
