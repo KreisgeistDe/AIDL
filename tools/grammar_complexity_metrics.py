@@ -16,6 +16,8 @@ from pathlib import Path
 GRAMMAR = Path("docs/06-grammar.md")
 WORD = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PRODUCTION_START = re.compile(r"^([A-Za-z][A-Za-z0-9]*)\s*=(.*)$")
+PRODUCTION_NAME_ONLY = re.compile(r"^([A-Za-z][A-Za-z0-9]*)\s*$")
+PRODUCTION_CONTINUATION_START = re.compile(r"^\s*=(.*)$")
 TERMINAL = re.compile(r'"((?:\\.|[^"\\])*)"')
 
 
@@ -47,6 +49,7 @@ def productions(sections: list[tuple[str, str]]) -> dict[str, tuple[str, str]]:
     result: dict[str, tuple[str, str]] = {}
     for section, block in sections:
         current: str | None = None
+        pending: str | None = None
         pieces: list[str] = []
         for line in block.splitlines():
             match = PRODUCTION_START.match(line)
@@ -54,12 +57,26 @@ def productions(sections: list[tuple[str, str]]) -> dict[str, tuple[str, str]]:
                 if current is not None:
                     result[current] = (section, " ".join(pieces).strip())
                 current = match.group(1)
+                pending = None
                 pieces = [match.group(2).strip()]
-            elif current is not None:
+            elif current is None:
+                name_only = PRODUCTION_NAME_ONLY.match(line)
+                continuation_start = PRODUCTION_CONTINUATION_START.match(line)
+                if name_only:
+                    pending = name_only.group(1)
+                    continue
+                if pending is not None and continuation_start:
+                    current = pending
+                    pending = None
+                    pieces = [continuation_start.group(1).strip()]
+                elif line.strip():
+                    pending = None
+            else:
                 pieces.append(line.strip())
             if current is not None and ";" in line:
                 result[current] = (section, " ".join(pieces).strip())
                 current = None
+                pending = None
                 pieces = []
         if current is not None:
             result[current] = (section, " ".join(pieces).strip())
