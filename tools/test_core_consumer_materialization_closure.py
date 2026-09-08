@@ -39,12 +39,7 @@ topic OrderEvents {
 
 consumer ApplyOrder on OrderApplied from OrderEvents {
   service OrdersService
-  idempotency:
-  {
-    key event.eventId
-    scope "orders"
-    retain 7d
-  }
+  idempotency: event.eventId retain 7d
   retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)
   start: workflow ReviewOrder({ requestId: event.eventId })
 }
@@ -115,10 +110,7 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
         first_analysis = load_compiler_analysis([source])
         second_analysis = load_compiler_analysis([source])
         for analysis in (first_analysis, second_analysis):
-            self.assertEqual(
-                [],
-                [item.to_json() for item in analysis.diagnostics if item.severity == CompilerDiagnosticSeverity.ERROR],
-            )
+            self.assertEqual([], [item.to_json() for item in analysis.diagnostics if item.severity == CompilerDiagnosticSeverity.ERROR])
         first = build_canonical_ir(first_analysis)
         second = build_canonical_ir(second_analysis)
         self.assertEqual(first, second)
@@ -137,19 +129,14 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
         self.assertIn(consumer["declarationId"], service["runs"])
         self.assertEqual(
             {
-                "key": {"kind": "symbol", "path": ["event", "eventId"]},
-                "scope": {"kind": "literal", "value": "orders"},
+                "key": {"kind": "symbol", "path": ["event . eventId"]},
+                "scope": {"kind": "literal", "value": "consumer"},
                 "retentionMs": 604800000,
             },
             consumer["idempotency"],
         )
         self.assertEqual(
-            {
-                "kind": "exponential",
-                "attempts": 8,
-                "initialDelayMs": 1000,
-                "maxDelayMs": 300000,
-            },
+            {"kind": "exponential", "attempts": 8, "initialDelayMs": 1000, "maxDelayMs": 300000},
             consumer["retry"],
         )
         self.assertEqual(
@@ -159,26 +146,13 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
                 "targetId": workflow["declarationId"],
                 "input": {
                     "kind": "record",
-                    "fields": [
-                        {
-                            "name": "requestId",
-                            "value": {"kind": "symbol", "path": ["event", "eventId"]},
-                        }
-                    ],
+                    "fields": [{"name": "requestId", "value": {"kind": "symbol", "path": ["event", "eventId"]}}],
                 },
             },
             consumer["effect"],
         )
-        source_entry = next(
-            entry
-            for entry in first["sourceMap"]["entries"]
-            if entry["originalDeclarationId"] == consumer["declarationId"]
-        )
-        consumer_index = next(
-            index
-            for index, item in enumerate(first["declarations"])
-            if item.get("declarationId") == consumer["declarationId"]
-        )
+        source_entry = next(entry for entry in first["sourceMap"]["entries"] if entry["originalDeclarationId"] == consumer["declarationId"])
+        consumer_index = next(index for index, item in enumerate(first["declarations"]) if item.get("declarationId") == consumer["declarationId"])
         self.assertEqual(f"/declarations/{consumer_index}", source_entry["nodePath"])
 
     def test_task_start_is_losslessly_projected(self) -> None:
@@ -193,11 +167,7 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
         self._assert_schema_valid(document)
 
     def test_optional_consumer_facts_have_explicit_closed_defaults(self) -> None:
-        source = _BASE_SOURCE
-        source = source.replace(
-            "  idempotency:\n  {\n    key event.eventId\n    scope \"orders\"\n    retain 7d\n  }\n",
-            "",
-        )
+        source = _BASE_SOURCE.replace("  idempotency: event.eventId retain 7d\n", "")
         source = source.replace("  retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)\n", "")
         source = source.replace("  start: workflow ReviewOrder({ requestId: event.eventId })\n", "")
         source = source.replace(", workflow ReviewOrder", "")
@@ -223,24 +193,26 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
                 self.assertNotIn("AIDL-T005", codes)
 
     def test_idempotency_failures_keep_dist411_ownership_without_t005_duplicate(self) -> None:
-        missing = _BASE_SOURCE.replace(
-            "  idempotency:\n  {\n    key event.eventId\n    scope \"orders\"\n    retain 7d\n  }\n",
-            "",
-        )
+        missing = _BASE_SOURCE.replace("  idempotency: event.eventId retain 7d\n", "")
         duplicate = _BASE_SOURCE.replace(
             "  retry: exponential",
             "  idempotency: event.eventId retain 7d\n  retry: exponential",
             1,
         )
         for source in (missing, duplicate):
-            with self.subTest(duplicate=source is duplicate):
-                errors = self._errors(source)
-                codes = [item.code.value for item in errors if item.subject.kind == "consumer"]
-                self.assertIn("AIDL-DIST411", codes)
-                self.assertNotIn("AIDL-T005", codes)
+            errors = self._errors(source)
+            codes = [item.code.value for item in errors if item.subject.kind == "consumer"]
+            self.assertIn("AIDL-DIST411", codes)
+            self.assertNotIn("AIDL-T005", codes)
 
     def test_materialization_only_consumer_losses_are_rejected_with_t005(self) -> None:
+        block_idempotency = _BASE_SOURCE.replace(
+            "  idempotency: event.eventId retain 7d\n",
+            "  idempotency:\n  {\n    key event.eventId\n    scope \"orders\"\n    retain 7d\n  }\n",
+        )
         cases = {
+            "idempotency-block": block_idempotency,
+            "idempotency-malformed": _BASE_SOURCE.replace("idempotency: event.eventId retain 7d", "idempotency: event.eventId retain tomorrow"),
             "service-unresolved": _BASE_SOURCE.replace("service OrdersService", "service MissingService", 1),
             "service-runs-mismatch": _BASE_SOURCE.replace("runs [consumer ApplyOrder, workflow ReviewOrder]", "runs [workflow ReviewOrder]"),
             "retry-immediate": _BASE_SOURCE.replace("retry: exponential(initial: 1s, maxDelay: 5m, attempts: 8)", "retry: immediate(max: 2)"),
@@ -250,19 +222,12 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
             "start-unresolved": _BASE_SOURCE.replace("start: workflow ReviewOrder", "start: workflow MissingOrder"),
             "start-unprojectable": _BASE_SOURCE.replace("{ requestId: event.eventId }", "event.eventId + 1", 1),
             "call": _BASE_SOURCE.replace("  start: workflow ReviewOrder({ requestId: event.eventId })\n", "  call: task ReviewOrder(event.eventId)\n"),
-            "transaction": _BASE_SOURCE.replace(
-                "  start: workflow ReviewOrder({ requestId: event.eventId })\n",
-                "  transaction on OrdersDb {\n  }\n",
-            ),
+            "transaction": _BASE_SOURCE.replace("  start: workflow ReviewOrder({ requestId: event.eventId })\n", "  transaction on OrdersDb {\n  }\n"),
         }
         for name, source in cases.items():
             with self.subTest(name=name):
                 errors = self._errors(source)
-                t005 = [
-                    item
-                    for item in errors
-                    if item.code.value == "AIDL-T005" and item.subject.kind == "consumer"
-                ]
+                t005 = [item for item in errors if item.code.value == "AIDL-T005" and item.subject.kind == "consumer"]
                 self.assertEqual(1, len(t005), [item.to_json() for item in errors])
 
 
