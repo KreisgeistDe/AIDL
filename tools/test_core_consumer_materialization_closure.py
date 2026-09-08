@@ -76,12 +76,15 @@ deployment local for OrdersSystem {
 
 
 class CoreConsumerMaterializationClosureTest(unittest.TestCase):
-    def _analysis(self, text: str):
+    def _source(self, text: str) -> Path:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         source = Path(temporary.name) / "consumer.aidl"
         source.write_text(text, encoding="utf-8")
-        return load_compiler_analysis([source])
+        return source
+
+    def _analysis(self, text: str):
+        return load_compiler_analysis([self._source(text)])
 
     def _errors(self, text: str):
         return tuple(
@@ -108,8 +111,16 @@ class CoreConsumerMaterializationClosureTest(unittest.TestCase):
         self.assertEqual((), tuple(validator.iter_errors(document)))
 
     def test_complete_consumer_contract_is_deterministic_and_schema_valid(self) -> None:
-        first = self._ir(_BASE_SOURCE)
-        second = self._ir(_BASE_SOURCE)
+        source = self._source(_BASE_SOURCE)
+        first_analysis = load_compiler_analysis([source])
+        second_analysis = load_compiler_analysis([source])
+        for analysis in (first_analysis, second_analysis):
+            self.assertEqual(
+                [],
+                [item.to_json() for item in analysis.diagnostics if item.severity == CompilerDiagnosticSeverity.ERROR],
+            )
+        first = build_canonical_ir(first_analysis)
+        second = build_canonical_ir(second_analysis)
         self.assertEqual(first, second)
         self._assert_schema_valid(first)
 
