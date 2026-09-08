@@ -27,6 +27,14 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
             source.write_text(text, encoding="utf-8")
             return load_compiler_analysis([source])
 
+    def _ir(self, text: str):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "app.aidl"
+            source.write_text(text, encoding="utf-8")
+            analysis = load_compiler_analysis([source])
+            self.assertEqual((), analysis.diagnostics)
+            return build_canonical_ir(analysis), str(source)
+
     def _line_of(self, text: str, needle: str) -> int:
         for line, value in enumerate(text.splitlines(), start=1):
             if needle in value:
@@ -88,6 +96,100 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
                     needle=needle,
                     message_fragment=message_fragment,
                 )
+
+    def test_unrepresented_auth_value_forms_are_rejected_before_ir(self) -> None:
+        base = SOURCE.read_text(encoding="utf-8")
+        cases = (
+            (
+                base.replace('  subject claim "sub"\n', "  subject principal\n", 1),
+                "subject principal",
+                "auth subject must be exactly",
+            ),
+            (
+                base.replace('  subject claim "sub"\n', '  subject claim "sub" trailing\n', 1),
+                'subject claim "sub" trailing',
+                "auth subject must be exactly",
+            ),
+            (
+                base.replace("  roles [user]\n", "  roles user\n", 1),
+                "roles user",
+                "auth roles must be an explicit bracket list",
+            ),
+            (
+                base.replace("  scopes [pets.write]\n", "  scopes pets.write\n", 1),
+                "scopes pets.write",
+                "auth scopes must be an explicit bracket list",
+            ),
+            (
+                base.replace("  roles [user]\n", "  roles [user, admin, user]\n", 1),
+                "roles [user, admin, user]",
+                "auth roles must not repeat list elements",
+            ),
+            (
+                base.replace("  scopes [pets.write]\n", "  scopes [pets.read, pets.write, pets.read]\n", 1),
+                "scopes [pets.read, pets.write, pets.read]",
+                "auth scopes must not repeat list elements",
+            ),
+            (
+                base.replace("  serviceIdentities required\n", "  serviceIdentities inherited\n", 1),
+                "serviceIdentities inherited",
+                "auth serviceIdentities must be one of required, optional, or disabled",
+            ),
+        )
+        for text, needle, message_fragment in cases:
+            with self.subTest(needle=needle):
+                self._assert_single_app_diagnostic(
+                    text,
+                    needle=needle,
+                    message_fragment=message_fragment,
+                )
+
+    def test_auth_projection_preserves_order_empty_lists_enum_and_source_map(self) -> None:
+        base = SOURCE.read_text(encoding="utf-8")
+        variants = (
+            (
+                base.replace("  roles [user]\n", "  roles [admin, user]\n", 1)
+                .replace("  scopes [pets.write]\n", "  scopes [pets.read, pets.write]\n", 1),
+                ["admin", "user"],
+                ["pets.read", "pets.write"],
+                "required",
+            ),
+            (
+                base.replace("  roles [user]\n", "  roles []\n", 1)
+                .replace("  scopes [pets.write]\n", "  scopes []\n", 1)
+                .replace("  serviceIdentities required\n", "  serviceIdentities optional\n", 1),
+                [],
+                [],
+                "optional",
+            ),
+            (
+                base.replace("  serviceIdentities required\n", "  serviceIdentities disabled\n", 1),
+                ["user"],
+                ["pets.write"],
+                "disabled",
+            ),
+        )
+        for text, roles, scopes, service_identities in variants:
+            with self.subTest(serviceIdentities=service_identities, roles=roles, scopes=scopes):
+                first, source_path = self._ir(text)
+                second, _ = self._ir(text)
+                self.assertEqual(first, second)
+                self.assertEqual([], list(VALIDATOR.iter_errors(first)))
+                self.assertEqual("oidc", first["app"]["auth"]["provider"])
+                self.assertEqual("sub", first["app"]["auth"]["subjectClaim"])
+                self.assertEqual(roles, first["app"]["auth"]["roles"])
+                self.assertEqual(scopes, first["app"]["auth"]["scopes"])
+                self.assertEqual(
+                    service_identities,
+                    first["app"]["auth"]["serviceIdentities"],
+                )
+                app_entry = next(
+                    entry
+                    for entry in first["sourceMap"]["entries"]
+                    if entry["nodePath"] == "/app"
+                )
+                self.assertEqual("petstore.m4.PetstoreApp@1", app_entry["originalDeclarationId"])
+                self.assertEqual(source_path, app_entry["span"]["file"])
 
     def test_reduced_auth_projection_is_deterministic_schema_valid_and_source_mapped(self) -> None:
         text = SOURCE.read_text(encoding="utf-8")
