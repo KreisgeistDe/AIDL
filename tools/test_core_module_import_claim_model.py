@@ -16,7 +16,7 @@ SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8
 
 
 class CoreModuleImportClaimModelTest(unittest.TestCase):
-    def _analysis(self, sources: dict[str, str]):
+    def _paths(self, sources: dict[str, str]) -> list[Path]:
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)
@@ -25,7 +25,10 @@ class CoreModuleImportClaimModelTest(unittest.TestCase):
             path = root / name
             path.write_text(text, encoding="utf-8")
             paths.append(path)
-        return load_compiler_analysis(paths)
+        return paths
+
+    def _analysis(self, sources: dict[str, str]):
+        return load_compiler_analysis(self._paths(sources))
 
     @staticmethod
     def _errors(analysis):
@@ -65,8 +68,9 @@ value UsesWildcard {
 }
 """,
         }
-        first_analysis = self._analysis(sources)
-        second_analysis = self._analysis(sources)
+        paths = self._paths(sources)
+        first_analysis = load_compiler_analysis(paths)
+        second_analysis = load_compiler_analysis(paths)
         self.assertEqual([], [item.to_json() for item in self._errors(first_analysis)])
         self.assertEqual([], [item.to_json() for item in self._errors(second_analysis)])
 
@@ -179,8 +183,9 @@ export value C {
 }
 """,
         }
-        first = self._analysis(sources)
-        second = self._analysis(sources)
+        paths = self._paths(sources)
+        first = load_compiler_analysis(paths)
+        second = load_compiler_analysis(paths)
         first_cycles = [item.to_json() for item in self._diagnostics(first, "AIDL-R004")]
         second_cycles = [item.to_json() for item in self._diagnostics(second, "AIDL-R004")]
         self.assertEqual(first_cycles, second_cycles)
