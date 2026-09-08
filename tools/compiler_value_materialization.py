@@ -6,11 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 
 try:
+    from .compiler_core_materialization import collect_core_materialization_issues
     from .compiler_project import CompilerProject
-    from .compiler_typecheck import TypeSyntaxError, parse_type
+    from .compiler_typecheck import TypeSyntaxError, collect_type_issues, parse_type
 except ImportError:  # pragma: no cover
+    from compiler_core_materialization import collect_core_materialization_issues
     from compiler_project import CompilerProject
-    from compiler_typecheck import TypeSyntaxError, parse_type
+    from compiler_typecheck import TypeSyntaxError, collect_type_issues, parse_type
 
 _FIELD = re.compile(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.+)$", re.S)
 _SUPPORTED_MODIFIERS = {
@@ -84,11 +86,23 @@ def _take_type(tail: str) -> tuple[str, str]:
     return tail, ""
 
 
+def _owned_type_locations(project: CompilerProject) -> set[tuple[Path, int]]:
+    """Locations already owned by pre-existing AIDL-T001/T005 type boundaries."""
+    return {
+        (issue.source_path, issue.location.offset)
+        for issue in (
+            *collect_type_issues(project),
+            *collect_core_materialization_issues(project),
+        )
+    }
+
+
 def collect_value_materialization_issues(
     project: CompilerProject,
 ) -> tuple[ValueMaterializationIssue, ...]:
     """Reject Value body facts the current Canonical IR cannot preserve."""
     issues: list[ValueMaterializationIssue] = []
+    owned_type_locations = _owned_type_locations(project)
     for item in project.declaration_names:
         declaration = item.declaration
         if declaration.kind != "value":
@@ -138,6 +152,12 @@ def collect_value_materialization_issues(
             try:
                 parsed_type = parse_type(type_expression)
             except TypeSyntaxError:
+                location = node.span or declaration.span
+                if location is not None and (
+                    item.document.source_path,
+                    location.offset,
+                ) in owned_type_locations:
+                    continue
                 issue = _issue(
                     item,
                     node,
