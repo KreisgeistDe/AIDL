@@ -20,6 +20,7 @@ try:
     from .compiler_consumer_materialization import collect_consumer_materialization_issues
     from .compiler_core_materialization import collect_core_materialization_issues
     from .compiler_event_materialization import collect_event_materialization_issues
+    from .compiler_module_validation import collect_module_validation_issues
     from .compiler_project import CompilerProject
     from .compiler_topic_materialization import collect_topic_materialization_issues
     from .compiler_typecheck import collect_type_issues
@@ -31,6 +32,7 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
     from compiler_consumer_materialization import collect_consumer_materialization_issues
     from compiler_core_materialization import collect_core_materialization_issues
     from compiler_event_materialization import collect_event_materialization_issues
+    from compiler_module_validation import collect_module_validation_issues
     from compiler_project import CompilerProject
     from compiler_topic_materialization import collect_topic_materialization_issues
     from compiler_typecheck import collect_type_issues
@@ -49,6 +51,11 @@ class CoreTypeDiagnosticCode(StrEnum):
     ERROR_CONTRACT = "AIDL-T003"
     PUBLIC_SERIALIZATION = "AIDL-T004"
     UNSUPPORTED_MATERIALIZATION = "AIDL-T005"
+
+
+class ModuleDiagnosticCode(StrEnum):
+    MODULE_STRUCTURE = "AIDL-R003"
+    MODULE_CYCLE = "AIDL-R004"
 
 
 class AppDiagnosticCode(StrEnum):
@@ -349,6 +356,28 @@ def _consumer_binding_diagnostics(
     return tuple(diagnostics)
 
 
+def _with_module_diagnostics(
+    project: CompilerProject,
+    base_diagnostics: Iterable[CompilerDiagnostic],
+) -> tuple[CompilerDiagnostic, ...]:
+    diagnostics = list(base_diagnostics)
+    for issue in collect_module_validation_issues(project):
+        diagnostics.append(
+            CompilerDiagnostic(
+                code=ModuleDiagnosticCode(issue.code),
+                phase="resolve",
+                severity=CompilerDiagnosticSeverity.ERROR,
+                message=issue.message,
+                source_path=issue.source_path,
+                location=issue.location,
+                subject=CompilerDiagnosticSubject(kind="module", name=issue.subject_name),
+                expected=issue.expected,
+                docs=f"aidl://diagnostics/{issue.code}",
+            )
+        )
+    return tuple(diagnostics)
+
+
 def _with_core_contract_diagnostics(
     project: CompilerProject,
     base_diagnostics: Iterable[CompilerDiagnostic],
@@ -358,6 +387,8 @@ def _with_core_contract_diagnostics(
         CompilerDiagnosticCode.PARSE_FAILURE.value,
         CompilerDiagnosticCode.UNRESOLVED_IMPORT.value,
         CompilerDiagnosticCode.DUPLICATE_DECLARATION.value,
+        ModuleDiagnosticCode.MODULE_STRUCTURE.value,
+        ModuleDiagnosticCode.MODULE_CYCLE.value,
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
         diagnostics.extend(_app_contract_diagnostics(project))
@@ -374,6 +405,8 @@ def _with_type_diagnostics(
         CompilerDiagnosticCode.PARSE_FAILURE.value,
         CompilerDiagnosticCode.UNRESOLVED_IMPORT.value,
         CompilerDiagnosticCode.DUPLICATE_DECLARATION.value,
+        ModuleDiagnosticCode.MODULE_STRUCTURE.value,
+        ModuleDiagnosticCode.MODULE_CYCLE.value,
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
         issues = (
@@ -433,7 +466,10 @@ def collect_compiler_diagnostics(
         project,
         _with_core_contract_diagnostics(
             project,
-            _base.collect_compiler_diagnostics(project, parser_diagnostics),
+            _with_module_diagnostics(
+                project,
+                _base.collect_compiler_diagnostics(project, parser_diagnostics),
+            ),
         ),
     )
 
@@ -444,6 +480,9 @@ def load_compiler_analysis(paths: Iterable[Path]) -> CompilerAnalysis:
         project=analysis.project,
         diagnostics=_with_type_diagnostics(
             analysis.project,
-            _with_core_contract_diagnostics(analysis.project, analysis.diagnostics),
+            _with_core_contract_diagnostics(
+                analysis.project,
+                _with_module_diagnostics(analysis.project, analysis.diagnostics),
+            ),
         ),
     )
