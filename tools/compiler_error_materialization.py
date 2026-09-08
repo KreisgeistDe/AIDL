@@ -56,10 +56,19 @@ def _non_empty_string(raw: str) -> bool:
     return match is not None and bool(match.group(1).strip())
 
 
+def _canonical_core_context(project: CompilerProject) -> bool:
+    apps = sum(item.declaration.kind == "app" for item in project.declaration_names)
+    systems = sum(item.declaration.kind == "system" for item in project.declaration_names)
+    return apps == 1 and systems == 1
+
+
 def collect_error_materialization_issues(
     project: CompilerProject,
 ) -> tuple[ErrorMaterializationIssue, ...]:
     """Reject Error source facts the current errorDecl IR cannot preserve truthfully."""
+    if not _canonical_core_context(project):
+        return ()
+
     issues: list[ErrorMaterializationIssue] = []
     for item in project.declaration_names:
         declaration = item.declaration
