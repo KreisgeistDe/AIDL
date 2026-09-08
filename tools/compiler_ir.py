@@ -583,8 +583,8 @@ def _system(item: CompilerDeclarationName, resolver: _Resolver) -> tuple[dict[st
 def _app(item: CompilerDeclarationName, resolver: _Resolver) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     system, deployment = _value(item.declaration.node, "system"), _value(item.declaration.node, "defaultDeployment")
     if not system or not deployment: raise IrBuildError("app must declare system and defaultDeployment")
-    result = _identity(resolver, item); api = _value(item.declaration.node, "api")
-    result.update({"systemId": resolver.ref_id(item, system, {"system"}), "apiIds": [resolver.ref_id(item, api, {"api"})] if api else [], "defaultDeploymentId": resolver.ref_id(item, deployment, {"deployment"})})
+    result = _identity(resolver, item); apis = _values(item.declaration.node, "api")
+    result.update({"systemId": resolver.ref_id(item, system, {"system"}), "apiIds": [resolver.ref_id(item, api, {"api"}) for api in apis], "defaultDeploymentId": resolver.ref_id(item, deployment, {"deployment"})})
     for declaration in item.document.declarations:
         if declaration.kind != "auth": continue
         provider, subject, service_ids = _value(declaration.node, "provider"), _value(declaration.node, "subject"), _value(declaration.node, "serviceIdentities")
