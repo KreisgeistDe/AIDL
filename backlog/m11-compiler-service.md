@@ -9,6 +9,10 @@ Goal: provide editor-neutral, compiler-authoritative semantics for unsaved and m
 - [x] **P1** Add incremental analysis, cache invalidation, watched-file handling, cancellation, progress, and lifecycle/load tests. *(M11-03 adds compiler-owned per-root snapshot caching keyed by exact deterministic source fingerprints, conservative root-level invalidation for saved/unsaved and watched-file changes, isolated caches, cancellation without cache/partial-result publication, balanced work-done progress, shutdown/restart state handling, and structural repeated-request load regressions without wall-clock gates.)*
 - [x] **P1** Expose existing compiler-owned completion, documentation, references, rename, and authorized fixes through LSP. *(M11-04 exposes those capabilities over the owning incremental compiler snapshot, including unsaved buffers and isolated multi-root workspaces, with compiler-owned rename/fix authority and no editor-local semantic fallback.)*
 
+### M10.5 migration gate before further compiler-core deepening
+
+Completed M11-01 through M11-04 remain completed and are not reinterpreted by the additive [M10.5 Kotlin Compiler-Core Migration Gate](m10-5-kotlin-compiler-migration.md). After M10 itself is fully complete, M10.5 must establish the staged Python-to-Kotlin architecture, differential parity harness, coverage-quality gates, and Python exit criteria before further compiler-core implementation of M11-04.1 or M11.5 proceeds. Adapter-neutral maintenance may continue, but new cache/index/service semantics must not deepen Python-only architecture in a way that conflicts with the shared Kotlin Multiplatform target.
+
 ### M11-04.1 — Dependency-Aware Incremental Analysis
 
 - [ ] **P1** Replace root-wide rebuilds with dependency-aware module/declaration invalidation while retaining a conservative full-root fallback whenever dependency precision is unavailable.
