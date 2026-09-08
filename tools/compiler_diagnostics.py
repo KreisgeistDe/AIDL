@@ -1,4 +1,4 @@
-"""Stable compiler diagnostics with App/Auth leaf-shape losslessness closure."""
+"""Stable compiler diagnostics with project-wide App/Auth losslessness closure."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -7,11 +7,11 @@ from typing import Iterable, Mapping
 try:
     from . import compiler_diagnostics_pre_app_leaf_shape as _layer
     from .aidl_parser import Diagnostic as ParserDiagnostic
-    from .compiler_project import CompilerProject
+    from .compiler_project import CompilerDeclarationName, CompilerProject
 except ImportError:  # pragma: no cover - direct tools/ execution/import path
     import compiler_diagnostics_pre_app_leaf_shape as _layer
     from aidl_parser import Diagnostic as ParserDiagnostic
-    from compiler_project import CompilerProject
+    from compiler_project import CompilerDeclarationName, CompilerProject
 
 for _name in dir(_layer):
     if not _name.startswith("__") and _name != "_previous":
@@ -19,6 +19,248 @@ for _name in dir(_layer):
 
 _APP_BLOCK_LEAF_KINDS = frozenset({"profile", "system", "api", "defaultDeployment"})
 _AUTH_BLOCK_LEAF_KINDS = frozenset({"subject", "roles", "scopes", "serviceIdentities"})
+
+
+def _stable_declarations(
+    project: CompilerProject,
+    kind: str,
+) -> tuple[CompilerDeclarationName, ...]:
+    items = [
+        item
+        for item in project.declaration_names
+        if item.declaration.kind == kind and item.declaration.span is not None
+    ]
+    items.sort(
+        key=lambda item: (
+            item.document.source_path.as_posix(),
+            item.declaration.span.offset if item.declaration.span is not None else -1,
+        )
+    )
+    return tuple(items)
+
+
+def _project_app_diagnostic(
+    *,
+    source_path: Path,
+    location: Span,
+    app_name: str,
+    message: str,
+) -> CompilerDiagnostic:
+    return CompilerDiagnostic(
+        code=AppDiagnosticCode.APP_CONTRACT,
+        phase="policy",
+        severity=CompilerDiagnosticSeverity.ERROR,
+        message=message,
+        source_path=source_path,
+        location=location,
+        subject=CompilerDiagnosticSubject(kind="app", name=app_name),
+        expected="exactly one project app with at most one losslessly materializable project auth block",
+        docs="aidl://diagnostics/AIDL-DIST414",
+    )
+
+
+def _app_cardinality_diagnostics(project: CompilerProject) -> tuple[CompilerDiagnostic, ...]:
+    apps = _stable_declarations(project, "app")
+    if len(apps) == 1:
+        return ()
+    if not project.documents:
+        return ()
+    if len(apps) > 1:
+        anchor = apps[1]
+        assert anchor.declaration.span is not None
+        return (
+            _project_app_diagnostic(
+                source_path=anchor.document.source_path,
+                location=anchor.declaration.span,
+                app_name=anchor.declaration.name or "<unnamed>",
+                message=f"project must declare exactly one app; found {len(apps)}",
+            ),
+        )
+    document = min(project.documents, key=lambda item: item.source_path.as_posix())
+    if document.span is None:
+        return ()
+    return (
+        _project_app_diagnostic(
+            source_path=document.source_path,
+            location=document.span,
+            app_name="<missing>",
+            message="project must declare exactly one app; found 0",
+        ),
+    )
+
+
+def _auth_diagnostic(
+    app: CompilerDeclarationName,
+    auth: CompilerDeclarationName,
+    location: Span,
+    message: str,
+) -> CompilerDiagnostic:
+    app_name = app.fully_qualified_name or app.declaration.name or "<unnamed>"
+    return _project_app_diagnostic(
+        source_path=auth.document.source_path,
+        location=location,
+        app_name=app.declaration.name or "<unnamed>",
+        message=f"app '{app_name}' {message}",
+    )
+
+
+def _auth_contract_for_declaration(
+    app: CompilerDeclarationName,
+    auth: CompilerDeclarationName,
+) -> tuple[CompilerDiagnostic, ...]:
+    diagnostics: list[CompilerDiagnostic] = []
+    declaration = auth.declaration
+    if declaration.span is None:
+        return ()
+    occurrences: dict[str, list[Span]] = {key: [] for key in _layer._AUTH_REQUIRED}
+    for child in declaration.node.children:
+        if child.name is None or child.span is None:
+            continue
+        clause = child.name.strip()
+        key = _layer._auth_clause_kind(clause)
+        if key is None:
+            diagnostics.append(
+                _auth_diagnostic(
+                    app,
+                    auth,
+                    child.span,
+                    f"auth clause is not a normative auth clause: '{clause}'",
+                )
+            )
+            continue
+        occurrences[key].append(child.span)
+        if key == "provider":
+            if child.kind == "blockClause":
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        "auth provider must be a leaf clause; provider block configuration is not represented by the current Canonical IR app.auth contract",
+                    )
+                )
+            elif _layer._AUTH_PROVIDER.fullmatch(clause) is None:
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        "auth provider configuration is not represented by the current Canonical IR app.auth contract",
+                    )
+                )
+        elif key == "subject":
+            if _layer._AUTH_SUBJECT_ALIAS.search(clause) is not None:
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        "auth subject alias/type is not represented by the current Canonical IR app.auth contract",
+                    )
+                )
+            elif _layer._AUTH_SUBJECT.fullmatch(clause) is None:
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        "auth subject must be exactly 'subject claim \"CLAIM\"' with a non-empty losslessly representable claim string",
+                    )
+                )
+        elif key in {"roles", "scopes"}:
+            values = _layer._auth_list_values(clause, key)
+            if values is None:
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        f"auth {key} must be an explicit bracket list",
+                    )
+                )
+            else:
+                seen: set[str] = set()
+                for value in values:
+                    if value in seen:
+                        diagnostics.append(
+                            _auth_diagnostic(
+                                app,
+                                auth,
+                                child.span,
+                                f"auth {key} must not repeat list elements; duplicate {value!r}",
+                            )
+                        )
+                        break
+                    seen.add(value)
+        elif key == "serviceIdentities" and _layer._AUTH_SERVICE_IDENTITIES.fullmatch(clause) is None:
+            diagnostics.append(
+                _auth_diagnostic(
+                    app,
+                    auth,
+                    child.span,
+                    "auth serviceIdentities must be one of required, optional, or disabled",
+                )
+            )
+
+    for key in _layer._AUTH_REQUIRED:
+        spans = occurrences[key]
+        if not spans:
+            diagnostics.append(
+                _auth_diagnostic(
+                    app,
+                    auth,
+                    declaration.span,
+                    f"auth block must declare exactly one {key} clause; found 0",
+                )
+            )
+        elif len(spans) > 1:
+            diagnostics.append(
+                _auth_diagnostic(
+                    app,
+                    auth,
+                    spans[1],
+                    f"auth block must declare exactly one {key} clause; found {len(spans)}",
+                )
+            )
+    return tuple(diagnostics)
+
+
+def _project_auth_diagnostics(project: CompilerProject) -> tuple[CompilerDiagnostic, ...]:
+    apps = _stable_declarations(project, "app")
+    if len(apps) != 1:
+        return ()
+    app = apps[0]
+    auths = _stable_declarations(project, "auth")
+    if len(auths) > 1:
+        anchor = auths[1]
+        assert anchor.declaration.span is not None
+        return (
+            _auth_diagnostic(
+                app,
+                anchor,
+                anchor.declaration.span,
+                f"must declare at most one project auth block; found {len(auths)}",
+            ),
+        )
+    if not auths:
+        return ()
+    auth = auths[0]
+    if auth.document is app.document:
+        diagnostics: list[CompilerDiagnostic] = []
+        for child in auth.declaration.node.children:
+            if child.name is None or child.span is None:
+                continue
+            if _layer._auth_clause_kind(child.name.strip()) is None:
+                diagnostics.append(
+                    _auth_diagnostic(
+                        app,
+                        auth,
+                        child.span,
+                        f"auth clause is not a normative auth clause: '{child.name.strip()}'",
+                    )
+                )
+        return tuple(diagnostics)
+    return _auth_contract_for_declaration(app, auth)
 
 
 def _represented_app_leaf_kind(clause: str) -> str | None:
@@ -36,41 +278,41 @@ def _represented_app_leaf_kind(clause: str) -> str | None:
 
 def _app_auth_leaf_shape_diagnostics(project: CompilerProject) -> tuple[CompilerDiagnostic, ...]:
     diagnostics: list[CompilerDiagnostic] = []
-    for app in project.declaration_names:
-        if app.declaration.kind != "app" or app.declaration.span is None:
-            continue
-        app_name = app.fully_qualified_name or app.declaration.name or "<unnamed>"
+    apps = _stable_declarations(project, "app")
+    if len(apps) != 1:
+        return ()
+    app = apps[0]
+    app_name = app.fully_qualified_name or app.declaration.name or "<unnamed>"
 
-        for child in app.declaration.node.children:
+    for child in app.declaration.node.children:
+        if child.kind != "blockClause" or child.name is None or child.span is None:
+            continue
+        clause_kind = _represented_app_leaf_kind(child.name)
+        if clause_kind not in _APP_BLOCK_LEAF_KINDS:
+            continue
+        diagnostics.append(
+            _layer._app_diagnostic(
+                app,
+                child.span,
+                f"app '{app_name}' {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app contract",
+            )
+        )
+
+    for auth in _stable_declarations(project, "auth"):
+        for child in auth.declaration.node.children:
             if child.kind != "blockClause" or child.name is None or child.span is None:
                 continue
-            clause_kind = _represented_app_leaf_kind(child.name)
-            if clause_kind not in _APP_BLOCK_LEAF_KINDS:
+            clause_kind = _layer._auth_clause_kind(child.name)
+            if clause_kind not in _AUTH_BLOCK_LEAF_KINDS:
                 continue
             diagnostics.append(
-                _layer._app_diagnostic(
+                _auth_diagnostic(
                     app,
+                    auth,
                     child.span,
-                    f"app '{app_name}' {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app contract",
+                    f"auth {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app.auth contract",
                 )
             )
-
-        for declaration in app.document.declarations:
-            if declaration.kind != "auth":
-                continue
-            for child in declaration.node.children:
-                if child.kind != "blockClause" or child.name is None or child.span is None:
-                    continue
-                clause_kind = _layer._auth_clause_kind(child.name)
-                if clause_kind not in _AUTH_BLOCK_LEAF_KINDS:
-                    continue
-                diagnostics.append(
-                    _layer._app_diagnostic(
-                        app,
-                        child.span,
-                        f"app '{app_name}' auth {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app.auth contract",
-                    )
-                )
     return tuple(diagnostics)
 
 
@@ -86,6 +328,19 @@ def _with_leaf_shape_diagnostics(
         ModuleDiagnosticCode.MODULE_STRUCTURE.value,
     }
     if not any(diagnostic.code.value in blocking_codes for diagnostic in diagnostics):
+        apps = _stable_declarations(project, "app")
+        auths = _stable_declarations(project, "auth")
+        if len(apps) == 1 and len(auths) > 1:
+            diagnostics = [
+                diagnostic
+                for diagnostic in diagnostics
+                if not (
+                    diagnostic.code.value == AppDiagnosticCode.APP_CONTRACT.value
+                    and "must declare at most one auth block" in diagnostic.message
+                )
+            ]
+        diagnostics.extend(_app_cardinality_diagnostics(project))
+        diagnostics.extend(_project_auth_diagnostics(project))
         diagnostics.extend(_app_auth_leaf_shape_diagnostics(project))
     document_order = {
         document.source_path: index for index, document in enumerate(project.documents)
@@ -98,7 +353,7 @@ def _with_leaf_shape_diagnostics(
     }
     diagnostics.sort(
         key=lambda diagnostic: (
-            document_order.get(diagnostic.source_path, len(document_order)),
+            diagnostic.source_path.as_posix(),
             diagnostic.location.offset,
             phase_order.get(diagnostic.phase, len(phase_order)),
             severity_order[diagnostic.severity],
