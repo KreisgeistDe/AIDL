@@ -207,7 +207,6 @@ class CoreAppIrSemanticsTest(unittest.TestCase):
             "missing profile": (
                 """module example.app
 app ExampleApp {
-  compatibility stable
   system ExampleSystem
   defaultDeployment local
 }
@@ -347,6 +346,40 @@ deployment local for ExampleSystem {}
             changed,
             self._line_of(changed, "api PetstoreApi", 2),
             "repeats api reference 'PetstoreApi'",
+        )
+
+        for name, (text, line, message_fragment) in cases.items():
+            with self.subTest(name=name):
+                self._assert_single_app_diagnostic(
+                    text,
+                    line=line,
+                    message_fragment=message_fragment,
+                )
+
+    def test_unrepresented_frontend_and_compatibility_are_rejected_before_ir(self) -> None:
+        base = self._multi_api_text()
+        cases = {}
+
+        changed = base.replace(
+            "  system PetstoreSystem\n",
+            "  system PetstoreSystem\n  frontend PetstoreFrontend\n",
+            1,
+        )
+        cases["frontend"] = (
+            changed,
+            self._line_of(changed, "frontend PetstoreFrontend"),
+            "frontend clause is not represented by the current Canonical IR app contract",
+        )
+
+        changed = base.replace(
+            "  defaultDeployment local\n",
+            "  defaultDeployment local\n  compatibility stable\n",
+            1,
+        )
+        cases["compatibility"] = (
+            changed,
+            self._line_of(changed, "compatibility stable"),
+            "compatibility clause is not represented by the current Canonical IR app contract",
         )
 
         for name, (text, line, message_fragment) in cases.items():
