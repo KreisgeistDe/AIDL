@@ -39,6 +39,22 @@ class CoreFixtureConformanceTest(unittest.TestCase):
         }
         self.assertIn("tools/test_core_consumer_materialization_closure.py", paths)
 
+    def test_module_and_import_are_fixture_complete_after_claim_correction(self) -> None:
+        self.assertIn("decl.module", self.coverage["featureIds"])
+        self.assertIn("decl.import", self.coverage["featureIds"])
+        module = next(item for item in self.core["features"] if item["id"] == "decl.module")
+        import_ = next(item for item in self.core["features"] if item["id"] == "decl.import")
+        self.assertEqual("implemented", module["layerStatus"]["validate"])
+        self.assertEqual("not-applicable", module["layerStatus"]["ir"])
+        self.assertEqual("not-applicable", import_["layerStatus"]["validate"])
+        self.assertEqual("not-applicable", import_["layerStatus"]["ir"])
+        paths = {
+            entry["path"]
+            for category in ("positive-core", "negative-core", "ir-core")
+            for entry in self.coverage["evidenceCatalog"][category]
+        }
+        self.assertIn("tools/test_core_module_import_claim_model.py", paths)
+
     def test_unknown_evidence_reference_fails(self) -> None:
         payload = copy.deepcopy(self.coverage)
         payload["defaultEvidence"]["negative"] = ["missing-negative-suite"]
