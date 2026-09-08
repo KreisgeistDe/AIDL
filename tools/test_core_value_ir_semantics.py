@@ -231,7 +231,7 @@ export value BrokenValue {{
                 with self.assertRaises(IrBuildError):
                     build_canonical_ir(analysis)
 
-    def test_malformed_type_remains_owned_by_earlier_type_diagnostic(self) -> None:
+    def test_unowned_malformed_value_type_is_rejected_before_ir(self) -> None:
         analysis = self._analysis(
             """
 
@@ -240,9 +240,7 @@ export value BrokenValue {
 }
 """
         )
-        codes = [diagnostic.code.value for diagnostic in analysis.diagnostics]
-        self.assertIn("AIDL-T001", codes)
-        value_t005 = [
+        diagnostics = [
             diagnostic
             for diagnostic in analysis.diagnostics
             if diagnostic.code.value == "AIDL-T005"
@@ -250,7 +248,30 @@ export value BrokenValue {
             and diagnostic.subject.kind == "value"
             and diagnostic.subject.name == "BrokenValue"
         ]
-        self.assertEqual(value_t005, [])
+        self.assertEqual(len(diagnostics), 1, [d.to_json() for d in analysis.diagnostics])
+        self.assertIn("not losslessly materialized", diagnostics[0].message)
+        with self.assertRaises(IrBuildError):
+            build_canonical_ir(analysis)
+
+    def test_existing_generic_materialization_boundary_is_not_duplicated(self) -> None:
+        analysis = self._analysis(
+            """
+
+export value GenericValue<T> {
+  value: T
+}
+"""
+        )
+        diagnostics = [
+            diagnostic
+            for diagnostic in analysis.diagnostics
+            if diagnostic.code.value == "AIDL-T005"
+            and diagnostic.subject is not None
+            and diagnostic.subject.kind == "value"
+            and diagnostic.subject.name == "GenericValue"
+        ]
+        self.assertEqual(len(diagnostics), 1, [d.to_json() for d in analysis.diagnostics])
+        self.assertIn("type parameters are not materialized", diagnostics[0].message)
         with self.assertRaises(IrBuildError):
             build_canonical_ir(analysis)
 
