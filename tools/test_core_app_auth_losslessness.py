@@ -239,7 +239,7 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
         self.assertEqual("petstore.m4.PetstoreApp@1", app_entry["originalDeclarationId"])
         self.assertEqual(str(source), app_entry["span"]["file"])
 
-    def test_partial_auth_is_rejected_and_app_claims_remain_open(self) -> None:
+    def test_partial_auth_is_rejected_and_app_claims_are_closed(self) -> None:
         text = SOURCE.read_text(encoding="utf-8").replace(
             "auth {\n  provider oidc\n  subject claim \"sub\"\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n",
             "auth {\n  provider oidc\n}\n",
@@ -269,8 +269,8 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
             for feature in CONFORMANCE["features"]
             if feature["id"] == "decl.app"
         )
-        self.assertEqual("partial", app_row["layerStatus"]["validate"])
-        self.assertEqual("partial", app_row["layerStatus"]["ir"])
+        self.assertEqual("implemented", app_row["layerStatus"]["validate"])
+        self.assertEqual("implemented", app_row["layerStatus"]["ir"])
 
 
 if __name__ == "__main__":
