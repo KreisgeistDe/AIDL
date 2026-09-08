@@ -2,6 +2,12 @@
 
 Status: **non-binding analysis**. This document does not change AIDL syntax, grammar, language semantics, conformance status, roadmap priority, or implementation support. All simplification options below require a separate design decision and compatibility analysis before they could become language changes.
 
+## E1 baseline reconciliation
+
+E1 reran the exact base metric and reconciled it with a static enumeration of the normative grammar. The pre-E1 extractor reproduced the historical 182-production result because it recognized only definitions whose production name and `=` occur on the same physical line. The grammar contains 29 additional valid definitions whose name is on one line and the `=` begins the following indented line. The metric extractor now recognizes both layouts, without changing `docs/06-grammar.md`. The authoritative reproducible E1 baseline is therefore 211 productions and the dependent counts shown below. The old 182/456/111/62/40/19/30/295 values remain useful only as historical output of the pre-E1 measurement semantics; they are not the current baseline.
+
+The complete one-owner production/fact inventory and the list of all 29 formerly omitted productions are recorded in `docs/m16-5-e1-design-decision.md`, `docs/m16-5-e1-production-inventory-kernel.md`, `docs/m16-5-e1-production-inventory-structural-a.md`, `docs/m16-5-e1-production-inventory-structural-b.md`, and `docs/m16-5-e1-fact-inventory.md`.
+
 ## Executive summary
 
 This review classifies the current AIDL surface as **(b) moderately in need of simplification**.
@@ -11,17 +17,17 @@ The evidence does **not** support classifying the language as structurally unman
 The reproducible grammar measurement reports:
 
 - 16 normative EBNF sections,
-- 182 productions,
-- 456 top-level production alternatives across those productions,
+- 211 productions,
+- 522 top-level production alternatives across those productions,
 - 349 distinct quoted terminals in the normative grammar,
 - 318 non-lexical syntax terminals, including 298 word-shaped contextual terminals and 20 symbolic terminals,
 - 48 productions referenced by the top-level `declaration` union and 49 concrete top-level forms because `aliasDecl` covers both `alias` and `opaque`,
-- 111 alternatives containing a logical-newline leaf,
-- 62 alternatives containing a block,
-- 40 alternatives containing `:`,
-- 19 alternatives containing list punctuation,
-- 30 alternatives delegating to `profileProperty`, 16 to `uiStatement`, and 4 to `testStatement`, and
-- 295 deliberately coarse *starter-plus-shape* signatures. That last number is an inventory aid, not a claim that authors must learn 295 independent grammar rules.
+- 129 alternatives containing a logical-newline leaf,
+- 70 alternatives containing a block,
+- 46 alternatives containing `:`,
+- 20 alternatives containing list punctuation,
+- 39 alternatives delegating to `profileProperty`, 16 to `uiStatement`, and 4 to `testStatement`, and
+- 321 deliberately coarse *starter-plus-shape* signatures. That last number is an inventory aid, not a claim that authors must learn 321 independent grammar rules.
 
 A manual construction-oriented normalization collapses the grammar into **16 recurring surface families**. That is a more useful approximation of what an author or model must learn than raw keyword count. Even within those families, however, several concepts recur in different shapes: `auth`, `errors`, `consistency`, `retry`, `timeout`, `idempotency`, invocation, and lifecycle/budget policies. Offline Sync and deployment/resource clauses also contain dense word-order mini-languages. Frontend and tests introduce their own generic statement sublanguages.
 
@@ -49,22 +55,22 @@ No reproducible external LLM benchmark is part of the repository, so this review
 | Metric | Result | Interpretation |
 | --- | ---: | --- |
 | EBNF sections | 16 | The grammar is explicitly partitioned by language area. |
-| Productions | 182 | Large but still inspectable as a normative grammar. |
-| Production alternatives | 456 | Indicates substantial local branching and special forms. |
+| Productions | 211 | Large but still inspectable as a normative grammar. |
+| Production alternatives | 522 | Indicates substantial local branching and special forms. |
 | Distinct quoted terminals | 349 | Includes lexical and syntactic literals. |
 | Syntax terminals | 318 | Excludes the lexical-terminal set used by the metric. |
 | Word-shaped syntax terminals | 298 | Mostly contextual vocabulary, not all global lexer keywords. |
 | Symbolic syntax terminals | 20 | Punctuation/operators are comparatively compact. |
 | Top-level declaration productions | 48 | The `declaration` union is broad. |
 | Concrete top-level forms | 49 | `aliasDecl` has `alias` and `opaque` forms. |
-| Leaf alternatives | 111 | Newline-significant leaf clauses are a dominant form. |
-| Block alternatives | 62 | Nested blocks are also common. |
-| Colon alternatives | 40 | Colon usage is significant but not universal. |
-| List alternatives | 19 | Bracket-list forms are a recurring family. |
-| `profileProperty` alternatives | 30 | A large profile-like generic sublanguage. |
+| Leaf alternatives | 129 | Newline-significant leaf clauses are a dominant form. |
+| Block alternatives | 70 | Nested blocks are also common. |
+| Colon alternatives | 46 | Colon usage is significant but not universal. |
+| List alternatives | 20 | Bracket-list forms are a recurring family. |
+| `profileProperty` alternatives | 39 | A large profile-like generic sublanguage. |
 | `uiStatement` alternatives | 16 | Frontend introduces a separate generic statement family. |
 | `testStatement` alternatives | 4 | Tests introduce another generic statement family. |
-| Coarse starter-plus-shape signatures | 295 | Useful for hotspot discovery; not a learnability count. |
+| Coarse starter-plus-shape signatures | 321 | Useful for hotspot discovery; not a learnability count. |
 
 The largest section-local terminal inventories are also informative: Operations has 70 unique quoted terminals, Frontend 62, Events/Messaging/Processing 56, Offline Sync 49, and Type Declarations 44. This concentration matches the areas where construction requires remembering clause placement and word order rather than just declaration names.
 
@@ -102,7 +108,7 @@ Ratings are relative within AIDL: Low, Medium, High.
 | Retry vocabulary and placement | High | High | Medium | Medium | High | High | Error retry class, consumer/task retry clause, workflow `step ... retry ...`, and distributed client retry are structurally different. |
 | Auth and error contract forms | High | High | Medium | Medium | High | High | API `auth inherit` / `errors problemDetails`; operation `auth: mode` / `errors: [types]`; frontend route/page auth has another shape. |
 | Consistency/timeout/budget policies | Medium | High | Medium | Medium | Medium | High | Similar facts appear as colonized operation clauses, generic profile properties, data modifiers, or header/step policy text. |
-| `profileProperty` generic sublanguage | Medium | Medium | High | Medium | Medium | Medium–High | 30 measured alternatives delegate to it; parser preserves generic clauses and later schemas own much of the validation. |
+| `profileProperty` generic sublanguage | Medium | Medium | High | Medium | Medium | Medium–High | 39 measured alternatives delegate to it; parser preserves generic clauses and later schemas own much of the validation. |
 | `uiStatement` generic sublanguage | High | High | High | Medium | Medium | High | 16 measured alternatives delegate to UI statements; many element-specific word sequences are identifier-led rather than globally explicit productions. |
 | Offline Sync compound leaves | High | High | Medium | Medium | High | High | Valid fixture includes `push batch max ... retry ...`, `pull cursor ... page ... source ...`, `changes to ... via outbox`, tombstone and rejected-operation sequences. |
 | Deployment/resource compound properties | High | High | Medium | Medium | Medium | High | Resource/deployment blocks combine generic property paths and dense sequences for replicas, autoscale, rollout, health, observability, SLOs and bindings. |
@@ -164,7 +170,7 @@ Operations commonly use colonized clauses; resource/frontend/profile contexts fr
 
 ### `profileProperty`
 
-The normative grammar intentionally defines a generic property-path/value-or-block mechanism. Thirty measured alternatives refer to it. The parser similarly keeps many subclauses as generic structured nodes; declaration/profile schemas then determine legal names, values, and nesting.
+The normative grammar intentionally defines a generic property-path/value-or-block mechanism. Thirty-nine measured alternatives refer to it. The parser similarly keeps many subclauses as generic structured nodes; declaration/profile schemas then determine legal names, values, and nesting.
 
 **Benefit:** avoids exploding the top-level parser into a rule for every provider/profile property and supports closed profile vocabularies outside the basic parser.
 
@@ -360,7 +366,7 @@ The risk is therefore **breadth plus local irregularity**, not fundamental synta
 A category-(a) conclusion would understate the evidence:
 
 - 298 word-shaped syntax terminals are distributed across many context-specific vocabularies.
-- There are 111 leaf and 62 block alternatives with only partial punctuation regularity.
+- There are 129 leaf and 70 block alternatives with only partial punctuation regularity.
 - Similar operational concepts use visibly different local shapes.
 - `profileProperty`, `uiStatement` and `testStatement` create three substantial context-dependent sublanguages.
 - Offline Sync and deployment/resource syntax encode many facts in fixed word-order leaves.
