@@ -32,7 +32,7 @@ class CoreExecutableEvidenceTests(unittest.TestCase):
         self.assertEqual((), violations(self.evidence, candidate, root=ROOT))
 
     def test_partial_cells_are_not_promoted_by_evidence_registry(self) -> None:
-        row = next(item for item in self.core["features"] if item["id"] == "decl.value")
+        row = next(item for item in self.core["features"] if item["id"] == "decl.error")
         self.assertEqual("partial", row["layerStatus"]["ir"])
         self.assertIn("ir-core", self.evidence["evidence"])
         self.assertEqual((), violations(self.evidence, self.core, root=ROOT))
