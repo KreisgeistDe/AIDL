@@ -76,6 +76,12 @@ def _app_cardinality_diagnostics(project: CompilerProject) -> tuple[CompilerDiag
                 message=f"project must declare exactly one app; found {len(apps)}",
             ),
         )
+    has_app_project_context = any(
+        item.declaration.kind in {"auth", "system", "deployment"}
+        for item in project.declaration_names
+    )
+    if not has_app_project_context:
+        return ()
     document = min(project.documents, key=lambda item: item.source_path.as_posix())
     if document.span is None:
         return ()
@@ -231,6 +237,9 @@ def _with_leaf_shape_diagnostics(
         diagnostics.extend(_app_cardinality_diagnostics(project))
         diagnostics.extend(_project_auth_diagnostics(project))
         diagnostics.extend(_app_auth_leaf_shape_diagnostics(project))
+    document_order = {
+        document.source_path: index for index, document in enumerate(project.documents)
+    }
     phase_order = {"parse": 0, "resolve": 1, "type": 2, "policy": 3}
     severity_order = {
         CompilerDiagnosticSeverity.ERROR: 0,
@@ -239,7 +248,7 @@ def _with_leaf_shape_diagnostics(
     }
     diagnostics.sort(
         key=lambda diagnostic: (
-            diagnostic.source_path.as_posix(),
+            document_order.get(diagnostic.source_path, len(document_order)),
             diagnostic.location.offset,
             phase_order.get(diagnostic.phase, len(phase_order)),
             severity_order[diagnostic.severity],
