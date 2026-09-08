@@ -121,7 +121,7 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
         self.assertEqual("petstore.m4.PetstoreApp@1", app_entry["originalDeclarationId"])
         self.assertEqual(str(source), app_entry["span"]["file"])
 
-    def test_partial_auth_and_app_claims_remain_open(self) -> None:
+    def test_partial_auth_is_rejected_and_app_claims_remain_open(self) -> None:
         text = SOURCE.read_text(encoding="utf-8").replace(
             "auth {\n  provider oidc\n  subject claim \"sub\"\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n",
             "auth {\n  provider oidc\n}\n",
@@ -132,7 +132,20 @@ class CoreAppAuthLosslessnessTest(unittest.TestCase):
             for diagnostic in self._analysis(text).diagnostics
             if diagnostic.code.value == "AIDL-DIST414"
         )
-        self.assertEqual((), diagnostics)
+        self.assertEqual(4, len(diagnostics))
+        self.assertEqual(
+            {
+                "subject",
+                "roles",
+                "scopes",
+                "serviceIdentities",
+            },
+            {
+                clause
+                for clause in ("subject", "roles", "scopes", "serviceIdentities")
+                if any(f"exactly one {clause} clause; found 0" in item.message for item in diagnostics)
+            },
+        )
         app_row = next(
             feature
             for feature in CONFORMANCE["features"]
