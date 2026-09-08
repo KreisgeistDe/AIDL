@@ -8,6 +8,7 @@
     "positive-core": [
       {"path": "fixtures/valid/m4-minimal/app.aidl", "type": "fixture"},
       {"path": "tools/test_m5_fixture_corpus.py", "type": "test"},
+      {"path": "tools/test_core_app_project_losslessness.py", "type": "test"},
       {"path": "tools/test_core_consumer_materialization_closure.py", "type": "test"},
       {"path": "tools/test_core_domain_type_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
@@ -27,6 +28,7 @@
       {"path": "tools/test_compiler_diagnostics_m2_08.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_09.py", "type": "test"},
       {"path": "tools/test_compiler_diagnostics_m2_10.py", "type": "test"},
+      {"path": "tools/test_core_app_project_losslessness.py", "type": "test"},
       {"path": "tools/test_core_consumer_materialization_closure.py", "type": "test"},
       {"path": "tools/test_core_domain_type_ir_semantics.py", "type": "test"},
       {"path": "tools/test_core_enum_ir_semantics.py", "type": "test"},
@@ -40,6 +42,7 @@
     "ir-core": [
       {"path": "fixtures/valid/m4-minimal/snapshots/ir.json", "type": "snapshot"},
       {"path": "tools/test_core_api_contract_semantics.py", "type": "test"},
+      {"path": "tools/test_core_app_project_losslessness.py", "type": "test"},
       {"path": "tools/test_core_consumer_idempotency_semantics.py", "type": "test"},
       {"path": "tools/test_core_consumer_materialization_closure.py", "type": "test"},
       {"path": "tools/test_core_domain_type_ir_semantics.py", "type": "test"},
@@ -66,6 +69,7 @@
   "featureIds": [
     "decl.alias",
     "decl.api",
+    "decl.app",
     "decl.consumer",
     "decl.entity",
     "decl.enum",
