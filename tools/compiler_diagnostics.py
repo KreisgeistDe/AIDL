@@ -5,17 +5,17 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 try:
-    from . import compiler_diagnostics_pre_app_leaf_shape as _previous
+    from . import compiler_diagnostics_pre_app_leaf_shape as _layer
     from .aidl_parser import Diagnostic as ParserDiagnostic
     from .compiler_project import CompilerProject
 except ImportError:  # pragma: no cover - direct tools/ execution/import path
-    import compiler_diagnostics_pre_app_leaf_shape as _previous
+    import compiler_diagnostics_pre_app_leaf_shape as _layer
     from aidl_parser import Diagnostic as ParserDiagnostic
     from compiler_project import CompilerProject
 
-for _name in dir(_previous):
-    if not _name.startswith("__"):
-        globals()[_name] = getattr(_previous, _name)
+for _name in dir(_layer):
+    if not _name.startswith("__") and _name != "_previous":
+        globals()[_name] = getattr(_layer, _name)
 
 _APP_BLOCK_LEAF_KINDS = frozenset({"profile", "system", "api", "defaultDeployment"})
 _AUTH_BLOCK_LEAF_KINDS = frozenset({"subject", "roles", "scopes", "serviceIdentities"})
@@ -23,12 +23,12 @@ _AUTH_BLOCK_LEAF_KINDS = frozenset({"subject", "roles", "scopes", "serviceIdenti
 
 def _represented_app_leaf_kind(clause: str) -> str | None:
     text = clause.strip()
-    if _previous._APP_PROFILE.fullmatch(text) is not None:
+    if _layer._APP_PROFILE.fullmatch(text) is not None:
         return "profile"
-    typed = _previous._APP_TYPED_REFERENCE.fullmatch(text)
+    typed = _layer._APP_TYPED_REFERENCE.fullmatch(text)
     if typed is not None and typed.group(1) in {"system", "api"}:
         return typed.group(1)
-    identifier = _previous._APP_IDENTIFIER_VALUE.fullmatch(text)
+    identifier = _layer._APP_IDENTIFIER_VALUE.fullmatch(text)
     if identifier is not None and identifier.group(1) == "defaultDeployment":
         return "defaultDeployment"
     return None
@@ -48,7 +48,7 @@ def _app_auth_leaf_shape_diagnostics(project: CompilerProject) -> tuple[Compiler
             if clause_kind not in _APP_BLOCK_LEAF_KINDS:
                 continue
             diagnostics.append(
-                _previous._app_diagnostic(
+                _layer._app_diagnostic(
                     app,
                     child.span,
                     f"app '{app_name}' {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app contract",
@@ -61,11 +61,11 @@ def _app_auth_leaf_shape_diagnostics(project: CompilerProject) -> tuple[Compiler
             for child in declaration.node.children:
                 if child.kind != "blockClause" or child.name is None or child.span is None:
                     continue
-                clause_kind = _previous._auth_clause_kind(child.name)
+                clause_kind = _layer._auth_clause_kind(child.name)
                 if clause_kind not in _AUTH_BLOCK_LEAF_KINDS:
                     continue
                 diagnostics.append(
-                    _previous._app_diagnostic(
+                    _layer._app_diagnostic(
                         app,
                         child.span,
                         f"app '{app_name}' auth {clause_kind} must be a leaf clause; nested block content is not represented by the current Canonical IR app.auth contract",
@@ -115,12 +115,12 @@ def collect_compiler_diagnostics(
 ) -> tuple[CompilerDiagnostic, ...]:
     return _with_leaf_shape_diagnostics(
         project,
-        _previous.collect_compiler_diagnostics(project, parser_diagnostics),
+        _layer.collect_compiler_diagnostics(project, parser_diagnostics),
     )
 
 
 def load_compiler_analysis(paths: Iterable[Path]) -> CompilerAnalysis:
-    analysis = _previous.load_compiler_analysis(paths)
+    analysis = _layer.load_compiler_analysis(paths)
     return CompilerAnalysis(
         project=analysis.project,
         diagnostics=_with_leaf_shape_diagnostics(
