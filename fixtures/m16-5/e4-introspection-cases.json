@@ -1,0 +1,33 @@
+{
+  "schema_id": "urn:aidl:schema:meta:m16.5-e4-introspection",
+  "schema_version": "0.1.0-e4",
+  "source_base_commit": "49c1552a4a0f620b4de4bc12fac87ecb395aac01",
+  "representative_clients": [
+    {
+      "family": "App",
+      "kind": "app",
+      "header_arguments": [],
+      "body_slots": ["profile", "system", "frontend", "api", "defaultDeployment", "compatibility"]
+    },
+    {
+      "family": "Core",
+      "kind": "entity",
+      "header_arguments": [],
+      "body_slots": ["field", "index", "invariant"]
+    },
+    {
+      "family": "Backend",
+      "kind": "service",
+      "header_arguments": [],
+      "body_slots": ["owns", "uses", "exposes", "runs", "dependsOn", "reliability", "telemetry"]
+    },
+    {
+      "family": "Sync",
+      "kind": "sync",
+      "header_arguments": ["target"],
+      "body_slots": ["mode", "authority", "scope", "localStore", "serverStore", "operationLog", "push", "pull", "changes", "delete", "conflict", "rejected", "schemaMigration"]
+    }
+  ],
+  "generic_sublanguages": ["profileProperty", "uiStatement", "testStatement"],
+  "candidate_kinds_that_must_not_be_exported_as_legal": ["queue_deadletter", "schedule_lease", "sync_outbox"]
+}
