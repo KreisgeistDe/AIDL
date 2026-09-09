@@ -1,0 +1,28 @@
+{
+  "schema_version": "m16.5-e3-candidate-v1",
+  "normalization_rows": [
+    {"id":"projection-relationship","source":"projection CustomerProjection {\n  source: OrderCreated\n  target: CustomerView\n}\n"},
+    {"id":"client-target","source":"client BillingClient {\n  service: BillingService\n}\n"},
+    {"id":"migration-source-target","source":"migration V2 {\n  from: \"v1\"\n  to: \"v2\"\n}\n"},
+    {"id":"consumer-relationship","source":"consumer OrdersConsumer {\n  topic: Orders\n  source: OrderCreated\n}\n"},
+    {"id":"explicit-field-child","source":"entity Customer {\n  field id: UUID\n  field email: String\n}\n"},
+    {"id":"explicit-index","source":"index ByEmail {\n  fields: [email, tenantId]\n  unique: true\n}\n"},
+    {"id":"queue-deadletter","source":"queue_deadletter OrdersPolicy {\n  queue: Orders\n  deadletter: OrdersDead\n}\n"},
+    {"id":"schedule-lease","source":"schedule_lease CleanupLease {\n  schedule: CleanupNightly\n  lease: 30s\n}\n"},
+    {"id":"sync-outbox","source":"sync_outbox MobileSyncPolicy {\n  changes: MobileChanges\n  outbox: SyncOutbox\n}\n"}
+  ],
+  "representative_families": [
+    {"id":"app","source":"app Demo {\n  version: \"1.0\"\n}\n"},
+    {"id":"service","source":"service Billing {\n  api: BillingApi\n  resource: Postgres\n}\n"},
+    {"id":"api","source":"api BillingApi {\n  route: GET /billing\n}\n"},
+    {"id":"event","source":"event InvoicePaid {\n  field invoiceId: UUID\n}\n"},
+    {"id":"workflow","source":"workflow Reconcile {\n  step: load\n  step: compare\n}\n"},
+    {"id":"deployment","source":"deployment Prod {\n  target: Kubernetes\n  resource: Billing\n}\n"}
+  ],
+  "legacy_rejections": [
+    "projection CustomerProjection from [OrderCreated] into CustomerView {\n}\n",
+    "client BillingClient for BillingService {\n}\n",
+    "consumer OrdersConsumer on Orders from OrderCreated {\n}\n",
+    "sync MobileSync {\n  changes MobileChanges via outbox SyncOutbox\n}\n"
+  ]
+}
