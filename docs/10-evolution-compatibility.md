@@ -15,6 +15,38 @@ Folgende Artefakte werden unabhängig versioniert:
 
 Eine app-Version ersetzt keine dieser Kompatibilitätsangaben.
 
+## Quellsprachversion und M16.5-Migration
+
+M16.5/E2 legt für spätere experimentelle Normalisierungen einen zusätzlichen,
+nicht-normativen Migrationsvertrag fest. Die vollständige Entscheidung steht in
+`docs/m16-5-e2-compatibility-migration-contract.md`; sie ändert keine heute
+akzeptierte Syntax.
+
+Eine normale Kompilation erhält genau **eine explizite Quellsprachversion** aus
+Projekt-/Compiler-Konfiguration, bevor AIDL-Quelltext geparst wird. Sie wird
+nicht aus Dateiinhalten geraten, nicht pro Datei gewählt und nicht mit app-,
+Profil-, API-, Event- oder Datenmigrationsversionen gleichgesetzt. Ein
+Importgraph mit unterschiedlichen Quellsprachversionen wird vor der
+semantischen Analyse abgewiesen.
+
+Ein späterer Syntax-Migrator arbeitet dagegen mit zwei getrennten,
+unveränderlichen Kompilationskontexten: alter Quelltext unter alter
+Quellsprachversion und Kandidat unter Zielversion. Für eine rein syntaktische
+Migration müssen beide semantisch auf kompatible Canonical IR abbilden. Das
+Hinzufügen einer weiteren akzeptierten Schreibweise ist `expandable`, ein
+projektweiter Versionswechsel mit deterministischer Umschreibung ist
+`coordinated`, und das Entfernen einer zuvor akzeptierten Schreibweise ist
+`breaking`. Ein vorhandener Migrator macht das Entfernen alter Syntax nicht
+`compatible`.
+
+Formatter und Migrator sind getrennt: Ein Formatter kanonisiert nur innerhalb
+der bereits gewählten Quellsprachversion; nur ein expliziter Migrator darf
+einen Versionswechsel planen. Unveränderte Bereiche müssen byte-identisch
+bleiben, semantisch geordnete Sequenzen dürfen nicht umsortiert werden, und
+eine Migration scheitert geschlossen bei veralteten Quell-/Schema-Fingerprints,
+überlappenden oder mehrdeutigen Ankern oder einem nicht kompatiblen
+semantischen Diff.
+
 ## Semantischer Diff
 
 aidl plan und aidl compatibility klassifizieren jede Änderung:
@@ -140,4 +172,3 @@ deprecated -> usageObservedZero -> disabled -> removed.
 
 Die Beobachtungsdauer und Telemetriequelle werden deklariert. Fehlende
 Telemetriedaten dürfen nicht als Nullnutzung interpretiert werden.
-
