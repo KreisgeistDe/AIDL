@@ -5,6 +5,7 @@ import pathlib
 import unittest
 from dataclasses import replace
 
+from tools.aidl_parser import parse_text
 from tools.m16_5_e5_migration import (
     OLD_SCHEMA_FINGERPRINT,
     OLD_VERSION,
@@ -67,9 +68,15 @@ class E5MigrationTests(unittest.TestCase):
                     result.source,
                 )
 
-    def test_old_fixtures_are_production_parse_valid_and_e3_replay_is_used_where_exact(self):
+    def test_old_validation_uses_production_parser_or_bounded_schedule_gap_and_e3_where_exact(self):
         replayed = set()
         for row in CASES["normalization_rows"]:
+            _, diagnostics, _ = parse_text(row["old"])
+            if row["id"] == "schedule-lease":
+                self.assertTrue(diagnostics)
+                self.assertEqual({item.message for item in diagnostics}, {"expected declaration"})
+            else:
+                self.assertEqual(diagnostics, [])
             plan = plan_migration(row["old"], **kwargs(row["old"]))
             replayed.update(plan.e3_replayed_rows)
         self.assertTrue(

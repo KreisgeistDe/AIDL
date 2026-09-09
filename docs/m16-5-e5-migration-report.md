@@ -45,7 +45,7 @@ Rollback is exact-byte restoration from `rollback_source`. The fixture suite als
 
 ## Semantic-equivalence evidence
 
-Old fixtures are first passed through the existing production `tools.aidl_parser.parse_text` and migration stops if that parser reports diagnostics. The target remains outside production parser acceptance.
+Old fixtures are first passed through the existing production `tools.aidl_parser.parse_text`. Eight normalization rows are required to produce no parser diagnostics. The current tooling parser does not dispatch `schedule` as a known block declaration even though `docs/06-grammar.md` defines `scheduleDecl`; that exact known tooling gap yields `expected declaration` for the normative `singleton lease D` fixture. E5 tolerates only that bounded condition: the source must have a named schedule header, a closing brace, exactly one recognized `schedule-lease` anchor between them, and no parser diagnostic other than `expected declaration`. Every other parser diagnostic still fails closed. E5 does not repair or broaden the production parser.
 
 For all nine rows, E5 extracts the named E1-preserved semantic facts from old and target snapshots and requires exact equality. Any mismatch fails as `AIDL-S004`; there is no `unknown` or `dataLoss` success state.
 
@@ -64,7 +64,7 @@ The migrator applies `Formatter(target)` only after target construction and requ
 The bounded prototype uses only E2 structural codes where it introduces a new failure surface:
 
 - `AIDL-S004`: bounded target/value/fact shape cannot preserve required semantics;
-- `AIDL-S005`: invalid/missing/ambiguous/overlapping anchor, non-deterministic relocation, or non-canonical migrator output;
+- `AIDL-S005`: invalid/missing/ambiguous/overlapping anchor, non-deterministic relocation, non-canonical migrator output, or an old-source parser failure outside the single recorded schedule tooling gap;
 - `AIDL-S007`: target formatter sees a legacy spelling;
 - `AIDL-S008`: source/version/schema/fingerprint context mismatch or staleness.
 
@@ -80,12 +80,12 @@ python3 -m unittest -v tools.test_m16_5_e5_migration
 python3 -m unittest -q tools.test_m16_5_e3_prototype
 ```
 
-`tools/test_m16_5_e5_migration.py` contains 12 focused tests covering all nine rows, exact canonical output, dry-run determinism, explicit idempotence, byte-exact untouched ranges, modifier/comment/annotation preservation, stale source/schema failures, missing/ambiguous/overlapping anchors, formatter/migrator separation, unchanged ordered source, the multi-source fail-closed gap, rollback, and explicit target-version coexistence/no-op behavior.
+`tools/test_m16_5_e5_migration.py` contains 12 focused tests covering all nine rows, exact canonical output, the explicit production-parser schedule gap, dry-run determinism, explicit idempotence, byte-exact untouched ranges, modifier/comment/annotation preservation, stale source/schema failures, missing/ambiguous/overlapping anchors, formatter/migrator separation, unchanged ordered source, the multi-source fail-closed gap, rollback, and explicit target-version coexistence/no-op behavior.
 
 Repository-wide regression truth is supplied by the normal project PR validation; this document does not pre-claim CI status.
 
 ## Known gaps
 
-This is deliberately not a full migration engine. It does not provide full 49-form declaration coverage, recursive property/view migration, sidecar reattachment after arbitrary concurrent edits, incremental parsing, production Canonical-IR comparison, profile-schema migrations, or an adopted source-language version. The current bounded field-context detector is intentionally limited to simple Entity fixtures. Multi-source projection rewrite remains blocked because the E3 target shape is not fact-complete for that case. E3 shape gaps for index directions and dead-letter threshold remain visible rather than normalized away.
+This is deliberately not a full migration engine. It does not provide full 49-form declaration coverage, recursive property/view migration, sidecar reattachment after arbitrary concurrent edits, incremental parsing, production Canonical-IR comparison, profile-schema migrations, or an adopted source-language version. The current bounded field-context detector is intentionally limited to simple Entity fixtures. Multi-source projection rewrite remains blocked because the E3 target shape is not fact-complete for that case. E3 shape gaps for index directions and dead-letter threshold remain visible rather than normalized away. The existing generic tooling parser's missing `schedule` block dispatch is recorded as an old-source validation gap; E5 does not modify that parser.
 
 These gaps must be resolved or explicitly superseded before any E6/E7 consumer can treat migration metadata as general language authority, and before E8/E9 can make adoption claims.
