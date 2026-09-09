@@ -1,0 +1,66 @@
+{
+  "schema": {
+    "old_version": "m16.5-e5-current-v1",
+    "target_version": "m16.5-e5-candidate-v1"
+  },
+  "normalization_rows": [
+    {
+      "id": "projection-relationship",
+      "old": "// lead stays byte-exact\nprojection CustomerProjection from [OrderCreated] into CustomerView { // header comment\n  key orderId // untouched body\n}\n",
+      "candidate": "// lead stays byte-exact\nprojection CustomerProjection { // header comment\n  source: OrderCreated\n  target: CustomerView\n  key orderId // untouched body\n}\n"
+    },
+    {
+      "id": "client-target",
+      "old": "client BillingClient for BillingService { // keep\n  call create {\n    timeout 30s\n  }\n}\n",
+      "candidate": "client BillingClient { // keep\n  service: BillingService\n  call create {\n    timeout 30s\n  }\n}\n"
+    },
+    {
+      "id": "migration-source-target",
+      "old": "migration V2 from \"v1\" to \"v2\" { // keep\n  expand addEmail\n}\n",
+      "candidate": "migration V2 { // keep\n  from: \"v1\"\n  to: \"v2\"\n  expand addEmail\n}\n"
+    },
+    {
+      "id": "consumer-relationship",
+      "old": "consumer OrdersConsumer on Orders from OrderCreated { // keep\n  service Billing\n}\n",
+      "candidate": "consumer OrdersConsumer { // keep\n  topic: Orders\n  source: OrderCreated\n  service Billing\n}\n"
+    },
+    {
+      "id": "explicit-field-child",
+      "old": "entity Customer {\n  id: UUID // field comment\n}\n",
+      "candidate": "entity Customer {\n  field id: UUID // field comment\n}\n"
+    },
+    {
+      "id": "explicit-index",
+      "old": "entity Customer {\n  index byEmail(email asc, tenantId desc) // index comment\n}\n",
+      "candidate": "entity Customer {\n  index byEmail: (email asc, tenantId desc) // index comment\n}\n"
+    },
+    {
+      "id": "queue-deadletter",
+      "old": "queue Orders {\n  deadLetter after 5 attempts // queue comment\n}\n",
+      "candidate": "queue Orders {\n  deadLetter: 5 attempts // queue comment\n}\n"
+    },
+    {
+      "id": "schedule-lease",
+      "old": "schedule Cleanup {\n  singleton lease 30s // schedule comment\n}\n",
+      "candidate": "schedule Cleanup {\n  singleton: lease 30s // schedule comment\n}\n"
+    },
+    {
+      "id": "sync-outbox",
+      "old": "sync Mobile for Customer {\n  changes to Customer via outbox // sync comment\n}\n",
+      "candidate": "sync Mobile for Customer {\n  changes: Customer via outbox // sync comment\n}\n"
+    }
+  ],
+  "unchanged": [
+    {
+      "id": "app",
+      "source": "app Demo {\n  system Core\n  api PublicApi\n}\n"
+    },
+    {
+      "id": "ordered-workflow",
+      "source": "workflow Reconcile() -> bool {\n  step first retry none {\n    return true\n  }\n  step second retry none {\n    return false\n  }\n}\n"
+    }
+  ],
+  "negative": {
+    "projection_multi_source": "projection P from [A, B] into View {\n}\n"
+  }
+}
