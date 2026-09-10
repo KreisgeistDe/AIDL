@@ -40,6 +40,9 @@ class CandidateEvaluationRunnerTests(unittest.TestCase):
 import json, pathlib, sys
 request = json.load(sys.stdin)
 source = next(iter(sorted(pathlib.Path(request['attempt']['worktreePath']).rglob('*.aidl'))), None)
+if source is not None and len(sys.argv) > 1:
+    fixture = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding='utf-8'))
+    source.write_text(fixture['accepted_project']['candidate'], encoding='utf-8')
 raw = '' if source is None else source.read_text(encoding='utf-8')
 response = {
   'schemaVersion': request['schemaVersion'],
@@ -271,7 +274,11 @@ print(json.dumps(response, sort_keys=True, separators=(',', ':')))
         record = runner.execute_run(
             corpus=corpus,
             baseline=baseline,
-            executor_argv=[sys.executable, str(self.executor)],
+            executor_argv=[
+                sys.executable,
+                str(self.executor),
+                str(ROOT / "fixtures/m16-5/evaluation-candidate-projection-cases.json"),
+            ],
             run_id="candidate-fake-run",
             output_path=output,
             evidence_root=evidence_root,
