@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "baselineId": "urn:aidl:evaluation:m16-current-surface-before-v1",
+  "projectBase": "a5c359b501913f7adce92792dec244add0452909",
+  "corpusId": "urn:aidl:evaluation:m16-agent-tasks-v1",
+  "corpusFingerprint": "sha256:e47b399c2460f576a2f68023af039412f02395de67f8204f3785bf9d7d8dfcef",
+  "surface": "current",
+  "surfaceAuthority": {
+    "kind": "accepted-project-main",
+    "commit": "a5c359b501913f7adce92792dec244add0452909",
+    "candidateSyntaxAuthorized": false
+  },
+  "executionContract": {
+    "contextBudgetTokens": 32000,
+    "retryLimit": 2,
+    "seedPolicy": {
+      "kind": "fixed-when-supported",
+      "seed": 1605008,
+      "unsupportedBehavior": "record-unavailable"
+    },
+    "taskOrder": "ascending-task-id",
+    "networkAccess": "executor-defined-but-recorded",
+    "acceptanceChecks": [
+      "aidl check <task-worktree> --format json",
+      "aidl ir <task-worktree> --format json"
+    ],
+    "recordRawFailures": true,
+    "humanRewriteScale": [
+      "none",
+      "minor",
+      "substantial",
+      "rejected",
+      "not-reviewed"
+    ],
+    "tokenCostPolicy": "record provider-reported input/output totals when available; otherwise record explicit unavailable reason"
+  },
+  "initialProjectResolution": {
+    "repoPath": "resolve relative to the exact projectBase commit",
+    "emptyModule": "create exactly one module declaration named by the fixture before handing the task to an executor"
+  },
+  "reproducibility": {
+    "python": "3.12",
+    "cliPackageVersion": "0.1.0rc1",
+    "corpusPath": "fixtures/m16-5/m16-agent-task-corpus.json",
+    "harnessModule": "tools.m16_evaluation_harness",
+    "verifyCommand": "python3 -m tools.m16_evaluation_harness verify",
+    "note": "This freezes the before surface and run protocol; it is not an empirical model result."
+  },
+  "fingerprint": "sha256:d5c7e9cd2003cfa970707e11d8cb130c80aac056028630aa3b7679e2790b7110"
+}
