@@ -4,9 +4,11 @@ import copy
 import sys
 import types
 import unittest
+from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
+import tools
 from tools import m16_evaluation_harness as e8
 
 
@@ -81,6 +83,26 @@ class HarnessTest(unittest.TestCase):
             "tools.m16_5_e4_introspection": e4,
             "tools.m16_5_e5_migration": e5,
         }
+
+    @contextmanager
+    def _stub_prototypes(self, *, e4_fingerprint: str = e8.E4_SCHEMA_FINGERPRINT):
+        modules = self._stub_modules(e4_fingerprint=e4_fingerprint)
+        with (
+            patch.dict(sys.modules, modules),
+            patch.object(
+                tools,
+                "m16_5_e4_introspection",
+                modules["tools.m16_5_e4_introspection"],
+                create=True,
+            ),
+            patch.object(
+                tools,
+                "m16_5_e5_migration",
+                modules["tools.m16_5_e5_migration"],
+                create=True,
+            ),
+        ):
+            yield
 
     def test_frozen_corpus_and_baseline_fingerprints(self):
         e8.validate_corpus(self.corpus)
@@ -205,7 +227,7 @@ class HarnessTest(unittest.TestCase):
             e8.validate_run_record(record, self.corpus, self.baseline)
 
     def test_candidate_status_reads_exact_prototype_identities_and_reports_gaps(self):
-        with patch.dict(sys.modules, self._stub_modules()):
+        with self._stub_prototypes():
             status = e8.prototype_candidate_status(self.corpus)
         self.assertFalse(status["ready"])
         self.assertGreater(status["unavailableTaskCount"], 0)
@@ -215,14 +237,14 @@ class HarnessTest(unittest.TestCase):
         self.assertEqual(e8.E4_SCHEMA_FINGERPRINT, status["e4Schema"]["fingerprint"])
 
     def test_candidate_status_rejects_stale_e4_tuple(self):
-        with patch.dict(sys.modules, self._stub_modules(e4_fingerprint="sha256:stale")):
+        with self._stub_prototypes(e4_fingerprint="sha256:stale"):
             with self.assertRaisesRegex(e8.EvaluationContractError, "E4 exact schema tuple"):
                 e8.prototype_candidate_status(self.corpus)
 
     def test_compare_refuses_candidate_while_prototype_coverage_incomplete(self):
         before = self._all_success_record(surface="current")
         candidate = self._all_success_record(surface="candidate")
-        with patch.dict(sys.modules, self._stub_modules()):
+        with self._stub_prototypes():
             with self.assertRaisesRegex(e8.EvaluationContractError, "candidate comparison unavailable"):
                 e8.compare_runs(before, candidate, self.corpus, self.baseline)
 
