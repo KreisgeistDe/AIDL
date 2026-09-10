@@ -1,0 +1,71 @@
+{
+  "projection_contract": {
+    "id": "urn:aidl:evaluation:m16.5-candidate-current-projection",
+    "version": "1",
+    "fingerprint": "sha256:a99667aecc90877da362f51fdf4fb7f5775b2f3ceb5a2911871f73443f52136c"
+  },
+  "normalization_rows": [
+    {
+      "id": "projection-relationship",
+      "candidate": "projection LedgerByCustomer {\n  source: InvoiceIssued\n  source: PaymentCaptured\n  target: LedgerView\n}\n",
+      "current": "projection LedgerByCustomer from [InvoiceIssued, PaymentCaptured] into LedgerView {\n}\n"
+    },
+    {
+      "id": "client-target",
+      "candidate": "client MobileGateway{\n  service:   EdgeService\n}\n",
+      "current": "client MobileGateway for EdgeService {\n}\n"
+    },
+    {
+      "id": "migration-source-target",
+      "candidate": "migration SchemaLift {\n  from:   \"2026-01\"\n  to:\t\"2026-02\"\n}\n",
+      "current": "migration SchemaLift from \"2026-01\" to \"2026-02\" {\n}\n"
+    },
+    {
+      "id": "consumer-relationship",
+      "candidate": "consumer InvoiceConsumer {\n  topic:  InvoiceIssued\n  source:\tInvoices\n}\n",
+      "current": "consumer InvoiceConsumer on InvoiceIssued from Invoices {\n}\n"
+    },
+    {
+      "id": "explicit-field-child",
+      "candidate": "entity Account {\n  field balance:\tdecimal   required   mutable // independent candidate\n}\n",
+      "current": "entity Account {\n  balance: decimal required mutable // independent candidate\n}\n"
+    },
+    {
+      "id": "explicit-index",
+      "candidate": "entity Account {\n  index byOwner : (ownerId desc, createdAt asc) // independent candidate\n}\n",
+      "current": "entity Account {\n  index byOwner(ownerId desc, createdAt asc) // independent candidate\n}\n"
+    },
+    {
+      "id": "queue-deadletter",
+      "candidate": "queue BillingQueue {\n  deadLetter : 7 attempts // independent candidate\n}\n",
+      "current": "queue BillingQueue {\n  deadLetter after 7 attempts // independent candidate\n}\n"
+    },
+    {
+      "id": "schedule-lease",
+      "candidate": "schedule Nightly {\n  singleton : lease 45s // independent candidate\n}\n",
+      "current": "schedule Nightly {\n  singleton lease 45s // independent candidate\n}\n"
+    },
+    {
+      "id": "sync-outbox",
+      "candidate": "sync MobileSync for Account {\n  changes : AccountDelta via outbox // independent candidate\n}\n",
+      "current": "sync MobileSync for Account {\n  changes to AccountDelta via outbox // independent candidate\n}\n"
+    }
+  ],
+  "reordered_repeated": {
+    "candidate": "projection PaymentRollup {\n  source: PaymentSettled\n  source: OrderPlaced\n  source: PaymentSettled\n  target: PaymentView\n}\n",
+    "current": "projection PaymentRollup from [PaymentSettled, OrderPlaced, PaymentSettled] into PaymentView {\n}\n",
+    "sources": ["PaymentSettled", "OrderPlaced", "PaymentSettled"]
+  },
+  "fail_closed": {
+    "missing_fact": "client MissingTarget {\n}\n",
+    "ambiguous_fact": "client AmbiguousTarget {\n  service: FirstService\n  service: SecondService\n}\n",
+    "unsupported_e3": "service CandidateService {\n  api: CandidateApi\n}\n"
+  },
+  "accepted_project": {
+    "candidate": "module petstore.m4\n\napp PetstoreApp {\n  profile core version 1\n  profile distributed version 1\n  profile cloud version 1\n  system PetstoreSystem\n  api PetstoreApi\n  defaultDeployment local\n}\n\nauth {\n  provider oidc\n  subject claim \"sub\"\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n\nexport value CreatePetInput {\n  operationId: uuid required\n  id: uuid required\n  name: string(1..80) required\n}\n\nexport entity RunnablePet {\n  field id: uuid primary immutable\n  field revision: revision generated concurrencyToken\n  field name: string required mutable\n}\n\nexport event RunnablePetCreated version 1 {\n  eventId: OperationId required\n  petId: uuid required\n  occurredAt: datetime required\n}\n\nexport topic RunnablePetEvents {\n  events [RunnablePetCreated]\n  delivery atLeastOnce\n  partition by petId\n  ordering perPartition\n  retention 30d\n  compatibility backward\n  deadLetter: 8 attempts\n}\n\nexport mutation createPet(input: CreatePetInput) -> RunnablePet {\n  auth: authenticated\n  allow: true\n  errors: []\n  idempotency: \"petstore-create\" retain 1d\n  transaction on PetstoreDb isolation readCommitted {\n    pet = RunnablePet.create(id: input.id, name: input.name)\n    emit: RunnablePetCreated(eventId: operationId(), petId: pet.id, occurredAt: now()) to RunnablePetEvents via outbox\n    return pet\n  }\n}\n\nexport api PetstoreApi {\n  transport rest\n  version 1\n  operations [mutation createPet]\n  auth inherit\n  errors problemDetails\n  compatibility backward\n  rateLimit principal 300 per 1m burst 50\n}\n\nexport resource PetstoreDb sql {\n  consistency strong\n  transactions [readCommitted]\n  migrations expandBackfillContract\n  encryption required\n}\n\nexport service PetstoreService {\n  owns [RunnablePet]\n  uses [PetstoreDb, RunnablePetEvents]\n  exposes [mutation createPet]\n  runs []\n  reliability {\n    idempotencyStore PetstoreDb\n  }\n}\n\nexport system PetstoreSystem {\n  services [PetstoreService]\n  resources [PetstoreDb, RunnablePetEvents]\n  apis [PetstoreApi]\n}\n\nexport deployment local for PetstoreSystem {\n  environment development\n  target process\n  colocate services all\n  bind PetstoreDb container \"postgres:17\"\n  bind RunnablePetEvents memory\n}\n",
+    "current": "module petstore.m4\n\napp PetstoreApp {\n  profile core version 1\n  profile distributed version 1\n  profile cloud version 1\n  system PetstoreSystem\n  api PetstoreApi\n  defaultDeployment local\n}\n\nauth {\n  provider oidc\n  subject claim \"sub\"\n  roles [user]\n  scopes [pets.write]\n  serviceIdentities required\n}\n\nexport value CreatePetInput {\n  operationId: uuid required\n  id: uuid required\n  name: string(1..80) required\n}\n\nexport entity RunnablePet {\n  id: uuid primary immutable\n  revision: revision generated concurrencyToken\n  name: string required mutable\n}\n\nexport event RunnablePetCreated version 1 {\n  eventId: OperationId required\n  petId: uuid required\n  occurredAt: datetime required\n}\n\nexport topic RunnablePetEvents {\n  events [RunnablePetCreated]\n  delivery atLeastOnce\n  partition by petId\n  ordering perPartition\n  retention 30d\n  compatibility backward\n  deadLetter after 8 attempts\n}\n\nexport mutation createPet(input: CreatePetInput) -> RunnablePet {\n  auth: authenticated\n  allow: true\n  errors: []\n  idempotency: \"petstore-create\" retain 1d\n  transaction on PetstoreDb isolation readCommitted {\n    pet = RunnablePet.create(id: input.id, name: input.name)\n    emit: RunnablePetCreated(eventId: operationId(), petId: pet.id, occurredAt: now()) to RunnablePetEvents via outbox\n    return pet\n  }\n}\n\nexport api PetstoreApi {\n  transport rest\n  version 1\n  operations [mutation createPet]\n  auth inherit\n  errors problemDetails\n  compatibility backward\n  rateLimit principal 300 per 1m burst 50\n}\n\nexport resource PetstoreDb sql {\n  consistency strong\n  transactions [readCommitted]\n  migrations expandBackfillContract\n  encryption required\n}\n\nexport service PetstoreService {\n  owns [RunnablePet]\n  uses [PetstoreDb, RunnablePetEvents]\n  exposes [mutation createPet]\n  runs []\n  reliability {\n    idempotencyStore PetstoreDb\n  }\n}\n\nexport system PetstoreSystem {\n  services [PetstoreService]\n  resources [PetstoreDb, RunnablePetEvents]\n  apis [PetstoreApi]\n}\n\nexport deployment local for PetstoreSystem {\n  environment development\n  target process\n  colocate services all\n  bind PetstoreDb container \"postgres:17\"\n  bind RunnablePetEvents memory\n}\n"
+  },
+  "compiler_rejection_project": {
+    "candidate": "schedule Cleanup {\n  singleton: lease 30s\n}\n"
+  }
+}
