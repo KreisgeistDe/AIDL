@@ -83,6 +83,16 @@ def _class(items):
  raise ProjectionError("regex-render-unsupported","no deterministic character-class witness")
 def _render(pattern,bindings:Mapping[str,Any]):
  names={n:k for k,n in pattern.groupindex.items()}
+ def has_bound(seq):
+  for op,arg in seq:
+   if op is C.SUBPATTERN:
+    group,_,_,child=arg;name=names.get(group)
+    if name is not None and bindings.get(name) is not None:return True
+    if has_bound(child):return True
+   elif op in {C.MAX_REPEAT,C.MIN_REPEAT}:
+    if has_bound(arg[2]):return True
+   elif op is C.BRANCH and any(has_bound(branch) for branch in arg[1]):return True
+  return False
  def go(seq):
   out=[]
   for op,arg in seq:
@@ -94,7 +104,8 @@ def _render(pattern,bindings:Mapping[str,Any]):
      if bindings.get(name) is None:raise ProjectionError("missing-inverse-fact",f"missing E5 regex group {name}")
      out.append(_bind(bindings[name]))
     else:out.append(go(child))
-   elif op in {C.MAX_REPEAT,C.MIN_REPEAT}:minimum,_,child=arg;out.append(go(child)*minimum)
+   elif op in {C.MAX_REPEAT,C.MIN_REPEAT}:
+    minimum,_,child=arg;count=minimum or (1 if has_bound(child) else 0);out.append(go(child)*count)
    elif op is C.IN:out.append(_class(arg))
    elif op is C.BRANCH:
     _,branches=arg
