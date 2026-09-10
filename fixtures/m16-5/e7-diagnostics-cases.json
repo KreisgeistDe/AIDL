@@ -1,90 +1,20 @@
 {
   "e4_schema": {
     "schema_id": "urn:aidl:schema:meta:m16.5-e4-introspection",
-    "schema_version": "0.1.0-e4",
-    "schema_fingerprint": "sha256:1c870ed29b4621ae108a64c6fd8ffecd48e7b984d38afee393c23a33cc5da542"
+    "schema_version": "0.2.0-e4",
+    "schema_fingerprint": "sha256:68465a548d3322af3ae2d14df018fde1f08cdd161ce864f648f96a32a20dfdf2"
   },
-  "structural": {
-    "app_unknown_slot": {
-      "source": "app Demo {\n  mystery Core\n}\n",
-      "anchor": "mystery",
-      "kind": "app",
-      "observed_slot": "mystery",
-      "code": "AIDL-S003"
-    },
-    "entity_bad_modifier": {
-      "source": "entity Customer {\n  id: UUID magical\n}\n",
-      "anchor": "magical",
-      "kind": "entity",
-      "slot": "field",
-      "modifier": "magical",
-      "code": "AIDL-S005"
-    },
-    "service_bad_nesting": {
-      "source": "service Billing {\n  reliability {\n  }\n}\n",
-      "anchor": "reliability",
-      "kind": "service",
-      "slot": "reliability",
-      "observed_nested_schema": "uiStatement",
-      "expected_nested_schema": "profileProperty",
-      "code": "AIDL-S005"
-    },
-    "sync_bad_mode": {
-      "source": "sync Mobile for Customer {\n  mode impossible\n}\n",
-      "anchor": "impossible",
-      "shape": "sync-mode",
-      "observed": "impossible",
-      "expected": ["serverAuthoritative", "queuedCommands", "replicated"],
-      "code": "AIDL-S004"
-    }
-  },
-  "generic_sublanguages": ["profileProperty", "uiStatement", "testStatement"],
   "e5_context": {
     "old_schema_id": "urn:aidl:schema:language:m16.5-e5-current",
     "old_version": "m16.5-e5-current-v1",
     "old_schema_fingerprint": "sha256:3964b3c5cf72fb67a0ef17e0ea2e7d7fb288359250e3b1e130db2c021a69f822",
     "target_schema_id": "urn:aidl:schema:language:m16.5-e5-candidate",
-    "target_version": "m16.5-e5-candidate-v1",
-    "target_schema_fingerprint": "sha256:c702262d2f5374d8eda54a028923d00d7d21e45d3980c62f32d472392ccc8c30"
+    "target_version": "m16.5-e5-candidate-v2",
+    "target_schema_fingerprint": "sha256:b30abd7f3534e7792c041ecf1e67f22c264be05712324a36096056dde5cebaf5"
   },
-  "migration_supported": [
-    {
-      "id": "client-target",
-      "old": "client BillingClient for BillingService {\n  call create {\n    timeout 30s\n  }\n}\n",
-      "candidate": "client BillingClient {\n  service: BillingService\n  call create {\n    timeout 30s\n  }\n}\n",
-      "anchor": "client BillingClient for BillingService {"
-    },
-    {
-      "id": "projection-relationship",
-      "old": "projection CustomerProjection from [OrderCreated] into CustomerView {\n  key orderId\n}\n",
-      "candidate": "projection CustomerProjection {\n  source: OrderCreated\n  target: CustomerView\n  key orderId\n}\n",
-      "anchor": "projection CustomerProjection from [OrderCreated] into CustomerView {"
-    }
-  ],
-  "migration_unavailable": [
-    {
-      "id": "explicit-index",
-      "source": "entity Customer {\n  index byEmail(email asc, tenantId desc)\n}\n",
-      "anchor": "index byEmail(email asc, tenantId desc)"
-    },
-    {
-      "id": "queue-deadletter",
-      "source": "queue Orders {\n  deadLetter after 5 attempts\n}\n",
-      "anchor": "deadLetter after 5 attempts"
-    },
-    {
-      "id": "schedule-lease",
-      "source": "schedule Cleanup {\n  singleton lease 30s\n}\n",
-      "anchor": "singleton lease 30s"
-    },
-    {
-      "id": "sync-outbox",
-      "source": "sync Mobile for Customer {\n  changes to Customer via outbox\n}\n",
-      "anchor": "changes to Customer via outbox"
-    }
-  ],
-  "multi_source_projection": {
-    "source": "projection P from [A, B] into View {\n}\n",
-    "anchor": "projection P from [A, B] into View {"
+  "generic_vocabulary": {
+    "profileProperty": ["idempotencyStore", "inboxStore"],
+    "uiStatement": ["semantic", "heading", "grid", "button"],
+    "testStatement": ["arrange", "call", "assert", "parallel"]
   }
 }

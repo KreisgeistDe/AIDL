@@ -1,492 +1,169 @@
 """M16.5 E4 bounded read-only compiler schema/introspection prototype.
 
-Experimental metadata only.  It describes a representative subset of the
-currently accepted grammar surface and never parses, accepts, rewrites, or
-formats AIDL source.
+Experimental metadata only. It does not parse, accept, rewrite, or format AIDL source.
 """
 from __future__ import annotations
-
-import argparse
-import hashlib
-import json
+import argparse, hashlib, json
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 from typing import Any, Iterable
 
-BASE_COMMIT = "49c1552a4a0f620b4de4bc12fac87ecb395aac01"
-GRAMMAR_BLOB_SHA = "834629dab9198c1e78090e31a5ce2a29180a05f1"
-SCHEMA_ID = "urn:aidl:schema:meta:m16.5-e4-introspection"
-SCHEMA_VERSION = "0.1.0-e4"
-
-
+BASE_COMMIT="49866a14d263c9dbf4269f46642d7e86936114cf"
+GRAMMAR_BLOB_SHA="834629dab9198c1e78090e31a5ce2a29180a05f1"
+SCHEMA_ID="urn:aidl:schema:meta:m16.5-e4-introspection"
+SCHEMA_VERSION="0.2.0-e4"
 class SchemaLookupError(ValueError):
-    """Fail-closed error for an unknown or stale introspection schema reference."""
-
-    def __init__(self, reason: str, detail: str):
-        super().__init__(f"{reason}: {detail}")
-        self.reason = reason
-        self.detail = detail
-
-
+    def __init__(self,reason,detail): super().__init__(f"{reason}: {detail}"); self.reason=reason; self.detail=detail
 @dataclass(frozen=True)
-class SchemaRef:
-    schema_id: str
-    semantic_version: str
-    content_fingerprint: str
-
-
+class SchemaRef: schema_id:str; semantic_version:str; content_fingerprint:str
 @dataclass(frozen=True)
 class ValueShape:
-    shape_id: str
-    kind: str
-    syntax: str
-    documentation: str
-    closed_values: tuple[str, ...] = ()
-    item_shape: str | None = None
-    alternatives: tuple[str, ...] = ()
-
-
+    shape_id:str; kind:str; syntax:str; documentation:str; closed_values:tuple[str,...]=(); item_shape:str|None=None; alternatives:tuple[str,...]=()
 @dataclass(frozen=True)
-class ModifierShape:
-    modifier_id: str
-    visible_tokens: tuple[str, ...]
-    value_shape: str | None
-    documentation: str
-
-
+class ModifierShape: modifier_id:str; visible_tokens:tuple[str,...]; value_shape:str|None; documentation:str
 @dataclass(frozen=True)
-class HeaderArgument:
-    argument_id: str
-    visible_tokens: tuple[str, ...]
-    value_shape: str
-    cardinality: str
-    documentation: str
-
-
+class HeaderArgument: argument_id:str; visible_tokens:tuple[str,...]; value_shape:str; cardinality:str; documentation:str
 @dataclass(frozen=True)
 class BodySlot:
-    slot_id: str
-    visible_tokens: tuple[str, ...]
-    cardinality: str
-    value_shape: str | None
-    documentation: str
-    name_shape: str | None = None
-    modifiers: tuple[str, ...] = ()
-    nested_schema: str | None = None
-    semantic_order: str = "preserve"
-
-
+    slot_id:str; visible_tokens:tuple[str,...]; cardinality:str; value_shape:str|None; documentation:str; name_shape:str|None=None; modifiers:tuple[str,...]=(); nested_schema:str|None=None; semantic_order:str="preserve"
 @dataclass(frozen=True)
 class DeclarationShape:
-    kind: str
-    family: str
-    starter_tokens: tuple[str, ...]
-    identity_shape: str
-    header_arguments: tuple[HeaderArgument, ...]
-    body_slots: tuple[BodySlot, ...]
-    documentation: str
-    annotations_allowed: bool = True
-    body_semantic_order: str = "preserve"
-
-
+    kind:str; family:str; starter_tokens:tuple[str,...]; identity_shape:str; header_arguments:tuple[HeaderArgument,...]; body_slots:tuple[BodySlot,...]; documentation:str; annotations_allowed:bool=True; body_semantic_order:str="preserve"
 @dataclass(frozen=True)
-class SublanguageAlternative:
-    alternative_id: str
-    syntax: str
-    child_schema: str | None = None
-
-
+class SublanguageAlternative: alternative_id:str; syntax:str; child_schema:str|None=None
 @dataclass(frozen=True)
 class SublanguageShape:
-    name: str
-    generic_production: str
-    alternatives: tuple[SublanguageAlternative, ...]
-    vocabulary_authority: str
-    vocabulary_scope: str
-    closed_vocabulary: bool
-    documentation: str
-    recursive: bool = False
-
-
+    name:str; generic_production:str; alternatives:tuple[SublanguageAlternative,...]; vocabulary_authority:str; vocabulary_scope:str; closed_vocabulary:bool; documentation:str; recursive:bool=False; vocabulary:tuple[str,...]=(); semantic_fact_prefixes:tuple[str,...]=()
+@dataclass(frozen=True)
+class ConstructionSurface:
+    surface_id:str; semantic_fact_prefixes:tuple[str,...]; documentation:str; authority:str="e4-compiler-schema"; fact_complete:bool=True
 @dataclass(frozen=True)
 class IntrospectionCatalog:
-    schema_ref: SchemaRef
-    source_base_commit: str
-    source_grammar_blob_sha: str
-    declarations: tuple[DeclarationShape, ...]
-    value_shapes: tuple[ValueShape, ...]
-    modifiers: tuple[ModifierShape, ...]
-    sublanguages: tuple[SublanguageShape, ...]
-    coverage: tuple[str, ...]
-    omissions: tuple[str, ...]
-
-    def declaration(self, kind: str) -> DeclarationShape:
-        for item in self.declarations:
-            if item.kind == kind:
-                return item
+    schema_ref:SchemaRef; source_base_commit:str; source_grammar_blob_sha:str; declarations:tuple[DeclarationShape,...]; value_shapes:tuple[ValueShape,...]; modifiers:tuple[ModifierShape,...]; sublanguages:tuple[SublanguageShape,...]; construction_surfaces:tuple[ConstructionSurface,...]; coverage:tuple[str,...]; omissions:tuple[str,...]
+    def declaration(self,kind):
+        for x in self.declarations:
+            if x.kind==kind:return x
         raise KeyError(kind)
-
-    def value_shape(self, shape_id: str) -> ValueShape:
-        for item in self.value_shapes:
-            if item.shape_id == shape_id:
-                return item
+    def value_shape(self,shape_id):
+        for x in self.value_shapes:
+            if x.shape_id==shape_id:return x
         raise KeyError(shape_id)
-
-    def modifier(self, modifier_id: str) -> ModifierShape:
-        for item in self.modifiers:
-            if item.modifier_id == modifier_id:
-                return item
+    def modifier(self,modifier_id):
+        for x in self.modifiers:
+            if x.modifier_id==modifier_id:return x
         raise KeyError(modifier_id)
-
-    def sublanguage(self, name: str) -> SublanguageShape:
-        for item in self.sublanguages:
-            if item.name == name:
-                return item
+    def sublanguage(self,name):
+        for x in self.sublanguages:
+            if x.name==name:return x
         raise KeyError(name)
+    def construction_surface(self,surface_id):
+        for x in self.construction_surfaces:
+            if x.surface_id==surface_id:return x
+        raise KeyError(surface_id)
 
-
-def _values() -> tuple[ValueShape, ...]:
+def _values():
+    d="docs/06-grammar.md"
     return (
-        ValueShape("identifier", "lexical", "identifier", "docs/06-grammar.md#Lexikalische-Regeln"),
-        ValueShape("typeName", "lexical", "typeName", "docs/06-grammar.md#Lexikalische-Regeln"),
-        ValueShape("type", "type", "type", "docs/06-grammar.md#Typen"),
-        ValueShape("expression", "expression", "expression", "docs/06-grammar.md#Ausdrücke"),
-        ValueShape("integer", "literal", "integer", "docs/06-grammar.md#Lexikalische-Regeln"),
-        ValueShape("duration", "literal", "durationLiteral", "docs/06-grammar.md#Lexikalische-Regeln"),
-        ValueShape("delete-action", "enum", "deleteAction", "docs/06-grammar.md#Typdeklarationen", closed_values=("restrict", "cascade", "nullify")),
-        ValueShape("profilePropertyValue", "generic-value", "profilePropertyValue", "docs/06-grammar.md#Ressourcen-und-Medien"),
-        ValueShape("typeName-list", "list", "[ typeName { , typeName } ]", "docs/06-grammar.md#Systeme-und-Services", item_shape="typeName"),
-        ValueShape("typed-exposed-list", "list", "[ exposedItem { , exposedItem } ]", "docs/06-grammar.md#Systeme-und-Services", alternatives=("query qualifiedName", "mutation qualifiedName", "channel qualifiedName", "sync qualifiedName")),
-        ValueShape("typed-runnable-list", "list", "[ runnableItem { , runnableItem } ]", "docs/06-grammar.md#Systeme-und-Services", alternatives=("consumer qualifiedName", "workflow qualifiedName", "task qualifiedName", "schedule qualifiedName", "projection qualifiedName", "sync qualifiedName", "channel qualifiedName")),
-        ValueShape("app-profile", "compound", "identifier version integer", "docs/06-grammar.md#App-und-Profile"),
-        ValueShape("compatibility-mode", "enum", "identifier", "docs/06-grammar.md#Events-Messaging-und-Verarbeitung", closed_values=("none", "backward", "forward", "full")),
-        ValueShape("index-fields", "compound-list", "( indexField { , indexField } )", "docs/06-grammar.md#Typdeklarationen"),
-        ValueShape("sync-mode", "enum", "syncMode", "docs/06-grammar.md#Offline-Synchronisation", closed_values=("serverAuthoritative", "queuedCommands", "replicated")),
-        ValueShape("sync-authority", "enum", "syncAuthority", "docs/06-grammar.md#Offline-Synchronisation", closed_values=("server", "serverValidated", "merge")),
-        ValueShape("sync-changes-outbox", "compound", "to typeName via outbox", "docs/06-grammar.md#Offline-Synchronisation"),
-        ValueShape("sync-delete-tombstone", "compound", "tombstone retain durationLiteral", "docs/06-grammar.md#Offline-Synchronisation"),
-        ValueShape("sync-schema-migration", "literal", "required", "docs/06-grammar.md#Offline-Synchronisation", closed_values=("required",)),
-        ValueShape("profilePropertyValue+", "sequence", "profilePropertyValue { profilePropertyValue }", "docs/06-grammar.md#Ressourcen-und-Medien", item_shape="profilePropertyValue"),
+      ValueShape("identifier","lexical","identifier",d), ValueShape("typeName","lexical","typeName",d), ValueShape("type","type","type",d), ValueShape("expression","expression","expression",d), ValueShape("integer","literal","integer",d), ValueShape("duration","literal","durationLiteral",d),
+      ValueShape("delete-action","enum","deleteAction",d,("restrict","cascade","nullify")), ValueShape("profilePropertyValue","generic-value","profilePropertyValue",d), ValueShape("typeName-list","list","[ typeName { , typeName } ]",d,item_shape="typeName"),
+      ValueShape("typed-exposed-list","list","[ exposedItem { , exposedItem } ]",d,alternatives=("query qualifiedName","mutation qualifiedName","channel qualifiedName","sync qualifiedName")), ValueShape("typed-runnable-list","list","[ runnableItem { , runnableItem } ]",d,alternatives=("consumer qualifiedName","workflow qualifiedName","task qualifiedName","schedule qualifiedName","projection qualifiedName","sync qualifiedName","channel qualifiedName")),
+      ValueShape("app-profile","compound","identifier version integer",d), ValueShape("compatibility-mode","enum","identifier",d,("none","backward","forward","full")), ValueShape("index-fields","compound-list","( indexField { , indexField } )",d), ValueShape("sync-mode","enum","syncMode",d,("serverAuthoritative","queuedCommands","replicated")), ValueShape("sync-authority","enum","syncAuthority",d,("server","serverValidated","merge")), ValueShape("sync-changes-outbox","compound","to typeName via outbox",d), ValueShape("sync-delete-tombstone","compound","tombstone retain durationLiteral",d), ValueShape("sync-schema-migration","literal","required",d,("required",)), ValueShape("profilePropertyValue+","sequence","profilePropertyValue { profilePropertyValue }",d,item_shape="profilePropertyValue")
     )
-
-
-def _modifiers() -> tuple[ModifierShape, ...]:
-    doc = "docs/06-grammar.md#Typdeklarationen"
+def _modifiers():
+    d="docs/06-grammar.md#Typdeklarationen"
+    return tuple(ModifierShape(x,(x,),v,d) for x,v in (("required",None),("primary",None),("generated",None),("clientGenerated",None),("immutable",None),("mutable",None),("sensitive",None),("unique",None),("concurrencyToken",None),("default","expression"),("onDelete","delete-action"),("via","identifier")))
+def _field_modifier_ids(): return tuple(x.modifier_id for x in _modifiers())
+def _declarations():
+    d="docs/06-grammar.md"
     return (
-        ModifierShape("required", ("required",), None, doc),
-        ModifierShape("primary", ("primary",), None, doc),
-        ModifierShape("generated", ("generated",), None, doc),
-        ModifierShape("clientGenerated", ("clientGenerated",), None, doc),
-        ModifierShape("immutable", ("immutable",), None, doc),
-        ModifierShape("mutable", ("mutable",), None, doc),
-        ModifierShape("sensitive", ("sensitive",), None, doc),
-        ModifierShape("unique", ("unique",), None, doc),
-        ModifierShape("concurrencyToken", ("concurrencyToken",), None, doc),
-        ModifierShape("default", ("default",), "expression", doc),
-        ModifierShape("onDelete", ("onDelete",), "delete-action", doc),
-        ModifierShape("via", ("via",), "identifier", doc),
+      DeclarationShape("app","App",("app",),"typeName",(),(BodySlot("profile",("profile",),"many","app-profile",d),BodySlot("system",("system",),"many","typeName",d),BodySlot("frontend",("frontend",),"many","typeName",d),BodySlot("api",("api",),"many","typeName",d),BodySlot("defaultDeployment",("defaultDeployment",),"many","identifier",d),BodySlot("compatibility",("compatibility",),"many","identifier",d)),d),
+      DeclarationShape("entity","Core",("entity",),"typeName",(),(BodySlot("field",(),"many","type",d,name_shape="identifier",modifiers=_field_modifier_ids()),BodySlot("index",("index",),"many","index-fields",d,name_shape="identifier"),BodySlot("invariant",("invariant",),"many","expression",d,name_shape="identifier")),d),
+      DeclarationShape("service","Backend",("service",),"typeName",(),(BodySlot("owns",("owns",),"many","typeName-list",d),BodySlot("uses",("uses",),"many","typeName-list",d),BodySlot("exposes",("exposes",),"many","typed-exposed-list",d),BodySlot("runs",("runs",),"many","typed-runnable-list",d),BodySlot("dependsOn",("dependsOn",),"many","typeName-list",d),BodySlot("reliability",("reliability",),"many",None,d,nested_schema="profileProperty"),BodySlot("telemetry",("telemetry",),"many","identifier",d)),d),
+      DeclarationShape("sync","Sync",("sync",),"typeName",(HeaderArgument("target",("for",),"type","one",d),),(BodySlot("mode",("mode",),"many","sync-mode",d),BodySlot("authority",("authority",),"many","sync-authority",d),BodySlot("scope",("scope",":"),"many","expression",d),BodySlot("localStore",("localStore",),"many","typeName",d),BodySlot("serverStore",("serverStore",),"many","typeName",d),BodySlot("operationLog",("operationLog",),"many",None,d,nested_schema="profileProperty"),BodySlot("push",("push",),"many","profilePropertyValue+",d),BodySlot("pull",("pull",),"many","profilePropertyValue+",d),BodySlot("changes",("changes",),"many","sync-changes-outbox",d),BodySlot("delete",("delete",),"many","sync-delete-tombstone",d),BodySlot("conflict",("conflict",),"many",None,d,nested_schema="conflictRule"),BodySlot("rejected",("rejected",),"many","profilePropertyValue+",d),BodySlot("schemaMigration",("schemaMigration",),"many","sync-schema-migration",d)),d),
     )
-
-
-def _field_modifier_ids() -> tuple[str, ...]:
-    return tuple(item.modifier_id for item in _modifiers())
-
-
-def _declarations() -> tuple[DeclarationShape, ...]:
-    app_doc = "docs/06-grammar.md#App-und-Profile"
-    core_doc = "docs/06-grammar.md#Typdeklarationen"
-    backend_doc = "docs/06-grammar.md#Systeme-und-Services"
-    sync_doc = "docs/06-grammar.md#Offline-Synchronisation"
+def _sublanguages():
     return (
-        DeclarationShape(
-            kind="app",
-            family="App",
-            starter_tokens=("app",),
-            identity_shape="typeName",
-            header_arguments=(),
-            documentation=app_doc,
-            body_slots=(
-                BodySlot("profile", ("profile",), "many", "app-profile", app_doc),
-                BodySlot("system", ("system",), "many", "typeName", app_doc),
-                BodySlot("frontend", ("frontend",), "many", "typeName", app_doc),
-                BodySlot("api", ("api",), "many", "typeName", app_doc),
-                BodySlot("defaultDeployment", ("defaultDeployment",), "many", "identifier", app_doc),
-                BodySlot("compatibility", ("compatibility",), "many", "identifier", app_doc),
-            ),
-        ),
-        DeclarationShape(
-            kind="entity",
-            family="Core",
-            starter_tokens=("entity",),
-            identity_shape="typeName",
-            header_arguments=(),
-            documentation=core_doc,
-            body_slots=(
-                BodySlot("field", (), "many", "type", core_doc, name_shape="identifier", modifiers=_field_modifier_ids()),
-                BodySlot("index", ("index",), "many", "index-fields", core_doc, name_shape="identifier"),
-                BodySlot("invariant", ("invariant",), "many", "expression", core_doc, name_shape="identifier"),
-            ),
-        ),
-        DeclarationShape(
-            kind="service",
-            family="Backend",
-            starter_tokens=("service",),
-            identity_shape="typeName",
-            header_arguments=(),
-            documentation=backend_doc,
-            body_slots=(
-                BodySlot("owns", ("owns",), "many", "typeName-list", backend_doc),
-                BodySlot("uses", ("uses",), "many", "typeName-list", backend_doc),
-                BodySlot("exposes", ("exposes",), "many", "typed-exposed-list", backend_doc),
-                BodySlot("runs", ("runs",), "many", "typed-runnable-list", backend_doc),
-                BodySlot("dependsOn", ("dependsOn",), "many", "typeName-list", backend_doc),
-                BodySlot("reliability", ("reliability",), "many", None, backend_doc, nested_schema="profileProperty"),
-                BodySlot("telemetry", ("telemetry",), "many", "identifier", backend_doc),
-            ),
-        ),
-        DeclarationShape(
-            kind="sync",
-            family="Sync",
-            starter_tokens=("sync",),
-            identity_shape="typeName",
-            header_arguments=(HeaderArgument("target", ("for",), "type", "one", sync_doc),),
-            documentation=sync_doc,
-            body_slots=(
-                BodySlot("mode", ("mode",), "many", "sync-mode", sync_doc),
-                BodySlot("authority", ("authority",), "many", "sync-authority", sync_doc),
-                BodySlot("scope", ("scope", ":"), "many", "expression", sync_doc),
-                BodySlot("localStore", ("localStore",), "many", "typeName", sync_doc),
-                BodySlot("serverStore", ("serverStore",), "many", "typeName", sync_doc),
-                BodySlot("operationLog", ("operationLog",), "many", None, sync_doc, nested_schema="profileProperty"),
-                BodySlot("push", ("push",), "many", "profilePropertyValue+", sync_doc),
-                BodySlot("pull", ("pull",), "many", "profilePropertyValue+", sync_doc),
-                BodySlot("changes", ("changes",), "many", "sync-changes-outbox", sync_doc),
-                BodySlot("delete", ("delete",), "many", "sync-delete-tombstone", sync_doc),
-                BodySlot("conflict", ("conflict",), "many", None, sync_doc, nested_schema="conflictRule"),
-                BodySlot("rejected", ("rejected",), "many", "profilePropertyValue+", sync_doc),
-                BodySlot("schemaMigration", ("schemaMigration",), "many", "sync-schema-migration", sync_doc),
-            ),
-        ),
+      SublanguageShape(
+        "profileProperty", "profileProperty",
+        (SublanguageAlternative("path-value","propertyPath [ : ] profilePropertyValue newline"), SublanguageAlternative("path-block","propertyPath { { profileProperty } }","profileProperty")),
+        "distributed profile schema", "service.reliability property paths", True,
+        "docs/07-distributed-systems.md#system-und-services", True,
+        ("idempotencyStore","inboxStore","workflowStore","projectionStore","syncStore"),
+        ("reliability",),
+      ),
+      SublanguageShape(
+        "uiStatement", "uiStatement",
+        (SublanguageAlternative("statement","identifier { uiAtom } [ { { uiStatement } } ] newline","uiStatement"),),
+        "web profile schema", "typed UI statement identifiers and atoms", True,
+        "docs/03-frontend.md", True,
+        ("semantic","layout","image","heading","button","list","repeat","render","grid","form","field","validate","submit","pending","success","failure","optimistic","rollback","conflict","rejected","show","navigate"),
+        ("ui",),
+      ),
+      SublanguageShape(
+        "testStatement", "testStatement",
+        (SublanguageAlternative("leaf","identifier { expression | qualifiedName | profilePropertyValue } newline"), SublanguageAlternative("block","identifier { expression | qualifiedName } { { testStatement } }","testStatement")),
+        "test profile schema", "typed test verbs and operands", True,
+        "docs/05-diagnostics-testing.md#testarten", True,
+        ("arrange","as","visit","fill","submit","assert","parallel","call","crashpoint","restart","deliver","duplicate","clients","disconnect","on","connect","sync","clientVersion","serverVersion","deploy","run"),
+        ("testCall","testAssert"),
+      ),
+      SublanguageShape(
+        "conflictRule", "conflictRule",
+        (SublanguageAlternative("field","field identifier merge mergeStrategy newline"), SublanguageAlternative("group","group identifier fields [ identifier { , identifier } ] merge mergeStrategy newline")),
+        "standard language schema", "offline-sync conflict rules", True,
+        "docs/06-grammar.md#offline-synchronisation", False,
+        ("field","group","reject","serverWins","lww","max","min","addWinsSet","removeWinsSet","counter","manual","custom"),
+        ("conflict",),
+      ),
     )
-
-
-def _sublanguages() -> tuple[SublanguageShape, ...]:
+def _surface(s,*facts): return ConstructionSurface(s,tuple(facts),"docs/06-grammar.md")
+def _construction_surfaces():
     return (
-        SublanguageShape(
-            name="profileProperty",
-            generic_production="profileProperty",
-            alternatives=(
-                SublanguageAlternative("path-value", "propertyPath [ : ] profilePropertyValue newline"),
-                SublanguageAlternative("path-block", "propertyPath { { profileProperty } }", "profileProperty"),
-            ),
-            vocabulary_authority="compiler-owned profile schema for the enclosing declaration/profile",
-            vocabulary_scope="contextual property paths and value types",
-            closed_vocabulary=True,
-            recursive=True,
-            documentation="docs/06-grammar.md#Ressourcen-und-Medien",
-        ),
-        SublanguageShape(
-            name="uiStatement",
-            generic_production="uiStatement",
-            alternatives=(
-                SublanguageAlternative("statement", "identifier { uiAtom } [ { { uiStatement } } ] newline", "uiStatement"),
-            ),
-            vocabulary_authority="compiler-owned web profile schema",
-            vocabulary_scope="contextual UI statement identifiers and typed atoms",
-            closed_vocabulary=True,
-            recursive=True,
-            documentation="docs/06-grammar.md#Frontend",
-        ),
-        SublanguageShape(
-            name="testStatement",
-            generic_production="testStatement",
-            alternatives=(
-                SublanguageAlternative("leaf", "identifier { expression | qualifiedName | profilePropertyValue } newline"),
-                SublanguageAlternative("block", "identifier { expression | qualifiedName } { { testStatement } }", "testStatement"),
-            ),
-            vocabulary_authority="compiler-owned test profile schema",
-            vocabulary_scope="typed test verbs such as arrange/act/assert and their operands",
-            closed_vocabulary=True,
-            recursive=True,
-            documentation="docs/06-grammar.md#Tests-und-Fixtures",
-        ),
-        SublanguageShape(
-            name="conflictRule",
-            generic_production="conflictRule",
-            alternatives=(
-                SublanguageAlternative("field", "field identifier merge mergeStrategy newline"),
-                SublanguageAlternative("group", "group identifier fields [ identifier { , identifier } ] merge mergeStrategy newline"),
-            ),
-            vocabulary_authority="standard language schema",
-            vocabulary_scope="offline-sync conflict rules",
-            closed_vocabulary=True,
-            recursive=False,
-            documentation="docs/06-grammar.md#Offline-Synchronisation",
-        ),
+      _surface("entity","entity"), _surface("field","field","type","modifier","optional","preserve"), _surface("value","value"), _surface("enum","enum","enumCase"), _surface("invariant","invariant","predicate"), _surface("alias","alias","aliasTarget"),
+      _surface("app","app","profile","system","defaultDeployment","frontend","api","preserve"), _surface("service","service","owns","uses","exposes","dependsOn","reliability","preserve"), _surface("system","system","services","resources"),
+      _surface("topic","topic","events","delivery","retention","preserve"), _surface("queue","queue","delivery"), _surface("consumer","consumer","topic","source"),
+      _surface("workflow","workflow","step","budgetDuration","preserve"), _surface("schedule","schedule","task","cadence"), _surface("schedule-lease","schedule","task"), _surface("task","task","call"),
+      _surface("sync","sync","target","authority","mode","localStore","conflict"), _surface("conflictRule","conflict"),
+      _surface("api","api","transport","operation","preserve"), _surface("query","query","returns","timeout","preserve"), _surface("mutation","mutation","input","returns"),
+      _surface("frontend","frontend","ui"), _surface("page","page","ui"), _surface("test","test"),
     )
-
-
-def _unsigned_payload() -> dict[str, Any]:
-    return {
-        "schema_id": SCHEMA_ID,
-        "semantic_version": SCHEMA_VERSION,
-        "source_base_commit": BASE_COMMIT,
-        "source_grammar_blob_sha": GRAMMAR_BLOB_SHA,
-        "declarations": [asdict(item) for item in _declarations()],
-        "value_shapes": [asdict(item) for item in _values()],
-        "modifiers": [asdict(item) for item in _modifiers()],
-        "sublanguages": [asdict(item) for item in _sublanguages()],
-        "coverage": [
-            "representative App/Core/Backend/Sync declaration construction metadata",
-            "header arguments, body slots, value/type shapes, field modifiers, documentation and nesting",
-            "generic profileProperty, uiStatement and testStatement structural discoverability",
-            "exact introspection schema id/version/fingerprint authority with fail-closed lookup",
-        ],
-        "omissions": [
-            "not a complete 49-form declaration corpus schema",
-            "does not export profile-specific property/UI/test vocabularies beyond their compiler-owned authority boundary",
-            "does not parse source or alter production parser acceptance",
-            "does not implement formatter/migration, IDE completion, diagnostics rollout, compatibility, IR or runtime behavior",
-        ],
-    }
-
-
-def _fingerprint(payload: dict[str, Any]) -> str:
-    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    return "sha256:" + hashlib.sha256(canonical).hexdigest()
-
-
+def _unsigned_payload():
+    return {"schema_id":SCHEMA_ID,"semantic_version":SCHEMA_VERSION,"source_base_commit":BASE_COMMIT,"source_grammar_blob_sha":GRAMMAR_BLOB_SHA,"declarations":[asdict(x) for x in _declarations()],"value_shapes":[asdict(x) for x in _values()],"modifiers":[asdict(x) for x in _modifiers()],"sublanguages":[asdict(x) for x in _sublanguages()],"construction_surfaces":[asdict(x) for x in _construction_surfaces()],"coverage":["representative current declaration metadata remains read-only","bounded compiler-owned construction-surface semantic fact projections from normative grammar/profile contracts","closed profileProperty/uiStatement/testStatement vocabularies sourced from normative profile documentation","exact schema tuple and fail-closed lookup"],"omissions":["not a production parser or language adoption surface","not a complete production 49-form completion schema","generic sublanguage vocabularies are bounded to terms explicitly documented by their normative profile sources, not inferred from evaluation tasks","does not alter production IDE, diagnostics, formatter, compatibility, IR, runtime or generator behavior"]}
+def _fingerprint(payload): return "sha256:"+hashlib.sha256(json.dumps(payload,sort_keys=True,separators=(",",":"),ensure_ascii=False).encode()).hexdigest()
 @lru_cache(maxsize=1)
-def build_catalog() -> IntrospectionCatalog:
-    payload = _unsigned_payload()
-    ref = SchemaRef(SCHEMA_ID, SCHEMA_VERSION, _fingerprint(payload))
-    return IntrospectionCatalog(
-        schema_ref=ref,
-        source_base_commit=BASE_COMMIT,
-        source_grammar_blob_sha=GRAMMAR_BLOB_SHA,
-        declarations=_declarations(),
-        value_shapes=_values(),
-        modifiers=_modifiers(),
-        sublanguages=_sublanguages(),
-        coverage=tuple(payload["coverage"]),
-        omissions=tuple(payload["omissions"]),
-    )
-
-
-def current_schema_ref() -> SchemaRef:
-    """Return the one exact compiler-embedded E4 introspection schema reference."""
-    return build_catalog().schema_ref
-
-
-def require_schema(ref: SchemaRef) -> IntrospectionCatalog:
-    """Resolve only an exact immutable schema tuple; never guess or fall back."""
-    current = build_catalog()
-    if ref.schema_id != current.schema_ref.schema_id:
-        raise SchemaLookupError("unknown-schema-id", ref.schema_id)
-    if ref.semantic_version != current.schema_ref.semantic_version:
-        raise SchemaLookupError("stale-schema-version", ref.semantic_version)
-    if ref.content_fingerprint != current.schema_ref.content_fingerprint:
-        raise SchemaLookupError("fingerprint-mismatch", ref.content_fingerprint)
-    return current
-
-
+def build_catalog():
+    p=_unsigned_payload(); return IntrospectionCatalog(SchemaRef(SCHEMA_ID,SCHEMA_VERSION,_fingerprint(p)),BASE_COMMIT,GRAMMAR_BLOB_SHA,_declarations(),_values(),_modifiers(),_sublanguages(),_construction_surfaces(),tuple(p["coverage"]),tuple(p["omissions"]))
+def current_schema_ref(): return build_catalog().schema_ref
+def require_schema(ref):
+    c=build_catalog()
+    if ref.schema_id!=c.schema_ref.schema_id: raise SchemaLookupError("unknown-schema-id",ref.schema_id)
+    if ref.semantic_version!=c.schema_ref.semantic_version: raise SchemaLookupError("stale-schema-version",ref.semantic_version)
+    if ref.content_fingerprint!=c.schema_ref.content_fingerprint: raise SchemaLookupError("fingerprint-mismatch",ref.content_fingerprint)
+    return c
 class CompilerSchemaService:
-    """Read-only transport-neutral projection over compiler-owned E4 metadata."""
-
-    def schema_ref(self) -> SchemaRef:
-        return current_schema_ref()
-
-    def declaration_kinds(self, ref: SchemaRef, *, family: str | None = None) -> tuple[str, ...]:
-        catalog = require_schema(ref)
-        return tuple(item.kind for item in catalog.declarations if family is None or item.family == family)
-
-    def declaration(self, ref: SchemaRef, kind: str) -> DeclarationShape:
-        catalog = require_schema(ref)
-        try:
-            return catalog.declaration(kind)
-        except KeyError as error:
-            raise SchemaLookupError("unknown-declaration-kind", kind) from error
-
-    def sublanguage(self, ref: SchemaRef, name: str) -> SublanguageShape:
-        catalog = require_schema(ref)
-        try:
-            return catalog.sublanguage(name)
-        except KeyError as error:
-            raise SchemaLookupError("unknown-sublanguage", name) from error
-
-    def value_shape(self, ref: SchemaRef, shape_id: str) -> ValueShape:
-        catalog = require_schema(ref)
-        try:
-            return catalog.value_shape(shape_id)
-        except KeyError as error:
-            raise SchemaLookupError("unknown-value-shape", shape_id) from error
-
-    def modifiers(self, ref: SchemaRef, modifier_ids: Iterable[str]) -> tuple[ModifierShape, ...]:
-        catalog = require_schema(ref)
-        result: list[ModifierShape] = []
-        for modifier_id in modifier_ids:
-            try:
-                result.append(catalog.modifier(modifier_id))
-            except KeyError as error:
-                raise SchemaLookupError("unknown-modifier", modifier_id) from error
-        return tuple(result)
-
-    def export(self, ref: SchemaRef) -> dict[str, Any]:
-        catalog = require_schema(ref)
-        return {
-            "schema_ref": asdict(catalog.schema_ref),
-            "source_base_commit": catalog.source_base_commit,
-            "source_grammar_blob_sha": catalog.source_grammar_blob_sha,
-            "declarations": [asdict(item) for item in catalog.declarations],
-            "value_shapes": [asdict(item) for item in catalog.value_shapes],
-            "modifiers": [asdict(item) for item in catalog.modifiers],
-            "sublanguages": [asdict(item) for item in catalog.sublanguages],
-            "coverage": list(catalog.coverage),
-            "omissions": list(catalog.omissions),
-        }
-
-
-def _parse_ref(args: argparse.Namespace) -> SchemaRef:
-    return SchemaRef(args.schema_id, args.schema_version, args.schema_fingerprint)
-
-
-def _add_ref_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--schema-id", required=True)
-    parser.add_argument("--schema-version", required=True)
-    parser.add_argument("--schema-fingerprint", required=True)
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    commands = parser.add_subparsers(dest="command", required=True)
-    commands.add_parser("schema-ref", help="print the exact compiler-owned E4 schema tuple")
-    export = commands.add_parser("export", help="export the complete bounded read-only catalog")
-    _add_ref_args(export)
-    declaration = commands.add_parser("declaration", help="describe one declaration kind")
-    declaration.add_argument("kind")
-    _add_ref_args(declaration)
-    sublanguage = commands.add_parser("sublanguage", help="describe one generic sublanguage")
-    sublanguage.add_argument("name")
-    _add_ref_args(sublanguage)
-    args = parser.parse_args(argv)
-    service = CompilerSchemaService()
-    try:
-        if args.command == "schema-ref":
-            value: Any = asdict(service.schema_ref())
-        elif args.command == "export":
-            value = service.export(_parse_ref(args))
-        elif args.command == "declaration":
-            value = asdict(service.declaration(_parse_ref(args), args.kind))
-        elif args.command == "sublanguage":
-            value = asdict(service.sublanguage(_parse_ref(args), args.name))
-        else:  # pragma: no cover
-            parser.error("unsupported command")
-        print(json.dumps(value, indent=2, sort_keys=True))
-        return 0
-    except SchemaLookupError as error:
-        print(json.dumps({"error": error.reason, "detail": error.detail}, sort_keys=True))
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    def schema_ref(self): return current_schema_ref()
+    def declaration_kinds(self,ref,*,family=None): return tuple(x.kind for x in require_schema(ref).declarations if family is None or x.family==family)
+    def declaration(self,ref,kind):
+        try:return require_schema(ref).declaration(kind)
+        except KeyError as e: raise SchemaLookupError("unknown-declaration-kind",kind) from e
+    def sublanguage(self,ref,name):
+        try:return require_schema(ref).sublanguage(name)
+        except KeyError as e: raise SchemaLookupError("unknown-sublanguage",name) from e
+    def value_shape(self,ref,shape_id):
+        try:return require_schema(ref).value_shape(shape_id)
+        except KeyError as e: raise SchemaLookupError("unknown-value-shape",shape_id) from e
+    def modifiers(self,ref,modifier_ids:Iterable[str]):
+        c=require_schema(ref); out=[]
+        for mid in modifier_ids:
+            try:out.append(c.modifier(mid))
+            except KeyError as e: raise SchemaLookupError("unknown-modifier",mid) from e
+        return tuple(out)
+    def construction_surface(self,ref,surface_id):
+        try:return require_schema(ref).construction_surface(surface_id)
+        except KeyError as e: raise SchemaLookupError("unknown-construction-surface",surface_id) from e
+    def construction_surfaces(self,ref): return require_schema(ref).construction_surfaces
+    def export(self,ref):
+        c=require_schema(ref); return {"schema_ref":asdict(c.schema_ref),"source_base_commit":c.source_base_commit,"source_grammar_blob_sha":c.source_grammar_blob_sha,"declarations":[asdict(x) for x in c.declarations],"value_shapes":[asdict(x) for x in c.value_shapes],"modifiers":[asdict(x) for x in c.modifiers],"sublanguages":[asdict(x) for x in c.sublanguages],"construction_surfaces":[asdict(x) for x in c.construction_surfaces],"coverage":list(c.coverage),"omissions":list(c.omissions)}
+def main(argv=None):
+    p=argparse.ArgumentParser(); sub=p.add_subparsers(dest="command",required=True); sub.add_parser("schema-ref"); a=p.parse_args(argv); print(json.dumps(asdict(current_schema_ref()),indent=2,sort_keys=True)); return 0
+if __name__=="__main__": raise SystemExit(main())

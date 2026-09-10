@@ -1,104 +1,20 @@
 {
   "e4_schema": {
     "schema_id": "urn:aidl:schema:meta:m16.5-e4-introspection",
-    "schema_version": "0.1.0-e4",
-    "schema_fingerprint": "sha256:1c870ed29b4621ae108a64c6fd8ffecd48e7b984d38afee393c23a33cc5da542"
+    "schema_version": "0.2.0-e4",
+    "schema_fingerprint": "sha256:68465a548d3322af3ae2d14df018fde1f08cdd161ce864f648f96a32a20dfdf2"
   },
-  "representative_completion": [
-    {
-      "family": "App",
-      "kind": "app",
-      "starter": "app",
-      "body_slot_ids": ["profile", "system", "frontend", "api", "defaultDeployment", "compatibility"]
-    },
-    {
-      "family": "Core",
-      "kind": "entity",
-      "starter": "entity",
-      "body_slot_ids": ["field", "index", "invariant"]
-    },
-    {
-      "family": "Backend",
-      "kind": "service",
-      "starter": "service",
-      "body_slot_ids": ["owns", "uses", "exposes", "runs", "dependsOn", "reliability", "telemetry"]
-    },
-    {
-      "family": "Sync",
-      "kind": "sync",
-      "starter": "sync",
-      "header_tokens": ["for"],
-      "body_slot_ids": ["mode", "authority", "scope", "localStore", "serverStore", "operationLog", "push", "pull", "changes", "delete", "conflict", "rejected", "schemaMigration"],
-      "mode_values": ["serverAuthoritative", "queuedCommands", "replicated"]
-    }
-  ],
-  "entity_field_modifiers": [
-    "required",
-    "primary",
-    "generated",
-    "clientGenerated",
-    "immutable",
-    "mutable",
-    "sensitive",
-    "unique",
-    "concurrencyToken",
-    "default",
-    "onDelete",
-    "via"
-  ],
-  "generic_sublanguages": ["profileProperty", "uiStatement", "testStatement"],
   "e5_context": {
     "old_schema_id": "urn:aidl:schema:language:m16.5-e5-current",
     "old_version": "m16.5-e5-current-v1",
     "old_schema_fingerprint": "sha256:3964b3c5cf72fb67a0ef17e0ea2e7d7fb288359250e3b1e130db2c021a69f822",
     "target_schema_id": "urn:aidl:schema:language:m16.5-e5-candidate",
-    "target_version": "m16.5-e5-candidate-v1",
-    "target_schema_fingerprint": "sha256:c702262d2f5374d8eda54a028923d00d7d21e45d3980c62f32d472392ccc8c30"
+    "target_version": "m16.5-e5-candidate-v2",
+    "target_schema_fingerprint": "sha256:b30abd7f3534e7792c041ecf1e67f22c264be05712324a36096056dde5cebaf5"
   },
-  "migration_supported": [
-    {
-      "id": "client-target",
-      "source": "client BillingClient for BillingService {\n  call create {\n    timeout 30s\n  }\n}\n",
-      "anchor_text": "client BillingClient for BillingService {",
-      "expected_replacement": "client BillingClient {\n  service: BillingService"
-    },
-    {
-      "id": "projection-relationship",
-      "source": "projection CustomerProjection from [OrderCreated] into CustomerView {\n  key orderId\n}\n",
-      "anchor_text": "projection CustomerProjection from [OrderCreated] into CustomerView {",
-      "expected_replacement": "projection CustomerProjection {\n  source: OrderCreated\n  target: CustomerView"
-    }
-  ],
-  "migration_unavailable": [
-    {
-      "id": "projection-multi-source",
-      "source": "projection P from [A, B] into View {\n}\n",
-      "anchor_text": "projection P from [A, B] into View {",
-      "reason_prefix": "e5-AIDL-S004"
-    },
-    {
-      "id": "explicit-index",
-      "source": "entity Customer {\n  index byEmail(email asc, tenantId desc)\n}\n",
-      "anchor_text": "index byEmail(email asc, tenantId desc)",
-      "reason_prefix": "e5-target-shape-not-fact-complete"
-    },
-    {
-      "id": "schedule-lease",
-      "source": "schedule Cleanup {\n  singleton lease 30s\n}\n",
-      "anchor_text": "singleton lease 30s",
-      "reason_prefix": "e5-target-shape-not-fact-complete"
-    },
-    {
-      "id": "sync-outbox",
-      "source": "sync Mobile for Customer {\n  changes to Customer via outbox\n}\n",
-      "anchor_text": "changes to Customer via outbox",
-      "reason_prefix": "e5-target-shape-not-fact-complete"
-    },
-    {
-      "id": "unmodeled",
-      "source": "app Demo {\n  system Core\n}\n",
-      "anchor_text": "system Core",
-      "reason_prefix": "e5-no-modeled-migration-edit"
-    }
-  ]
+  "generic_vocabulary": {
+    "profileProperty": ["idempotencyStore", "inboxStore", "workflowStore", "projectionStore", "syncStore"],
+    "uiStatement": ["semantic", "heading", "grid", "button"],
+    "testStatement": ["arrange", "call", "assert", "parallel"]
+  }
 }

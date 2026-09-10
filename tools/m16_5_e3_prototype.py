@@ -8,12 +8,12 @@ from functools import lru_cache
 from typing import Any
 
 CANDIDATE_SCHEMA_ID = "urn:aidl:schema:language:m16.5-e3-candidate"
-CANDIDATE_SCHEMA_VERSION = "m16.5-e3-candidate-v1"
+CANDIDATE_SCHEMA_VERSION = "m16.5-e3-candidate-v2"
 
 class Cardinality(str, Enum):
     ONE="one"; OPTIONAL="optional"; MANY="many"
 class ValueKind(str, Enum):
-    IDENTIFIER="identifier"; STRING="string"; DURATION="duration"; IDENTIFIER_LIST="identifier-list"; TYPE="type"; RAW="raw"
+    IDENTIFIER="identifier"; STRING="string"; DURATION="duration"; IDENTIFIER_LIST="identifier-list"; INDEX_FIELDS="index-fields"; INTEGER="integer"; BOOLEAN="boolean"; TYPE="type"; RAW="raw"
 @dataclass(frozen=True)
 class ContextualTerminal: text: str
 @dataclass(frozen=True)
@@ -22,12 +22,15 @@ class OrderedSlot: name: str; kind: ValueKind
 class KeyedChild:
     key: str; kind: ValueKind; cardinality: Cardinality=Cardinality.ONE
     contextual_terminal: ContextualTerminal|None=None; named: bool=False
+    closed_values: tuple[str,...]=()
 @dataclass(frozen=True)
 class WholeNodeAlternative: name: str; required_keys: tuple[str,...]=()
 @dataclass(frozen=True)
 class NodeShape:
     kind: str; ordered_slots: tuple[OrderedSlot,...]; keyed_children: tuple[KeyedChild,...]
     alternatives: tuple[WholeNodeAlternative,...]=(); construction_enabled: bool=True
+    semantic_surfaces: tuple[str,...]=(); semantic_fact_prefixes: tuple[str,...]=()
+    normalization_row: str|None=None
     def child(self,key:str)->KeyedChild|None: return next((x for x in self.keyed_children if x.key==key),None)
     def validate(self)->None:
         keys=[x.key for x in self.keyed_children]
@@ -39,23 +42,25 @@ class SchemaCatalog:
     schema_id: str; version: str; fingerprint: str; shapes: dict[str,NodeShape]
     def shape(self,kind:str)->NodeShape|None: return self.shapes.get(kind)
     def enabled_shapes(self): return (s for s in self.shapes.values() if s.construction_enabled)
+    def construction_surface(self,surface_id:str)->tuple[NodeShape,...]:
+        return tuple(s for s in self.enabled_shapes() if surface_id in s.semantic_surfaces)
 
-def _shape(kind:str,*children:KeyedChild,alts:tuple[WholeNodeAlternative,...]=(),enabled:bool=True)->NodeShape:
-    return NodeShape(kind,(OrderedSlot("name",ValueKind.IDENTIFIER),),children,alts,enabled)
+def _shape(kind:str,*children:KeyedChild,alts:tuple[WholeNodeAlternative,...]=(),enabled:bool=True,surfaces:tuple[str,...]=(),facts:tuple[str,...]=(),row:str|None=None)->NodeShape:
+    return NodeShape(kind,(OrderedSlot("name",ValueKind.IDENTIFIER),),children,alts,enabled,surfaces,facts,row)
 
 @lru_cache(maxsize=1)
 def build_catalog()->SchemaCatalog:
     f=ContextualTerminal("field"); M=Cardinality.MANY; O=Cardinality.OPTIONAL; I=ValueKind.IDENTIFIER
     shapes={
-      "projection":_shape("projection",KeyedChild("source",I),KeyedChild("target",I)),
-      "client":_shape("client",KeyedChild("service",I)),
-      "migration":_shape("migration",KeyedChild("from",ValueKind.STRING),KeyedChild("to",ValueKind.STRING)),
-      "consumer":_shape("consumer",KeyedChild("topic",I),KeyedChild("source",I)),
-      "entity":_shape("entity",KeyedChild("field",ValueKind.TYPE,M,f,True)),
-      "index":_shape("index",KeyedChild("fields",ValueKind.IDENTIFIER_LIST),KeyedChild("unique",ValueKind.RAW,O)),
-      "queue_deadletter":_shape("queue_deadletter",KeyedChild("queue",I),KeyedChild("deadletter",I)),
-      "schedule_lease":_shape("schedule_lease",KeyedChild("schedule",I),KeyedChild("lease",ValueKind.DURATION)),
-      "sync_outbox":_shape("sync_outbox",KeyedChild("changes",I),KeyedChild("outbox",I)),
+      "projection":_shape("projection",KeyedChild("source",I,M),KeyedChild("target",I),surfaces=("projection","multi-source-projection"),facts=("projection","source","target"),row="projection-relationship"),
+      "client":_shape("client",KeyedChild("service",I),surfaces=("client",),facts=("client","service"),row="client-target"),
+      "migration":_shape("migration",KeyedChild("from",ValueKind.STRING),KeyedChild("to",ValueKind.STRING),surfaces=("migration",),facts=("migration","from","to"),row="migration-source-target"),
+      "consumer":_shape("consumer",KeyedChild("topic",I),KeyedChild("source",I),surfaces=("consumer",),facts=("consumer","topic","source"),row="consumer-relationship"),
+      "entity":_shape("entity",KeyedChild("field",ValueKind.TYPE,M,f,True),surfaces=("entity","field"),facts=("entity","field","type"),row="explicit-field-child"),
+      "index":_shape("index",KeyedChild("fields",ValueKind.INDEX_FIELDS),KeyedChild("unique",ValueKind.BOOLEAN,O),surfaces=("index-direction",),facts=("index","indexField"),row="explicit-index"),
+      "queue_deadletter":_shape("queue_deadletter",KeyedChild("queue",I),KeyedChild("attempts",ValueKind.INTEGER),surfaces=("dead-letter-threshold",),facts=("topic","queue","deadLetterAttempts"),row="queue-deadletter"),
+      "schedule_lease":_shape("schedule_lease",KeyedChild("schedule",I),KeyedChild("singleton",ValueKind.BOOLEAN),KeyedChild("lease",ValueKind.DURATION),surfaces=("schedule-lease",),facts=("schedule","singleton","lease"),row="schedule-lease"),
+      "sync_outbox":_shape("sync_outbox",KeyedChild("changes",I),KeyedChild("delivery",I,closed_values=("outbox",)),surfaces=("sync-outbox",),facts=("sync","changesTarget","changesDelivery"),row="sync-outbox"),
       "app":_shape("app",KeyedChild("version",ValueKind.STRING),KeyedChild("module",I,O)),
       "service":_shape("service",KeyedChild("api",I,O),KeyedChild("resource",I,M)),
       "api":_shape("api",KeyedChild("route",ValueKind.RAW,M)),
@@ -72,6 +77,7 @@ TOKEN_RE=re.compile(r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"|[A-Za-z_][A-Za-z0-9_.
 HEADER_RE=re.compile(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*(?://[^\n]*)?$')
 CHILD_RE=re.compile(r'^\s*(\w+)\s+(\w+)\s*:\s*(.*?)\s*$'); KEY_RE=re.compile(r'^\s*(\w+)\s*:\s*(.*?)\s*$')
 IDENT_RE=re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*$'); DURATION_RE=re.compile(r'^\d+(?:\.\d+)?(?:ms|s|m|h|d)$')
+INDEX_RE=re.compile(r'^[A-Za-z_][A-Za-z0-9_.]*(?:\s+(?:asc|desc))?$')
 LEGACY_RE=re.compile(r'\b(from\s+\[|\sinto\b|\sfor\s+[A-Z]|\son\s+\w+\s+from\s+|deadLetter\s+\(|changes\s+\w+\s+via\s+outbox)')
 @dataclass(frozen=True)
 class Diagnostic: code:str; message:str; offset:int=0
@@ -109,19 +115,33 @@ def _value(raw:str,child:KeyedChild)->Any:
     raw=raw.strip()
     if child.kind in (ValueKind.IDENTIFIER,ValueKind.TYPE):
         if not IDENT_RE.fullmatch(raw): _fail("AIDL-S004",f"{child.key} requires identifier/type")
-        return raw
-    if child.kind is ValueKind.STRING:
+        value:Any=raw
+    elif child.kind is ValueKind.STRING:
         if len(raw)<2 or raw[0]!='"' or raw[-1]!='"': _fail("AIDL-S004",f"{child.key} requires quoted string")
-        return raw[1:-1]
-    if child.kind is ValueKind.DURATION:
+        value=raw[1:-1]
+    elif child.kind is ValueKind.DURATION:
         if not DURATION_RE.fullmatch(raw): _fail("AIDL-S004",f"{child.key} requires duration")
-        return raw
-    if child.kind is ValueKind.IDENTIFIER_LIST:
+        value=raw
+    elif child.kind is ValueKind.INTEGER:
+        if not re.fullmatch(r'\d+',raw): _fail("AIDL-S004",f"{child.key} requires non-negative integer")
+        value=int(raw)
+    elif child.kind is ValueKind.BOOLEAN:
+        if raw not in {"true","false"}: _fail("AIDL-S004",f"{child.key} requires boolean")
+        value=raw=="true"
+    elif child.kind is ValueKind.IDENTIFIER_LIST:
         if not(raw.startswith("[") and raw.endswith("]")): _fail("AIDL-S004",f"{child.key} requires identifier list")
         xs=[x.strip() for x in raw[1:-1].split(",") if x.strip()]
         if not xs or any(not IDENT_RE.fullmatch(x) for x in xs): _fail("AIDL-S004",f"{child.key} requires identifier list")
-        return xs
-    return raw
+        value=xs
+    elif child.kind is ValueKind.INDEX_FIELDS:
+        if not(raw.startswith("[") and raw.endswith("]")): _fail("AIDL-S004",f"{child.key} requires index-field list")
+        xs=[x.strip() for x in raw[1:-1].split(",") if x.strip()]
+        if not xs or any(not INDEX_RE.fullmatch(x) for x in xs): _fail("AIDL-S004",f"{child.key} requires index fields with optional asc/desc")
+        value=[tuple(x.split()) if " " in x else (x,"default") for x in xs]
+    else: value=raw
+    if child.closed_values and str(value) not in child.closed_values:
+        _fail("AIDL-S004",f"{child.key} requires one of {child.closed_values!r}")
+    return value
 
 def parse_candidate(source:str,*,source_version:str,schema_version:str|None=None)->ConstructionResult:
     cat=build_catalog(); schema_version=schema_version or source_version
@@ -165,8 +185,7 @@ def parse_candidate(source:str,*,source_version:str,schema_version:str|None=None
 WORKLOAD="projection BenchProjection {\n  source: OrderCreated\n  target: CustomerView\n}\n"
 def _one()->int:
     start=time.perf_counter_ns(); cat=build_catalog(); parse_candidate(WORKLOAD,source_version=cat.version,schema_version=cat.version); return time.perf_counter_ns()-start
-def _summary(xs:list[int])->dict[str,float|int]:
-    return {"min_ns":min(xs),"median_ns":statistics.median(xs),"mean_ns":statistics.fmean(xs),"max_ns":max(xs),"pstdev_ns":statistics.pstdev(xs)}
+def _summary(xs:list[int])->dict[str,float|int]: return {"min_ns":min(xs),"median_ns":statistics.median(xs),"mean_ns":statistics.fmean(xs),"max_ns":max(xs),"pstdev_ns":statistics.pstdev(xs)}
 def run_benchmark()->dict[str,Any]:
     cold=[int(subprocess.run([sys.executable,"-m","tools.m16_5_e3_prototype","--single"],check=True,capture_output=True,text=True).stdout) for _ in range(10)]
     for _ in range(5): _one()
