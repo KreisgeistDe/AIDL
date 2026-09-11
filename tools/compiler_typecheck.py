@@ -22,6 +22,13 @@ class TypeRef:
 @dataclass(frozen=True)
 class TypeIssue:
     code:str; message:str; source_path:Path; location:object; subject_kind:str; subject_name:str; expected:str
+@dataclass(frozen=True)
+class ReferenceResolution:
+    """Compiler-owned evidence for nominal refs and frozen entity-field projections."""
+    kind:str
+    target:str
+    projection:str|None=None
+    projected_type:str|None=None
 class TypeSyntaxError(ValueError): pass
 
 def _split(text):
@@ -47,7 +54,10 @@ def _split(text):
 def _take(tail):
     tail=tail.strip()
     if tail.startswith("ref "):
-        p=tail.split(None,2); return "ref "+p[1],p[2] if len(p)>2 else ""
+        # Keep the complete dotted/nullable reference token together. Parser
+        # whitespace is normalized by parse_type; modifiers start only after it.
+        m=re.match(r"ref\s+([A-Za-z_][A-Za-z0-9_.-]*(?:\s*\.\s*[A-Za-z_][A-Za-z0-9_.-]*)*\??)(?:\s+(.*))?$",tail,re.S)
+        if m: return "ref "+re.sub(r"\s*\.\s*",".",m.group(1)),(m.group(2) or "").strip()
     stack=[]; close={')':'(',']':'[','>':'<'}
     for i,ch in enumerate(tail):
         if ch in "([<": stack.append(ch)
@@ -68,7 +78,7 @@ def parse_type(raw):
         return TypeRef("list",args=(parse_type(text[1:-1]),))
     if text.startswith("ref "):
         target=re.sub(r"\s*\.\s*",".",text[4:].strip())
-        if not NAME.fullmatch(target): raise TypeSyntaxError("ref requires one entity name")
+        if not NAME.fullmatch(target): raise TypeSyntaxError("ref requires one entity name or frozen entity-field projection")
         return TypeRef("ref",target)
     if (m:=re.fullmatch(r"([A-Za-z_][A-Za-z0-9_.-]*)\s*<(.*)>",text,re.S)):
         name=m.group(1); args=tuple(parse_type(x) for x in _split(m.group(2)))
@@ -98,6 +108,44 @@ def _resolve(project,source,ref):
         if _id(x) not in seen: seen.add(_id(x)); out.append(x)
     return tuple(out)
 
+def _field(node):
+    if not node.name or not (m:=FIELD.match(node.name.strip())): return None
+    typ,mods=_take(m.group(2)); return m.group(1),typ,mods
+
+def resolve_reference(project,source,reference):
+    """Resolve one ``ref`` deterministically without weakening qualified names.
+
+    An exact entity match always wins. Only when there is no exact entity match
+    may the final dotted segment be interpreted as a frozen field projection.
+    Ambiguous exact names, ambiguous targets, duplicate fields, or an invalid
+    projected field type fail closed by returning ``None``.
+    """
+    ref=re.sub(r"\s*\.\s*",".",reference.strip())
+    exact=tuple(x for x in _resolve(project,source,ref) if x.declaration.kind=="entity")
+    if len(exact)==1:
+        return ReferenceResolution("entity",exact[0].fully_qualified_name or ref)
+    if exact or '.' not in ref:
+        return None
+    target_ref,projection=ref.rsplit('.',1)
+    targets=tuple(x for x in _resolve(project,source,target_ref) if x.declaration.kind=="entity")
+    if len(targets)!=1:
+        return None
+    fields=[]
+    for node in targets[0].declaration.node.children:
+        field=_field(node)
+        if field and field[0]==projection: fields.append(field)
+    if len(fields)!=1:
+        return None
+    projected_type=fields[0][1]
+    try: parse_type(projected_type)
+    except TypeSyntaxError: return None
+    return ReferenceResolution(
+        "projection",
+        targets[0].fully_qualified_name or target_ref,
+        projection,
+        projected_type,
+    )
+
 def _issue(item,code,msg,expected,loc=None):
     loc=loc or item.declaration.span
     return None if loc is None else TypeIssue(code,msg,item.document.source_path,loc,item.declaration.kind,item.declaration.name or "<unnamed>",expected)
@@ -114,18 +162,12 @@ def _check_type(project,item,raw,loc=None):
         x=_issue(item,"AIDL-T001",str(e),"well-formed Core type constructor",loc); return [x] if x else []
     out=[]
     def visit(t):
-        if t.kind=="ref":
-            m=[x for x in _resolve(project,item,t.name or "") if x.declaration.kind=="entity"]
-            if len(m)!=1:
-                x=_issue(item,"AIDL-T001",f"type '{raw}' must reference exactly one entity; found {len(m)}","owner-local ref resolves to one entity",loc); out.extend([x] if x else [])
+        if t.kind=="ref" and resolve_reference(project,item,t.name or "") is None:
+            x=_issue(item,"AIDL-T001",f"type '{raw}' must resolve to exactly one entity or one frozen entity-field projection","owner-local ref resolves exactly and projections require one entity plus one typed field",loc); out.extend([x] if x else [])
         if t.kind=="map" and not _map_key(project,item,t.args[0]):
             x=_issue(item,"AIDL-T001",f"map key in '{raw}' must be scalar or value-like","map<K,V> uses scalar/value K",loc); out.extend([x] if x else [])
         for a in t.args: visit(a)
     visit(root); return out
-
-def _field(node):
-    if not node.name or not (m:=FIELD.match(node.name.strip())): return None
-    typ,mods=_take(m.group(2)); return m.group(1),typ,mods
 
 def _params(raw):
     raw=raw.strip(); raw=raw[1:-1] if raw.startswith('(') and raw.endswith(')') else raw
