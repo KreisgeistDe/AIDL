@@ -8,9 +8,11 @@ import unittest
 from pathlib import Path
 
 from tools.compiler_diagnostics import load_compiler_analysis
-from tools.compiler_language_surface import TypeRef
+from tools.compiler_ir import build_canonical_ir
+from tools.compiler_language_surface import Declaration, TypeRef
 from tools.compiler_language_surface_integration import normalize_compiler_analysis
 from tools.compiler_summary import summarize_project
+from tools.test_aidl_ir import _MINIMAL_PROJECT
 
 
 _PROJECT = """module demo
@@ -88,6 +90,34 @@ class M101ProductionIntegrationTest(unittest.TestCase):
 
         self.assertFalse(surface.ok)
         self.assertIn("AIDL-N012", [item.code for item in surface.diagnostics])
+
+    def test_legacy_alias_normalization_matches_independent_canonical_facts(self) -> None:
+        surface = normalize_compiler_analysis(self._analysis(_PROJECT))
+        token = next(item for item in surface.declarations if item.name == "Token")
+        canonical = Declaration(
+            kind="alias",
+            name="Token",
+            name_policy="required",
+            exported=False,
+            facts={"opacity": True, "aliased_type": TypeRef("scalar", name="uuid")},
+        )
+
+        self.assertEqual(canonical.semantic_hash(), token.semantic_hash())
+
+    def test_ir_diagnostics_and_m10_1_hash_are_source_location_independent(self) -> None:
+        first_analysis = self._analysis(_MINIMAL_PROJECT)
+        second_analysis = self._analysis("\n\n" + _MINIMAL_PROJECT)
+        first_surface = normalize_compiler_analysis(first_analysis)
+        second_surface = normalize_compiler_analysis(second_analysis)
+        first_ir = build_canonical_ir(first_analysis)
+        second_ir = build_canonical_ir(second_analysis)
+
+        self.assertEqual(
+            [diagnostic.code.value for diagnostic in first_analysis.diagnostics],
+            [diagnostic.code.value for diagnostic in second_analysis.diagnostics],
+        )
+        self.assertEqual(first_ir["semanticHash"], second_ir["semanticHash"])
+        self.assertEqual(first_surface.semantic_hash(), second_surface.semantic_hash())
 
     def test_same_version_formatter_and_explicit_migrator_remain_separate(self) -> None:
         surface = normalize_compiler_analysis(self._analysis(_PROJECT))
