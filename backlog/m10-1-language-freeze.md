@@ -38,7 +38,7 @@ No semantic declaration kind is removed by this package. The items marked **remo
 1. **M10.1 Freeze** — this document, target schema, contract instance and regression fixtures are reviewed; no unresolved semantic question remains in the frozen model.
 2. **M10.5-03** — Kotlin front-end slices may begin only against the frozen model plus legacy compatibility corpus. Differential parity must compare normalized semantics, not accidental legacy parser node shape.
 3. **M16.5** — evaluation/tooling may measure or prototype the frozen target, but later adoption that changes this model requires an explicit versioned language decision and compatibility plan.
-4. **Parser/AST/IR migration** — broad production implementation is the next sequential M10.1 package, not part of this freeze commit.
+4. **Parser/AST/IR migration** — production integration proceeds as bounded M10.1 slices with differential evidence before M10.5-03; broad replacement remains out of scope until the compatibility path is complete.
 
 ## Compatibility bridge status
 
@@ -46,8 +46,14 @@ The representative bridge is implemented in `tools/compiler_language_surface.py`
 
 Covered executable cases include declaration-specific relationship headers, entity fields, optional/reference types, resolver-backed `Pet.id`, opaque aliases, enum cases, app profile/version slots, `@publicReason`, query `read` expressions, body occurrence/uniqueness checks and modifier target/arity checks. Unsupported body mini-languages are diagnosed instead of silently canonicalized, and migration preview refuses facts that the frozen contract cannot yet express losslessly.
 
-M10.1 remains open after this package. The next sequential dependency-ready step is parser/AST/resolver/typechecker integration with real project resolution/type facts and wider contract-backed normalization; M10.5-03 remains blocked until that compatibility path and parity evidence are complete.
+The first bounded production integration is implemented in `tools/compiler_language_surface_integration.py`. It consumes real `CompilerAnalysis`/`CompilerProject` nodes, reuses the existing Core type parser and compiler symbol/import resolution for type/reference evidence, and normalizes only the already-lossless `alias`/`opaque`, `entity`, `enum`, `migration`, `client`, `consumer` and `projection` subset. The compiler-owned `summary` projection consumes the resulting versioned semantic hash and surfaces its integrated declaration count and diagnostic state. Canonical IR shape and production parser acceptance remain unchanged.
+
+`Pet.id?` now has production evidence only when the compiler resolves one `Pet` entity and an actual typechecker-parsable `id` field. Missing or ambiguous projections remain fail-closed with `AIDL-N012`. The legacy `ref Pet.id` spelling deliberately remains non-OK while the current Core typechecker still treats the dotted `ref` as a nominal entity reference; the production adapter does not suppress that existing `AIDL-T001` parity signal.
+
+M10.1 remains open after this production slice. The next dependency-ready step is the narrow Core typechecker/resolver parity package for frozen legacy reference projections plus contract-backed modifier/value-mode evidence, followed by carefully widening production normalization to query/mutation/app surfaces only where existing compiler facts are lossless. M10.5-03 remains blocked until that compatibility path and parity evidence are complete.
 
 ## Required regression set
 
 The executable contract regression covers: a `User` entity; `migration`; `@publicReason` on `query getPet`; an `app` profile; all three `NamePolicy` values; BodySlot cardinality/order/uniqueness; modifier target/arity; enum cases; resolved `Pet.id` reference projection; and literal-vs-expression rejection. Negative cases must fail for missing required names, forbidden names, duplicate unique slots, occurrence overflow, wrong modifier target/arity, unresolved projection shape, and expressions supplied to literal-only positions.
+
+Production integration additionally proves: real project/typechecker evidence for `Pet.id?`; stable fail-closed diagnostics for unresolved and legacy `ref` projection cases; source-location/whitespace-independent M10.1 and Canonical IR semantic hashes; deterministic compiler-summary consumption of the M10.1 hash; and semantic equivalence between representative legacy normalization and independently constructed canonical facts.

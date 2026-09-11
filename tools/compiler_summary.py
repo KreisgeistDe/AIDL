@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from tools.compiler_diagnostics import CompilerAnalysis
+from tools.compiler_language_surface_integration import normalize_compiler_analysis
 
 
 MAX_SUMMARY_MODULES = 64
@@ -81,8 +82,18 @@ class ProjectSummary:
     modules_truncated: bool
     declarations_truncated: bool
     module_dependencies_truncated: bool
+    language_surface_semantic_hash: str
+    language_surface_declaration_count: int
+    language_surface_ok: bool
+    language_surface_diagnostic_codes: tuple[str, ...]
 
     def to_json(self) -> dict[str, Any]:
+        """Preserve the frozen CLI summary JSON contract.
+
+        M10.1 semantic evidence is compiler-owned in-memory state on this summary
+        object. Exposing it through CLI JSON requires an explicit CLI schema/version
+        change and is intentionally not part of this production-integration slice.
+        """
         return {
             "declarationCount": self.declaration_count,
             "declarationKinds": [item.to_json() for item in self.declaration_kinds],
@@ -114,9 +125,10 @@ def _counts(kinds: list[str]) -> tuple[ProjectCount, ...]:
 
 
 def summarize_project(analysis: CompilerAnalysis) -> ProjectSummary:
-    """Project existing compiler-owned facts into a deterministic bounded agent summary."""
+    """Project compiler facts and consume the M10.1 normalized semantic surface."""
 
     project = analysis.project
+    surface = normalize_compiler_analysis(analysis)
     declaration_names = tuple(project.declaration_names)
     exported_count = sum(1 for item in declaration_names if item.declaration.exported)
     declaration_kinds = _counts([item.declaration.kind for item in declaration_names])
@@ -161,6 +173,12 @@ def summarize_project(analysis: CompilerAnalysis) -> ProjectSummary:
             }
         )
     ]
+    diagnostic_codes = tuple(
+        sorted(
+            {diagnostic.code for diagnostic in surface.diagnostics}
+            | {issue.code for issue in surface.type_issues}
+        )
+    )
 
     return ProjectSummary(
         document_count=len(project.documents),
@@ -178,4 +196,8 @@ def summarize_project(analysis: CompilerAnalysis) -> ProjectSummary:
         modules_truncated=len(module_summaries) > MAX_SUMMARY_MODULES,
         declarations_truncated=len(declaration_summaries) > MAX_SUMMARY_DECLARATIONS,
         module_dependencies_truncated=len(dependency_summaries) > MAX_SUMMARY_MODULE_DEPENDENCIES,
+        language_surface_semantic_hash=surface.semantic_hash(),
+        language_surface_declaration_count=len(surface.declarations),
+        language_surface_ok=surface.ok,
+        language_surface_diagnostic_codes=diagnostic_codes,
     )
