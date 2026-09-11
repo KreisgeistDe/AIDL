@@ -1,8 +1,9 @@
 """M10.1 compatibility bridge behind the existing legacy parser.
 
-The parser remains the source-language recognizer.  This module loads
-``spec/language-surface-v1.json`` as the only declaration/body/modifier schema
-and projects representative legacy parser nodes into the frozen semantic model.
+The parser remains the source-language recognizer. This module loads
+``spec/language-surface-v1.json`` as the only declaration/body/modifier
+construction contract and projects representative legacy parser nodes into the
+frozen semantic model.
 """
 
 from __future__ import annotations
@@ -22,7 +23,7 @@ except ImportError:  # pragma: no cover
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "spec" / "language-surface-v1.json"
-NORMALIZATION_VERSION = "aidl.m10.1-normalized/v1"
+NORMALIZATION_VERSION = "aidl.m10.1-normalized/v2"
 
 
 @dataclass(frozen=True)
@@ -70,6 +71,22 @@ class ModifierCall:
             "argument_mode": self.argument_mode,
             "args": list(self.args),
         }
+
+
+@dataclass(frozen=True)
+class OperationParameter:
+    name: str
+    type_ref: TypeRef
+    modifiers: tuple[ModifierCall, ...] = ()
+
+    def semantic(self) -> dict[str, Any]:
+        result: dict[str, Any] = {
+            "name": self.name,
+            "type": self.type_ref.semantic(),
+        }
+        if self.modifiers:
+            result["modifiers"] = [item.semantic() for item in self.modifiers]
+        return result
 
 
 @dataclass(frozen=True)
@@ -180,7 +197,7 @@ class LanguageSurfaceBridge:
         self,
         contract_path: Path = CONTRACT_PATH,
         *,
-        reference_projections: Mapping[str, tuple[str, str, str]] | None = None,
+        reference_projections: Mapping[str, tuple[str, str | None, str | None]] | None = None,
     ) -> None:
         self.contract = json.loads(contract_path.read_text(encoding="utf-8"))
         if self.contract.get("authority") != "M10.1":
@@ -228,13 +245,21 @@ class LanguageSurfaceBridge:
         headers = self._headers(node, kind, schema, diagnostics)
         body = self._body(node, kind, schema, diagnostics)
         annotations = tuple(self._annotations(node, kind, diagnostics))
-        result_type = self.type_ref(str(node.attrs["returns"]), diagnostics) if schema.get("result_type") and node.attrs.get("returns") else None
+        result_type = (
+            self.type_ref(str(node.attrs["returns"]), diagnostics)
+            if schema.get("result_type") and node.attrs.get("returns")
+            else None
+        )
         facts: dict[str, Any] = {}
         if kind == "alias":
             facts["opacity"] = node.kind == "opaque"
             if node.attrs.get("type"):
                 facts["aliased_type"] = self.type_ref(str(node.attrs["type"]), diagnostics)
-        if node.attrs.get("parameters"):
+        if node.attrs.get("parameters") and not any(
+            item.name == "parameters" and item.value_mode == "parameter_list" for item in headers
+        ):
+            # Kept only as fail-closed evidence when the contract cannot normalize
+            # the legacy signature losslessly.
             facts["legacy_parameters"] = _surface(str(node.attrs["parameters"]))
 
         declaration = Declaration(
@@ -267,6 +292,8 @@ class LanguageSurfaceBridge:
             source = {"topic": node.attrs.get("on"), "messageType": node.attrs.get("from")}
         elif kind == "projection":
             source = {"sources": node.attrs.get("from"), "target": node.attrs.get("into")}
+        elif kind in {"query", "mutation"}:
+            source = {"parameters": node.attrs.get("parameters")}
 
         result: list[HeaderArg] = []
         for spec in schema.get("header_args", []):
@@ -276,9 +303,88 @@ class LanguageSurfaceBridge:
                     diagnostics.append(BridgeDiagnostic("AIDL-N004", f"{kind} misses header fact {spec['name']}"))
                 continue
             mode = spec["value_mode"]
+            if mode == "parameter_list":
+                value = self._operation_parameters(str(raw), kind, spec, diagnostics)
+                if value:
+                    result.append(HeaderArg(spec["name"], mode, value))
+                continue
             value = self.type_ref(str(raw), diagnostics) if mode == "type_ref" else _surface(str(raw))
             result.append(HeaderArg(spec["name"], mode, value))
         return result
+
+    def _operation_parameters(
+        self,
+        raw: str,
+        kind: str,
+        spec: Mapping[str, Any],
+        diagnostics: list[BridgeDiagnostic],
+    ) -> tuple[OperationParameter, ...]:
+        text = raw.strip()
+        if text.startswith("(") and text.endswith(")"):
+            text = text[1:-1].strip()
+        if not text:
+            return ()
+
+        parameter_spec = spec.get("parameter", {})
+        allowed_modifiers = tuple(str(item) for item in parameter_spec.get("modifiers", []))
+        parameters: list[OperationParameter] = []
+        seen: set[str] = set()
+        for raw_parameter in _split_commas(text):
+            part = raw_parameter.strip()
+            match = re.fullmatch(r"([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.+)", part, re.S)
+            if not match:
+                diagnostics.append(
+                    BridgeDiagnostic("AIDL-N015", f"{kind} parameter is not losslessly typed: {part}")
+                )
+                continue
+            name, tail = match.groups()
+            if name in seen:
+                diagnostics.append(BridgeDiagnostic("AIDL-N015", f"duplicate {kind} parameter: {name}"))
+            seen.add(name)
+
+            words = _words(tail)
+            modifier_index = next(
+                (index for index, word in enumerate(words) if word in self.modifiers),
+                len(words),
+            )
+            type_text = " ".join(words[:modifier_index]).strip()
+            if not type_text:
+                diagnostics.append(BridgeDiagnostic("AIDL-N015", f"{kind} parameter {name} has no type"))
+                continue
+
+            modifiers: list[ModifierCall] = []
+            index = modifier_index
+            while index < len(words):
+                modifier_name = words[index]
+                modifier_spec = self.modifiers.get(modifier_name)
+                if modifier_spec is None or modifier_name not in allowed_modifiers:
+                    diagnostics.append(
+                        BridgeDiagnostic(
+                            "AIDL-N015",
+                            f"{kind} parameter {name} uses unsupported modifier {modifier_name}",
+                        )
+                    )
+                    break
+                minimum = int(modifier_spec["arity"]["min"])
+                maximum = modifier_spec["arity"]["max"]
+                if modifier_spec.get("argument_mode") == "expression" and minimum == 1 and maximum == 1:
+                    argument_text = " ".join(words[index + 1:]).strip()
+                    args = (argument_text,) if argument_text else ()
+                    index = len(words)
+                else:
+                    take = minimum
+                    args = tuple(words[index + 1:index + 1 + take])
+                    index += 1 + take
+                modifiers.append(self._modifier(modifier_name, f"{kind}.parameter", args, diagnostics))
+
+            parameters.append(
+                OperationParameter(
+                    name=name,
+                    type_ref=self.type_ref(type_text, diagnostics),
+                    modifiers=tuple(modifiers),
+                )
+            )
+        return tuple(parameters)
 
     def _body(
         self,
@@ -296,7 +402,14 @@ class LanguageSurfaceBridge:
                     diagnostics.append(BridgeDiagnostic("AIDL-N005", f"malformed enum case: {item.get('raw', '')}"))
                     continue
                 wire = item.get("assignedValue")
-                result.append(BodySlot("case", item.get("name"), "enum_case", {"wire_literal": _literal(wire) if wire is not None else None}))
+                result.append(
+                    BodySlot(
+                        "case",
+                        item.get("name"),
+                        "enum_case",
+                        {"wire_literal": _literal(wire) if wire is not None else None},
+                    )
+                )
             return result
 
         for child in node.children:
@@ -311,7 +424,14 @@ class LanguageSurfaceBridge:
             if kind == "app" and "profile" in specs and text.startswith("profile "):
                 match = re.fullmatch(r"profile\s+([A-Za-z_]\w*)\s+version\s+(-?\d+)", text)
                 if match:
-                    result.append(BodySlot("profile", match.group(1), "block", {"slots": [{"slot": "version", "value_mode": "literal", "value": int(match.group(2))}]}))
+                    result.append(
+                        BodySlot(
+                            "profile",
+                            match.group(1),
+                            "block",
+                            {"slots": [{"slot": "version", "value_mode": "literal", "value": int(match.group(2))}]},
+                        )
+                    )
                 else:
                     diagnostics.append(BridgeDiagnostic("AIDL-N011", f"unsupported profile shape: {text}"))
                 continue
@@ -340,9 +460,13 @@ class LanguageSurfaceBridge:
                 index += 1
                 continue
             required = int(spec["arity"]["min"])
-            args = tuple(modifier_words[index + 1:index + 1 + required])
+            if spec.get("argument_mode") == "expression" and required == 1:
+                args = (" ".join(modifier_words[index + 1:]),) if index + 1 < len(modifier_words) else ()
+                index = len(modifier_words)
+            else:
+                args = tuple(modifier_words[index + 1:index + 1 + required])
+                index += 1 + required
             modifiers.append(self._modifier(modifier_name, "entity.field", args, diagnostics))
-            index += 1 + required
         return BodySlot("field", name, "type_ref", self.type_ref(type_text, diagnostics), tuple(modifiers))
 
     def _annotations(self, node: Node, target: str, diagnostics: list[BridgeDiagnostic]) -> list[ModifierCall]:
@@ -442,17 +566,17 @@ class LanguageSurfaceBridge:
                 version = slot.value["slots"][0]["value"]
                 lines.append(f"  profile {slot.name} version {version}")
             return "\n".join(lines + ["}"]) + "\n"
-        if declaration.kind == "query":
-            if declaration.facts.get("legacy_parameters") not in (None, "()"):
-                raise UnsupportedMigration("parameterized query formatting remains pending")
+        if declaration.kind in {"query", "mutation"}:
             result = f" -> {_format_type(declaration.result_type)}" if declaration.result_type else ""
-            lines = [f"{prefix}query {declaration.name}(){result} {{"]
-            lines += [f"  read: {slot.value}" for slot in declaration.body_slots if slot.slot_id == "read"]
+            parameters = _format_parameter_list(headers.get("parameters", ()))
+            lines = [f"{prefix}{declaration.kind} {declaration.name}({parameters}){result} {{"]
+            if declaration.kind == "query":
+                lines += [f"  read: {slot.value}" for slot in declaration.body_slots if slot.slot_id == "read"]
             return "\n".join(lines + ["}"]) + "\n"
         raise UnsupportedMigration(f"same-version formatter does not support {declaration.kind}")
 
     def migrate_to_canonical_preview(self, declaration: Declaration) -> str:
-        """Explicit target-version preview.  Never used by ``format_legacy``."""
+        """Explicit target-version preview. Never used by ``format_legacy``."""
         prefix = _annotation_prefix(declaration.modifiers) + ("export " if declaration.exported else "")
         if declaration.kind in {"migration", "client", "consumer", "projection"}:
             args = ", ".join(f"{item.name}: {_format_header(item)}" for item in declaration.header_args)
@@ -477,12 +601,14 @@ class LanguageSurfaceBridge:
                 version = slot.value["slots"][0]["value"]
                 lines += [f"  profile {slot.name} {{", f"    version: {version}", "  }"]
             return "\n".join(lines + ["}"]) + "\n"
-        if declaration.kind == "query":
-            if declaration.facts.get("legacy_parameters") not in (None, "()"):
-                raise UnsupportedMigration("operation parameters are not modeled by language-surface-v1 yet")
+        if declaration.kind in {"query", "mutation"}:
+            parameters = next((item.value for item in declaration.header_args if item.name == "parameters"), ())
+            if parameters:
+                raise UnsupportedMigration("operation parameter target syntax is not yet a production parser surface")
             result = f" -> {_format_type(declaration.result_type)}" if declaration.result_type else ""
-            lines = [f"{prefix}query {declaration.name}{result} {{"]
-            lines += [f"  read: {slot.value}" for slot in declaration.body_slots if slot.slot_id == "read"]
+            lines = [f"{prefix}{declaration.kind} {declaration.name}{result} {{"]
+            if declaration.kind == "query":
+                lines += [f"  read: {slot.value}" for slot in declaration.body_slots if slot.slot_id == "read"]
             return "\n".join(lines + ["}"]) + "\n"
         if declaration.kind == "alias" and declaration.facts.get("opacity"):
             raise UnsupportedMigration("opaque alias semantics normalize, but the frozen contract has no canonical opacity slot")
@@ -491,6 +617,10 @@ class LanguageSurfaceBridge:
 
 def _jsonable(value: Any) -> Any:
     if isinstance(value, TypeRef):
+        return value.semantic()
+    if isinstance(value, OperationParameter):
+        return value.semantic()
+    if isinstance(value, ModifierCall):
         return value.semantic()
     if isinstance(value, Mapping):
         return {str(key): _jsonable(item) for key, item in value.items()}
@@ -540,25 +670,34 @@ def _args(raw: Any) -> tuple[Any, ...]:
 
 
 def _split_commas(text: str) -> list[str]:
-    result, current, depth, quote, escaped = [], [], 0, False, False
+    result: list[str] = []
+    current: list[str] = []
+    depth = 0
+    quote: str | None = None
+    escaped = False
+    close = {")": "(", "]": "[", "}": "{", ">": "<"}
+    stack: list[str] = []
     for char in text:
-        if quote:
+        if quote is not None:
             current.append(char)
             if escaped:
                 escaped = False
             elif char == "\\":
                 escaped = True
-            elif char == '"':
-                quote = False
+            elif char == quote:
+                quote = None
             continue
-        if char == '"':
-            quote = True
+        if char in {'"', "'"}:
+            quote = char
             current.append(char)
         elif char in "([{<":
+            stack.append(char)
             depth += 1
             current.append(char)
-        elif char in ")]}>" :
-            depth = max(0, depth - 1)
+        elif char in ")]}>":
+            if stack and stack[-1] == close[char]:
+                stack.pop()
+                depth = max(0, depth - 1)
             current.append(char)
         elif char == "," and depth == 0:
             result.append("".join(current))
@@ -570,8 +709,25 @@ def _split_commas(text: str) -> list[str]:
 
 
 def _words(text: str) -> list[str]:
-    result, current, depth = [], [], 0
+    result: list[str] = []
+    current: list[str] = []
+    depth = 0
+    quote: str | None = None
+    escaped = False
     for char in text:
+        if quote is not None:
+            current.append(char)
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == quote:
+                quote = None
+            continue
+        if char in {'"', "'"}:
+            quote = char
+            current.append(char)
+            continue
         if char in "([{<":
             depth += 1
         elif char in ")]}>" :
@@ -616,6 +772,19 @@ def _format_modifier(value: ModifierCall) -> str:
     if not value.args:
         return value.name
     return value.name + " " + " ".join(str(item) for item in value.args)
+
+
+def _format_parameter_list(value: Any) -> str:
+    if not isinstance(value, (list, tuple)):
+        return ""
+    result = []
+    for item in value:
+        if not isinstance(item, OperationParameter):
+            continue
+        modifiers = " ".join(_format_modifier(modifier) for modifier in item.modifiers)
+        text = f"{item.name}: {_format_type(item.type_ref)}"
+        result.append(text + (f" {modifiers}" if modifiers else ""))
+    return ", ".join(result)
 
 
 def _format_header(value: HeaderArg) -> str:
