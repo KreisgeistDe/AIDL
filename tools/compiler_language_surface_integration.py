@@ -1,7 +1,7 @@
 """Production integration for the frozen M10.1 language-surface model.
 
 This module deliberately sits *after* the existing parser/typed compiler project
-boundary.  It reuses the compiler's project/typechecker evidence and the merged
+boundary. It reuses the compiler's project/typechecker evidence and the merged
 ``LanguageSurfaceBridge`` instead of defining another grammar, declaration
 inventory, modifier table, or type system.
 """
@@ -22,12 +22,13 @@ try:
         Document,
         LanguageSurfaceBridge,
         TypeRef as SurfaceTypeRef,
+        _format_type as format_surface_type,
     )
     from .compiler_project import CompilerDeclarationName, CompilerProject
     from .compiler_typecheck import (
         TypeRef as CheckedTypeRef,
         TypeSyntaxError,
-        _field as compiler_field,
+        _check_type as compiler_check_type,
         _resolve as compiler_resolve,
         collect_type_issues,
         parse_type,
@@ -40,12 +41,13 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
         Document,
         LanguageSurfaceBridge,
         TypeRef as SurfaceTypeRef,
+        _format_type as format_surface_type,
     )
     from compiler_project import CompilerDeclarationName, CompilerProject
     from compiler_typecheck import (
         TypeRef as CheckedTypeRef,
         TypeSyntaxError,
-        _field as compiler_field,
+        _check_type as compiler_check_type,
         _resolve as compiler_resolve,
         collect_type_issues,
         parse_type,
@@ -53,8 +55,6 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
 
 
 PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v1"
-# This first production slice is intentionally limited to frozen surfaces that
-# are already losslessly represented by both the existing parser and bridge.
 INTEGRATED_DECLARATION_KINDS = frozenset(
     {"alias", "opaque", "entity", "enum", "migration", "client", "consumer", "projection"}
 )
@@ -70,7 +70,11 @@ class ProductionLanguageSurface:
 
     @property
     def declarations(self) -> tuple[Declaration, ...]:
-        return tuple(declaration for document in self.documents for declaration in document.declarations)
+        return tuple(
+            declaration
+            for document in self.documents
+            for declaration in document.declarations
+        )
 
     @property
     def ok(self) -> bool:
@@ -90,21 +94,42 @@ class ProductionLanguageSurface:
         )
 
     def semantic_hash(self) -> str:
-        return "sha256:" + hashlib.sha256(self.semantic_json().encode("utf-8")).hexdigest()
+        return "sha256:" + hashlib.sha256(
+            self.semantic_json().encode("utf-8")
+        ).hexdigest()
 
 
-def _normalize_type_text(raw: str) -> str:
-    return " ".join(raw.split()).replace(" . ", ".").replace(". ", ".").replace(" .", ".")
+def _initial_surface_declaration(source: CompilerDeclarationName) -> Declaration:
+    declaration, _ = LanguageSurfaceBridge().normalize_declaration(source.declaration.node)
+    return declaration
+
+
+def _surface_types(source: CompilerDeclarationName) -> tuple[SurfaceTypeRef, ...]:
+    """Return contract-normalized types without requiring resolver evidence yet."""
+
+    declaration = _initial_surface_declaration(source)
+    values: list[SurfaceTypeRef] = []
+    aliased = declaration.facts.get("aliased_type")
+    if isinstance(aliased, SurfaceTypeRef):
+        values.append(aliased)
+    for slot in declaration.body_slots:
+        if isinstance(slot.value, SurfaceTypeRef):
+            values.append(slot.value)
+    if declaration.result_type is not None:
+        values.append(declaration.result_type)
+    return tuple(values)
 
 
 def _field_type(target: CompilerDeclarationName, projection: str) -> str | None:
-    """Return a typechecker-parsable entity field type for one projection."""
+    """Return a typechecker-parsable field type from canonical body-slot facts."""
 
-    for child in target.declaration.node.children:
-        field = compiler_field(child)
-        if field is None or field[0] != projection:
+    declaration = _initial_surface_declaration(target)
+    for slot in declaration.body_slots:
+        if slot.slot_id != "field" or slot.name != projection:
             continue
-        raw = _normalize_type_text(field[1])
+        if not isinstance(slot.value, SurfaceTypeRef):
+            return None
+        raw = format_surface_type(slot.value)
         try:
             parse_type(raw)
         except TypeSyntaxError:
@@ -169,9 +194,8 @@ def _projection_for_checked_type(
         return evidence, diagnostics
 
     if checked.kind == "ref" and checked.name and "." in checked.name:
-        # A dotted legacy ref may be a fully qualified entity. Prefer that exact
-        # compiler resolution before interpreting the final segment as a field
-        # projection; this avoids inventing a new dotted-name ambiguity rule.
+        # Prefer an exact qualified entity before interpreting the final segment
+        # as a field projection. This preserves existing qualified-name meaning.
         if len(_entity_matches(project, source, checked.name)) == 1:
             return evidence, diagnostics
         target_reference, projection = checked.name.rsplit(".", 1)
@@ -201,47 +225,56 @@ def _projection_for_checked_type(
 def _projection_evidence(
     project: CompilerProject,
     source: CompilerDeclarationName,
-) -> tuple[dict[str, tuple[str, str, str]], list[BridgeDiagnostic]]:
+) -> tuple[
+    dict[str, tuple[str, str, str]],
+    list[BridgeDiagnostic],
+    list[Any],
+]:
+    """Use canonical token normalization, then existing Core typechecker logic."""
+
     evidence: dict[str, tuple[str, str, str]] = {}
     diagnostics: list[BridgeDiagnostic] = []
-    node = source.declaration.node
-
-    raw_types: list[str] = []
-    if source.declaration.kind in {"alias", "opaque"}:
-        raw = node.attrs.get("type")
-        if isinstance(raw, str) and raw.strip():
-            raw_types.append(raw.strip())
-    if source.declaration.kind == "entity":
-        for child in node.children:
-            field = compiler_field(child)
-            if field is not None:
-                raw_types.append(field[1])
-
-    for raw in raw_types:
+    type_issues: list[Any] = []
+    for surface_type in _surface_types(source):
+        raw = format_surface_type(surface_type)
         try:
             checked = parse_type(raw)
         except TypeSyntaxError:
-            # The existing typechecker owns the stable AIDL-T001 diagnostic.
             continue
+        # This deliberately reuses the existing typechecker's validation over
+        # the normalized type spelling. It catches parser-token spacing losses
+        # (notably legacy ``ref Pet.id``) without weakening current diagnostics.
+        type_issues.extend(compiler_check_type(project, source, raw))
         item_evidence, item_diagnostics = _projection_for_checked_type(
             project, source, checked
         )
         evidence.update(item_evidence)
         diagnostics.extend(item_diagnostics)
-    return evidence, diagnostics
+    return evidence, diagnostics, type_issues
 
 
 def _type_issue_key(issue: Any) -> tuple[Path, str, str]:
     return (issue.source_path, issue.subject_kind, issue.subject_name)
 
 
+def _type_issue_identity(issue: Any) -> tuple[Any, ...]:
+    return (
+        issue.code,
+        issue.source_path,
+        getattr(issue.location, "offset", -1),
+        issue.subject_kind,
+        issue.subject_name,
+        issue.message,
+    )
+
+
 def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguageSurface:
     """Normalize the supported production slice from an existing compiler analysis.
 
     Parser nodes and project resolution stay authoritative for the current source
-    version.  Type syntax and reference candidates are taken from the existing
-    Core typechecker helpers; the frozen language-surface contract remains the
-    only declaration/body/modifier schema through ``LanguageSurfaceBridge``.
+    version. Type parsing/checking and reference candidates are supplied by the
+    existing Core compiler helpers; ``LanguageSurfaceBridge`` remains the only
+    declaration/body/modifier contract projection.
     """
 
     project = analysis.project
@@ -251,14 +284,18 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
         if item.declaration.kind in INTEGRATED_DECLARATION_KINDS
     }
     integrated_keys = {
-        (item.document.source_path, item.declaration.kind, item.declaration.name or "<unnamed>")
+        (
+            item.document.source_path,
+            item.declaration.kind,
+            item.declaration.name or "<unnamed>",
+        )
         for item in item_by_node.values()
     }
-    type_issues = tuple(
+    type_issues: list[Any] = [
         issue
         for issue in collect_type_issues(project)
         if _type_issue_key(issue) in integrated_keys
-    )
+    ]
 
     documents: list[Document] = []
     diagnostics: list[BridgeDiagnostic] = []
@@ -268,9 +305,11 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
             source = item_by_node.get(id(compiler_declaration.node))
             if source is None:
                 continue
-            projection_evidence, projection_diagnostics = _projection_evidence(
-                project, source
-            )
+            (
+                projection_evidence,
+                projection_diagnostics,
+                normalized_type_issues,
+            ) = _projection_evidence(project, source)
             bridge = LanguageSurfaceBridge(reference_projections=projection_evidence)
             declaration, declaration_diagnostics = bridge.normalize_declaration(
                 compiler_declaration.node
@@ -278,6 +317,7 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
             declarations.append(declaration)
             diagnostics.extend(projection_diagnostics)
             diagnostics.extend(declaration_diagnostics)
+            type_issues.extend(normalized_type_issues)
         if declarations:
             module = (
                 compiler_document.module.name
@@ -296,8 +336,17 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
                 )
             )
 
+    unique_type_issues: list[Any] = []
+    seen_type_issues: set[tuple[Any, ...]] = set()
+    for issue in type_issues:
+        identity = _type_issue_identity(issue)
+        if identity in seen_type_issues:
+            continue
+        seen_type_issues.add(identity)
+        unique_type_issues.append(issue)
+
     return ProductionLanguageSurface(
         documents=tuple(documents),
         diagnostics=tuple(diagnostics),
-        type_issues=type_issues,
+        type_issues=tuple(unique_type_issues),
     )
