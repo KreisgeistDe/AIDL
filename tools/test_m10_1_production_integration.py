@@ -166,7 +166,7 @@ entity Pet { id: uuid required }
 query getPet(id: uuid, petId: ref Pet.id?, limit: int? default 10) -> Pet {
   read: petById
 }
-mutation updatePet(id: uuid, note: string? default null) -> Pet {}
+mutation updatePet(id: uuid, note: string default \"memo\") -> Pet {}
 """
         analysis = self._analysis(source)
         surface = normalize_compiler_analysis(analysis)
@@ -188,7 +188,7 @@ mutation updatePet(id: uuid, note: string? default null) -> Pet {}
         self.assertEqual("expression", query_parameters[2].modifiers[0].argument_mode)
         self.assertEqual(("10",), query_parameters[2].modifiers[0].args)
         self.assertEqual("mutation.parameter", mutation_parameters[1].modifiers[0].target)
-        self.assertEqual(("null",), mutation_parameters[1].modifiers[0].args)
+        self.assertEqual(('"memo"',), mutation_parameters[1].modifiers[0].args)
         self.assertNotIn("legacy_parameters", query.facts)
         self.assertNotIn("legacy_parameters", mutation.facts)
 
