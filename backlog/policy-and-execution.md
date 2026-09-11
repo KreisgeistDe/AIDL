@@ -2,13 +2,22 @@
 
 ## Implementation policy
 
-`TODO.md` is the sole handwritten authority for roadmap order, milestone identity, and completion state. Operational execution state remains on `agents/channel`; committed legacy project `.ai/**` current-state files are not a second roadmap authority.
+`roadmap/v1/` is the sole machine-readable roadmap authority for explicitly migrated milestones. It owns their stable IDs, order, priority, persisted status, stable-ID dependencies and terminal disposition. `TODO.md` and the applicable `backlog/` files remain human-readable narrative/status projections and are deterministically drift-checked against that JSON. Milestones listed under `pending_migration` in `roadmap/v1/index.json` remain under their existing Markdown authority until explicitly migrated; a milestone is never simultaneously governed by two independent completion authorities. Operational execution state remains on `agents/channel`; committed legacy project `.ai/**` current-state files are not a second roadmap authority.
 
 The project tree is intentionally `.ai/**`-free. Every project PR targeting `main` must reject any `.ai/**` endpoint, including additions, modifications, deletions, copies, and renames; the former one-time legacy deletion exceptions are obsolete because those files no longer exist in the project repository. Operational state and any maintenance of the transport workflow belong only in `KreisgeistDe/AIDL_channel@agents/channel`, never in a project PR.
 
 `spec/conformance-manifest.json` is the separate authoritative versioned implementation/support source. New or changed support claims must update a stable manifest surface ID, use only the schema-defined status vocabulary, and carry repository-relative evidence that passes `python3 -m tools.conformance_manifest validate`. Roadmap completion alone never promotes a support claim.
 
-The offline repository-state check `python3 -m tools.validate_repository_state` enforces the `.ai/**`-free project invariant and the roadmap, channel, and conformance authority markers. It requires no network access and runs in standard validation CI.
+The offline repository-state check `python3 -m tools.validate_repository_state` enforces the `.ai/**`-free project invariant plus roadmap schema, graph, migration-scope and Markdown/JSON drift validation. It requires no network access and runs in standard validation CI. The same roadmap API is available directly for agents and local use:
+
+```bash
+python3 -m tools.roadmap validate --format json
+python3 -m tools.roadmap summary --format json
+python3 -m tools.roadmap next --milestone M10.1 --format json
+python3 -m tools.roadmap blockers M10.1-10 --transitive --format json
+```
+
+`blocked` is derived, never hand-maintained: a nonterminal package is blocked when at least one dependency is not in a terminal satisfied state (`complete`, `not_applicable`, or `excluded`). Reverse `blocks` relationships are likewise derived. `not_applicable` and `excluded` require an explicit disposition reason. Every roadmap command is offline and emits stable ordering suitable for agent consumption.
 
 M10-01 records repository-level support surfaces only. M10-02 provides the exhaustive Parse/Resolve/Validate/IR/Generate/IDE matrix for every Core declaration and semantic rule; incomplete rows or evidence remain explicit in that matrix and must not be interpreted as full layer completeness. Public wording in `SUPPORT.md` is drift-checked against each manifest `supportStatement`.
 

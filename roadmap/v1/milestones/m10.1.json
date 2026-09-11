@@ -1,0 +1,125 @@
+{
+  "schema_version": "aidl.roadmap/v1",
+  "document_type": "milestone",
+  "id": "M10.1",
+  "title": "Normative Language Surface Freeze Gate",
+  "order": 11,
+  "priority": "P1",
+  "packages": [
+    {
+      "id": "M10.1-01",
+      "title": "Freeze the canonical language-surface contract.",
+      "order": 1,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": [],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [
+        {"kind": "path", "ref": "backlog/m10-1-language-freeze.md"},
+        {"kind": "pr", "ref": "#59"},
+        {"kind": "path", "ref": "docs/m10-1-language-surface-freeze.md"},
+        {"kind": "path", "ref": "spec/language-surface-v1.json"}
+      ],
+      "references": []
+    },
+    {
+      "id": "M10.1-02",
+      "title": "Establish the executable legacy-to-canonical compatibility bridge.",
+      "order": 2,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10.1-01"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#60"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-03",
+      "title": "Integrate canonical normalization into the production compiler path.",
+      "order": 3,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10.1-02"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#61"}, {"kind": "pr", "ref": "#62"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-04",
+      "title": "Close operation signatures and baseline body parity.",
+      "order": 4,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10.1-03"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#63"}, {"kind": "pr", "ref": "#64"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-05",
+      "title": "Close structured operation error parity.",
+      "order": 5,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10.1-04"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#65"}, {"kind": "pr", "ref": "#66"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-06",
+      "title": "Close structured operation policy semantics.",
+      "order": 6,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-05"],
+      "acceptance_criteria": ["Complete auth, authorize, cache, and consistency Production-Parity where required; PR #67 and PR #68 remain prerequisite evidence only and do not close this package."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#67"}, {"kind": "pr", "ref": "#68"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-07",
+      "title": "Close operation execution semantics.",
+      "order": 7,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-06"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-08",
+      "title": "Close declaration-family production parity.",
+      "order": 8,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-07"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-09",
+      "title": "Add complete language-surface coverage and differential conformance.",
+      "order": 9,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-08"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
+      "references": []
+    },
+    {
+      "id": "M10.1-10",
+      "title": "Certify M10.1 closure and unblock M10.5-03.",
+      "order": 10,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-09"],
+      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
+      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
+      "references": []
+    }
+  ]
+}

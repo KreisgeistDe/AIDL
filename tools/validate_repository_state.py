@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from typing import Iterable
 
+from tools.roadmap import validate_repository as validate_roadmap
+
 
 ROOT = Path(__file__).resolve().parents[1]
 TODO = ROOT / "TODO.md"
@@ -12,13 +14,11 @@ POLICY = ROOT / "backlog" / "policy-and-execution.md"
 M9_M10 = ROOT / "backlog" / "m9-m10-release-conformance.md"
 
 TODO_AUTHORITY = (
-    "`TODO.md` remains the roadmap authority and stable entry point. "
-    "The linked files under `backlog/` are constituent sections of this roadmap, "
-    "not independent roadmap authorities"
+    "`roadmap/v1/` is the sole machine-readable authority for migrated milestone IDs, "
+    "order, priority, status, dependencies, and terminal disposition."
 )
 POLICY_AUTHORITY = (
-    "`TODO.md` is the sole handwritten authority for roadmap order, milestone identity, "
-    "and completion state."
+    "`roadmap/v1/` is the sole machine-readable roadmap authority for explicitly migrated milestones."
 )
 CONFORMANCE_AUTHORITY = (
     "`spec/conformance-manifest.json` is the separate authoritative versioned "
@@ -78,6 +78,9 @@ def violations(
 
     if "- [x] **P1** **M9-08** Publish the first explicitly scoped toolchain pre-release" in m9_m10:
         errors.append("M9-08 must not be marked complete before public publication exists")
+
+    for error in validate_roadmap(root):
+        errors.append(f"{error['code']} {error['subject']}: {error['message']}")
 
     return tuple(errors)
 

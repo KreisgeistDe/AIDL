@@ -4,7 +4,7 @@ This document tracks the next implementation steps required to turn AIDL from a 
 
 The guiding principle is to finish one deterministic vertical slice before expanding the language surface further.
 
-`TODO.md` remains the roadmap authority and stable entry point. The linked files under `backlog/` are constituent sections of this roadmap, not independent roadmap authorities; they preserve milestone identity, order, checkbox/completion state, acceptance criteria, policy, Definition of Done, and execution order. The relative links below intentionally remain valid if this index is later renamed to `BACKLOG.md`.
+`roadmap/v1/` is the sole machine-readable authority for migrated milestone IDs, order, priority, status, dependencies, and terminal disposition. `TODO.md` remains the stable human entry point; for migrated milestones its status projection is deterministically checked against JSON, while linked `backlog/` files retain narrative, acceptance rationale, and milestone-specific design context. Milestones listed as `pending_migration` in `roadmap/v1/index.json` remain under their existing Markdown authority until explicitly migrated, so no milestone has overlapping independent completion authorities.
 
 ## M10.1 blocking language-freeze gate
 

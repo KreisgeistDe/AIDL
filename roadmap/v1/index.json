@@ -1,0 +1,78 @@
+{
+  "schema_version": "aidl.roadmap/v1",
+  "document_type": "index",
+  "milestone_order": [
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9",
+    "M10",
+    "M10.1",
+    "M10.5",
+    "M11",
+    "M12",
+    "M13",
+    "M14",
+    "M15",
+    "M16",
+    "M16.5",
+    "M17",
+    "M18",
+    "M19",
+    "M20",
+    "M21"
+  ],
+  "milestones": [
+    {
+      "id": "M10",
+      "title": "Core Conformance Closure",
+      "path": "roadmap/v1/milestones/m10.json",
+      "order": 10,
+      "priority": "P1",
+      "authority": "authoritative"
+    },
+    {
+      "id": "M10.1",
+      "title": "Normative Language Surface Freeze Gate",
+      "path": "roadmap/v1/milestones/m10.1.json",
+      "order": 11,
+      "priority": "P1",
+      "authority": "authoritative"
+    }
+  ],
+  "migration": {
+    "authoritative_milestones": [
+      "M10",
+      "M10.1"
+    ],
+    "pending_milestones": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6",
+      "M7",
+      "M8",
+      "M9",
+      "M10.5",
+      "M11",
+      "M12",
+      "M13",
+      "M14",
+      "M15",
+      "M16",
+      "M16.5",
+      "M17",
+      "M18",
+      "M19",
+      "M20",
+      "M21"
+    ]
+  }
+}
