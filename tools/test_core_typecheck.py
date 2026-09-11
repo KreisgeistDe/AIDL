@@ -6,7 +6,7 @@ from pathlib import Path
 
 from tools.compiler_diagnostics import load_compiler_analysis
 from tools.compiler_ir import IrBuildError, build_canonical_ir
-from tools.compiler_typecheck import TypeSyntaxError, parse_type
+from tools.compiler_typecheck import TypeSyntaxError, operation_errors_evidence, parse_type
 
 ROOT = Path(__file__).resolve().parents[1]
 TYPE_CODES = {"AIDL-T001", "AIDL-T002", "AIDL-T003", "AIDL-T004", "AIDL-T005"}
@@ -23,6 +23,24 @@ class CoreTypeCheckingTests(unittest.TestCase):
                 for diagnostic in analysis.diagnostics
                 if diagnostic.code.value in TYPE_CODES
             )
+
+    def _errors_evidence(self, source: str):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "app.aidl"
+            path.write_text(source, encoding="utf-8")
+            analysis = load_compiler_analysis([path])
+            operation = next(
+                item
+                for item in analysis.project.declaration_names
+                if item.declaration.kind in {"query", "mutation"}
+            )
+            evidence = operation_errors_evidence(analysis.project, operation)
+            diagnostics = tuple(
+                diagnostic
+                for diagnostic in analysis.diagnostics
+                if diagnostic.code.value in TYPE_CODES
+            )
+            return evidence, diagnostics
 
     def test_core_type_constructors_and_int_to_decimal_default(self) -> None:
         with self.assertRaises(TypeSyntaxError):
@@ -92,8 +110,8 @@ export query read() -> string {
         self.assertTrue(any("NotAnError" in diagnostic.message for diagnostic in diagnostics))
         self.assertTrue(any("duplicate declared error" in diagnostic.message for diagnostic in diagnostics))
 
-    def test_typed_body_clause_nominals_resolve_or_report(self) -> None:
-        resolved = self._analysis(
+    def test_typed_body_clause_evidence_is_stricter_than_global_diagnostics(self) -> None:
+        evidence, diagnostics = self._errors_evidence(
             """module test.errors
 export error KnownError {
   code "KNOWN"
@@ -101,29 +119,92 @@ export error KnownError {
   retry never
   safeMessage "Known error"
 }
+export value NotAnError {
+  value: string
+}
 export query read() -> string {
-  errors: [KnownError]
+  errors: [InternalFailure, KnownError, MissingError, NotAnError]
 }
 """
         )
-        self.assertFalse(
-            [diagnostic for diagnostic in resolved if diagnostic.code.value == "AIDL-T001"]
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(
+            [member.source for member in evidence[0].members],
+            ["InternalFailure", "KnownError", "MissingError", "NotAnError"],
         )
+        self.assertEqual(
+            [member.status for member in evidence[0].members],
+            ["standard", "resolved", "unresolved", "wrong_kind"],
+        )
+        self.assertFalse(evidence[0].complete)
+        self.assertFalse([d for d in diagnostics if d.code.value == "AIDL-T001"])
+        self.assertTrue(any(d.code.value == "AIDL-T003" and "NotAnError" in d.message for d in diagnostics))
 
-        unresolved = self._analysis(
+    def test_typed_body_clause_evidence_preserves_order_whitespace_and_qualified_resolution(self) -> None:
+        evidence, _ = self._errors_evidence(
+            """module test.errors
+export error FirstError {
+  code "FIRST"
+  httpStatus 400
+  retry never
+  safeMessage "First"
+}
+export error SecondError {
+  code "SECOND"
+  httpStatus 400
+  retry never
+  safeMessage "Second"
+}
+export mutation write() -> string {
+  errors: [ test.errors.FirstError ,   SecondError , InternalFailure ]
+}
+"""
+        )
+        self.assertEqual(len(evidence), 1)
+        self.assertTrue(evidence[0].complete)
+        self.assertEqual(
+            [member.source for member in evidence[0].members],
+            ["test.errors.FirstError", "SecondError", "InternalFailure"],
+        )
+        self.assertEqual(
+            [member.status for member in evidence[0].members],
+            ["resolved", "resolved", "standard"],
+        )
+        self.assertEqual(evidence[0].members[0].target, "test.errors.FirstError")
+
+    def test_typed_body_clause_evidence_marks_ambiguous_and_malformed_incomplete(self) -> None:
+        ambiguous, _ = self._errors_evidence(
+            """module test.errors
+export error Clash {
+  code "CLASH_A"
+  httpStatus 400
+  retry never
+  safeMessage "A"
+}
+export error Clash {
+  code "CLASH_B"
+  httpStatus 401
+  retry never
+  safeMessage "B"
+}
+export query read() -> string {
+  errors: [Clash]
+}
+"""
+        )
+        self.assertEqual([member.status for member in ambiguous[0].members], ["ambiguous"])
+        self.assertFalse(ambiguous[0].complete)
+
+        malformed, diagnostics = self._errors_evidence(
             """module test.errors
 export query read() -> string {
-  errors: [MissingError]
+  errors: [InternalFailure,,RateLimited]
 }
 """
         )
-        unknown = [
-            diagnostic for diagnostic in unresolved if diagnostic.code.value == "AIDL-T001"
-        ]
-        self.assertEqual(len(unknown), 1)
-        self.assertIn("MissingError", unknown[0].message)
-        self.assertEqual(unknown[0].phase, "type")
-        self.assertEqual(unknown[0].docs, "aidl://diagnostics/AIDL-T001")
+        self.assertTrue(malformed[0].malformed)
+        self.assertFalse(malformed[0].complete)
+        self.assertTrue(any(d.code.value == "AIDL-T003" for d in diagnostics))
 
     def test_public_api_rejects_owner_local_refs_and_sensitive_values(self) -> None:
         diagnostics = self._analysis(
