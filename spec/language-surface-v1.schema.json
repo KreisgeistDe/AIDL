@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.dev/spec/language-surface-v1.schema.json",
+  "title": "AIDL Language Surface v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "authority", "status", "canonical_form", "declaration_kinds", "modifiers", "examples"],
+  "properties": {
+    "schema_version": {"const": "aidl.language-surface/v1"},
+    "authority": {"const": "M11-1"},
+    "status": {"const": "frozen"},
+    "canonical_form": {"const": "[export] <kind> <name?> [(named-args)] [-> type] { slots }"},
+    "declaration_kinds": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/declarationKind"}
+    },
+    "modifiers": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/modifierCall"}
+    },
+    "examples": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/example"}
+    }
+  },
+  "$defs": {
+    "occurrence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max"],
+      "properties": {
+        "min": {"type": "integer", "minimum": 0},
+        "max": {"type": ["integer", "null"], "minimum": 0}
+      }
+    },
+    "typeRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "optional"],
+      "properties": {
+        "kind": {"enum": ["scalar", "named", "list", "record", "reference"]},
+        "optional": {"type": "boolean"},
+        "name": {"type": "string"},
+        "element": {"$ref": "#/$defs/typeRef"},
+        "target": {"type": "string"},
+        "projection": {"type": ["string", "null"]},
+        "resolved_type": {"type": ["string", "null"]},
+        "range": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {"min": {}, "max": {}}
+        }
+      },
+      "allOf": [
+        {"if": {"properties": {"kind": {"const": "reference"}}}, "then": {"required": ["target", "projection", "resolved_type"]}}
+      ]
+    },
+    "headerArg": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "occurrence", "value_mode"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "occurrence": {"$ref": "#/$defs/occurrence"},
+        "value_mode": {"enum": ["literal", "expression", "type_ref", "declaration_ref"]},
+        "type": {"$ref": "#/$defs/typeRef"},
+        "literal_kind": {"type": "string"},
+        "reference_kinds": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+      }
+    },
+    "bodySlot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "visible_keyword", "name_policy", "occurrence", "order", "unique", "value_mode"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "visible_keyword": {"type": ["string", "null"]},
+        "name_policy": {"enum": ["required", "optional", "none"]},
+        "occurrence": {"$ref": "#/$defs/occurrence"},
+        "order": {"enum": ["source", "canonical", "unordered"]},
+        "unique": {"type": "boolean"},
+        "value_mode": {"enum": ["literal", "expression", "type_ref", "declaration_ref", "block", "enum_case"]},
+        "type": {"$ref": "#/$defs/typeRef"},
+        "literal_kind": {"type": "string"},
+        "nested_slots": {"type": "array", "items": {"$ref": "#/$defs/bodySlot"}}
+      }
+    },
+    "declarationKind": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "disposition", "name_policy", "export_allowed", "header_args_occurrence", "header_args", "result_type", "body_slots", "legacy_forms"],
+      "properties": {
+        "kind": {"type": "string", "minLength": 1},
+        "disposition": {"const": "canonical"},
+        "name_policy": {"enum": ["required", "optional", "none"]},
+        "export_allowed": {"type": "boolean"},
+        "header_args_occurrence": {"$ref": "#/$defs/occurrence"},
+        "header_args": {"type": "array", "items": {"$ref": "#/$defs/headerArg"}},
+        "result_type": {"type": "boolean"},
+        "body_slots": {"type": "array", "items": {"$ref": "#/$defs/bodySlot"}},
+        "legacy_forms": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "modifierCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "targets", "arity", "argument_mode"],
+      "properties": {
+        "name": {"type": "string"},
+        "targets": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}},
+        "arity": {"$ref": "#/$defs/occurrence"},
+        "argument_mode": {"enum": ["none", "literal", "expression", "mixed"]}
+      }
+    },
+    "example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "classification", "facts"],
+      "properties": {
+        "id": {"type": "string"},
+        "classification": {"enum": ["golden", "negative"]},
+        "facts": {"type": "object"}
+      }
+    }
+  }
+}
