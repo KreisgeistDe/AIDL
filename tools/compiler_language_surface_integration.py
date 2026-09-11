@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,7 @@ _ALWAYS_INTEGRATED = frozenset(
 )
 _LOSSLESS_CANDIDATES = frozenset({"query", "mutation", "app"})
 INTEGRATED_DECLARATION_KINDS = _ALWAYS_INTEGRATED | _LOSSLESS_CANDIDATES
+ReferenceEvidence = tuple[str, str | None, str | None]
 
 
 @dataclass(frozen=True)
@@ -109,8 +111,6 @@ def _initial_surface_declaration(source: CompilerDeclarationName) -> Declaration
 
 
 def _surface_types(source: CompilerDeclarationName) -> tuple[SurfaceTypeRef, ...]:
-    """Return contract-normalized types without requiring resolver evidence yet."""
-
     declaration = _initial_surface_declaration(source)
     values: list[SurfaceTypeRef] = []
     aliased = declaration.facts.get("aliased_type")
@@ -125,8 +125,6 @@ def _surface_types(source: CompilerDeclarationName) -> tuple[SurfaceTypeRef, ...
 
 
 def _field_type(target: CompilerDeclarationName, projection: str) -> str | None:
-    """Return a typechecker-parsable field type from canonical body-slot facts."""
-
     declaration = _initial_surface_declaration(target)
     for slot in declaration.body_slots:
         if slot.slot_id != "field" or slot.name != projection:
@@ -158,8 +156,8 @@ def _entity_id_projection(
     project: CompilerProject,
     source: CompilerDeclarationName,
     target_reference: str,
-) -> tuple[dict[str, tuple[str, str, str]], list[BridgeDiagnostic]]:
-    evidence: dict[str, tuple[str, str, str]] = {}
+) -> tuple[dict[str, ReferenceEvidence], list[BridgeDiagnostic]]:
+    evidence: dict[str, ReferenceEvidence] = {}
     diagnostics: list[BridgeDiagnostic] = []
     projection = "id"
     surface_reference = f"{target_reference}.{projection}"
@@ -190,8 +188,8 @@ def _projection_for_checked_type(
     project: CompilerProject,
     source: CompilerDeclarationName,
     checked: CheckedTypeRef,
-) -> tuple[dict[str, tuple[str, str, str]], list[BridgeDiagnostic]]:
-    evidence: dict[str, tuple[str, str, str]] = {}
+) -> tuple[dict[str, ReferenceEvidence], list[BridgeDiagnostic]]:
+    evidence: dict[str, ReferenceEvidence] = {}
     diagnostics: list[BridgeDiagnostic] = []
 
     if checked.kind in {"nullable", "list", "set", "map", "named"}:
@@ -216,33 +214,32 @@ def _projection_for_checked_type(
                 )
             )
             return evidence, diagnostics
-        if resolution.kind == "projection":
-            target_reference, projection = checked.name.rsplit(".", 1)
-            target_matches = _entity_matches(project, source, target_reference)
-            target_name = (
-                target_matches[0].declaration.name
-                if len(target_matches) == 1 and target_matches[0].declaration.name
-                else target_reference
-            )
-            evidence[checked.name] = (
-                target_name,
-                projection,
-                resolution.projected_type or "",
-            )
+        if resolution.kind == "entity":
+            # The bridge otherwise interprets every dotted ref as a projection.
+            # Resolver evidence explicitly preserves a legitimate qualified
+            # nominal entity as target-only reference semantics.
+            evidence[checked.name] = (checked.name, None, None)
+            return evidence, diagnostics
+        target_reference, projection = checked.name.rsplit(".", 1)
+        target_matches = _entity_matches(project, source, target_reference)
+        target_name = (
+            target_matches[0].declaration.name
+            if len(target_matches) == 1 and target_matches[0].declaration.name
+            else target_reference
+        )
+        evidence[checked.name] = (
+            target_name,
+            projection,
+            resolution.projected_type,
+        )
     return evidence, diagnostics
 
 
 def _projection_evidence(
     project: CompilerProject,
     source: CompilerDeclarationName,
-) -> tuple[
-    dict[str, tuple[str, str, str]],
-    list[BridgeDiagnostic],
-    list[Any],
-]:
-    """Use canonical token normalization, then existing Core typechecker logic."""
-
-    evidence: dict[str, tuple[str, str, str]] = {}
+) -> tuple[dict[str, ReferenceEvidence], list[BridgeDiagnostic], list[Any]]:
+    evidence: dict[str, ReferenceEvidence] = {}
     diagnostics: list[BridgeDiagnostic] = []
     type_issues: list[Any] = []
     for surface_type in _surface_types(source):
@@ -269,13 +266,14 @@ def _candidate_is_lossless(
         return True, ()
     if source.declaration.kind not in _LOSSLESS_CANDIDATES:
         return False, ()
-    declaration, diagnostics = LanguageSurfaceBridge().normalize_declaration(
+    declaration, bridge_diagnostics = LanguageSurfaceBridge().normalize_declaration(
         source.declaration.node
     )
     reasons: list[str] = []
-    if declaration.facts.get("legacy_parameters"):
+    parameters = declaration.facts.get("legacy_parameters")
+    if parameters not in (None, "()"):
         reasons.append("legacy operation parameters are not frozen as canonical HeaderArgs yet")
-    if any(item.code == "AIDL-N010" for item in diagnostics):
+    if any(item.code == "AIDL-N010" for item in bridge_diagnostics):
         reasons.append("one or more body clauses are not normalized by the frozen contract")
     if reasons:
         name = source.fully_qualified_name or source.declaration.name or "<unnamed>"
@@ -286,6 +284,38 @@ def _candidate_is_lossless(
             ),
         )
     return True, ()
+
+
+def _modifier_value_mode_diagnostics(source: CompilerDeclarationName) -> tuple[BridgeDiagnostic, ...]:
+    """Validate lexical literal-vs-expression evidence from the existing AST."""
+
+    bridge = LanguageSurfaceBridge()
+    diagnostics: list[BridgeDiagnostic] = []
+    for annotation in source.declaration.node.attrs.get("annotations", []):
+        name = str(annotation.get("name", ""))
+        spec = bridge.modifiers.get(name)
+        if spec is None or spec.get("argument_mode") != "literal":
+            continue
+        raw = str(annotation.get("arguments") or "").strip()
+        if raw.startswith("(") and raw.endswith(")"):
+            raw = raw[1:-1].strip()
+        if not raw:
+            continue  # arity is owned by the bridge's AIDL-N009 diagnostic.
+        values = [item.strip() for item in raw.split(",")]
+        for value in values:
+            literal = (
+                bool(re.fullmatch(r'"(?:[^"\\]|\\.)*"', value))
+                or value in {"true", "false", "null"}
+                or bool(re.fullmatch(r"-?\d+(?:\.\d+)?", value))
+            )
+            if not literal:
+                diagnostics.append(
+                    BridgeDiagnostic(
+                        "AIDL-N014",
+                        f"modifier {name} requires literal argument evidence; got expression-like value {value!r}",
+                    )
+                )
+    return tuple(diagnostics)
 
 
 def _type_issue_key(issue: Any) -> tuple[Path, str, str]:
@@ -304,13 +334,7 @@ def _type_issue_identity(issue: Any) -> tuple[Any, ...]:
 
 
 def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguageSurface:
-    """Normalize the lossless production slice from an existing compiler analysis.
-
-    Parser nodes and project resolution stay authoritative for the current source
-    version. Type parsing/checking and reference candidates are supplied by the
-    existing Core compiler helpers; ``LanguageSurfaceBridge`` remains the only
-    declaration/body/modifier contract projection.
-    """
+    """Normalize the lossless production slice from an existing compiler analysis."""
 
     project = analysis.project
     item_by_node: dict[int, CompilerDeclarationName] = {}
@@ -342,11 +366,9 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
             source = item_by_node.get(id(compiler_declaration.node))
             if source is None:
                 continue
-            (
-                projection_evidence,
-                projection_diagnostics,
-                normalized_type_issues,
-            ) = _projection_evidence(project, source)
+            projection_evidence, projection_diagnostics, normalized_type_issues = (
+                _projection_evidence(project, source)
+            )
             bridge = LanguageSurfaceBridge(reference_projections=projection_evidence)
             declaration, declaration_diagnostics = bridge.normalize_declaration(
                 compiler_declaration.node
@@ -354,6 +376,7 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
             declarations.append(declaration)
             diagnostics.extend(projection_diagnostics)
             diagnostics.extend(declaration_diagnostics)
+            diagnostics.extend(_modifier_value_mode_diagnostics(source))
             type_issues.extend(normalized_type_issues)
         if declarations:
             module = (
