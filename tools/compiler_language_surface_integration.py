@@ -22,6 +22,7 @@ try:
         Declaration,
         Document,
         LanguageSurfaceBridge,
+        OperationParameter,
         TypeRef as SurfaceTypeRef,
         _format_type as format_surface_type,
     )
@@ -42,6 +43,7 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
         Declaration,
         Document,
         LanguageSurfaceBridge,
+        OperationParameter,
         TypeRef as SurfaceTypeRef,
         _format_type as format_surface_type,
     )
@@ -57,7 +59,7 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
     )
 
 
-PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v2"
+PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v3"
 _ALWAYS_INTEGRATED = frozenset(
     {"alias", "opaque", "entity", "enum", "migration", "client", "consumer", "projection"}
 )
@@ -116,6 +118,11 @@ def _surface_types(source: CompilerDeclarationName) -> tuple[SurfaceTypeRef, ...
     aliased = declaration.facts.get("aliased_type")
     if isinstance(aliased, SurfaceTypeRef):
         values.append(aliased)
+    for header in declaration.header_args:
+        if header.value_mode == "parameter_list" and isinstance(header.value, (list, tuple)):
+            for parameter in header.value:
+                if isinstance(parameter, OperationParameter):
+                    values.append(parameter.type_ref)
     for slot in declaration.body_slots:
         if isinstance(slot.value, SurfaceTypeRef):
             values.append(slot.value)
@@ -215,9 +222,6 @@ def _projection_for_checked_type(
             )
             return evidence, diagnostics
         if resolution.kind == "entity":
-            # The bridge otherwise interprets every dotted ref as a projection.
-            # Resolver evidence explicitly preserves a legitimate qualified
-            # nominal entity as target-only reference semantics.
             evidence[checked.name] = (checked.name, None, None)
             return evidence, diagnostics
         target_reference, projection = checked.name.rsplit(".", 1)
@@ -266,13 +270,17 @@ def _candidate_is_lossless(
         return True, ()
     if source.declaration.kind not in _LOSSLESS_CANDIDATES:
         return False, ()
+
     declaration, bridge_diagnostics = LanguageSurfaceBridge().normalize_declaration(
         source.declaration.node
     )
     reasons: list[str] = []
-    parameters = declaration.facts.get("legacy_parameters")
-    if parameters not in (None, "()"):
-        reasons.append("legacy operation parameters are not frozen as canonical HeaderArgs yet")
+    if source.declaration.node.attrs.get("typeParameters"):
+        reasons.append("generic operation type parameters are not frozen as canonical facts")
+    if declaration.facts.get("legacy_parameters") not in (None, "()"):
+        reasons.append("one or more operation parameters are not losslessly normalized")
+    if any(item.code == "AIDL-N015" for item in bridge_diagnostics):
+        reasons.append("one or more operation parameters are malformed or unsupported")
     if any(item.code == "AIDL-N010" for item in bridge_diagnostics):
         reasons.append("one or more body clauses are not normalized by the frozen contract")
     if reasons:
@@ -300,7 +308,7 @@ def _modifier_value_mode_diagnostics(source: CompilerDeclarationName) -> tuple[B
         if raw.startswith("(") and raw.endswith(")"):
             raw = raw[1:-1].strip()
         if not raw:
-            continue  # arity is owned by the bridge's AIDL-N009 diagnostic.
+            continue
         values = [item.strip() for item in raw.split(",")]
         for value in values:
             literal = (

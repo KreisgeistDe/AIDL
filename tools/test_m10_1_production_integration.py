@@ -9,7 +9,16 @@ from pathlib import Path
 
 from tools.compiler_diagnostics import load_compiler_analysis
 from tools.compiler_ir import build_canonical_ir
-from tools.compiler_language_surface import Declaration, TypeRef
+from tools.compiler_language_surface import (
+    BodySlot,
+    Declaration,
+    HeaderArg,
+    LanguageSurfaceBridge,
+    ModifierCall,
+    OperationParameter,
+    TypeRef,
+    UnsupportedMigration,
+)
 from tools.compiler_language_surface_integration import normalize_compiler_analysis
 from tools.compiler_summary import summarize_project
 from tools.compiler_typecheck import resolve_reference
@@ -151,6 +160,135 @@ app Store {
         self.assertEqual("literal", mutation.modifiers[0].argument_mode)
         self.assertEqual("profile", app.body_slots[0].slot_id)
 
+    def test_contract_backed_operation_parameters_are_integrated_losslessly(self) -> None:
+        source = """module demo
+entity Pet { id: uuid required }
+query getPet(id: uuid, petId: ref Pet.id?, limit: int? default 10) -> Pet {
+  read: petById
+}
+mutation updatePet(id: uuid, note: string default \"memo\") -> Pet {}
+"""
+        analysis = self._analysis(source)
+        surface = normalize_compiler_analysis(analysis)
+
+        self.assertTrue(surface.ok, (surface.diagnostics, surface.type_issues))
+        by_name = {item.name: item for item in surface.declarations}
+        query = by_name["getPet"]
+        mutation = by_name["updatePet"]
+        query_parameters = next(item.value for item in query.header_args if item.name == "parameters")
+        mutation_parameters = next(item.value for item in mutation.header_args if item.name == "parameters")
+        self.assertEqual(["id", "petId", "limit"], [item.name for item in query_parameters])
+        self.assertEqual("reference", query_parameters[1].type_ref.kind)
+        self.assertEqual("Pet", query_parameters[1].type_ref.target)
+        self.assertEqual("id", query_parameters[1].type_ref.projection)
+        self.assertEqual("uuid", query_parameters[1].type_ref.resolved_type)
+        self.assertTrue(query_parameters[1].type_ref.optional)
+        self.assertEqual("default", query_parameters[2].modifiers[0].name)
+        self.assertEqual("query.parameter", query_parameters[2].modifiers[0].target)
+        self.assertEqual("expression", query_parameters[2].modifiers[0].argument_mode)
+        self.assertEqual(("10",), query_parameters[2].modifiers[0].args)
+        self.assertEqual("mutation.parameter", mutation_parameters[1].modifiers[0].target)
+        self.assertEqual(('"memo"',), mutation_parameters[1].modifiers[0].args)
+        self.assertNotIn("legacy_parameters", query.facts)
+        self.assertNotIn("legacy_parameters", mutation.facts)
+
+    def test_operation_parameter_semantic_hash_matches_independent_canonical_facts(self) -> None:
+        bridge = LanguageSurfaceBridge(reference_projections={"Pet.id": ("Pet", "id", "uuid")})
+        result = bridge.normalize_text(
+            """query getPet(id: uuid, petId: ref Pet.id?, limit: int? default 10) -> Pet {
+  read: petById
+}
+"""
+        )
+        self.assertTrue(result.ok, result.diagnostics)
+        actual = result.document.declarations[0]
+        canonical = Declaration(
+            kind="query",
+            name="getPet",
+            name_policy="required",
+            exported=False,
+            header_args=(
+                HeaderArg(
+                    "parameters",
+                    "parameter_list",
+                    (
+                        OperationParameter("id", TypeRef("scalar", name="uuid")),
+                        OperationParameter(
+                            "petId",
+                            TypeRef(
+                                "reference",
+                                optional=True,
+                                target="Pet",
+                                projection="id",
+                                resolved_type="uuid",
+                            ),
+                        ),
+                        OperationParameter(
+                            "limit",
+                            TypeRef("scalar", optional=True, name="int"),
+                            (ModifierCall("default", "query.parameter", "expression", ("10",)),),
+                        ),
+                    ),
+                ),
+            ),
+            result_type=TypeRef("named", name="Pet"),
+            body_slots=(BodySlot("read", None, "expression", "petById"),),
+        )
+        self.assertEqual(canonical.semantic_hash(), actual.semantic_hash())
+
+    def test_parameter_whitespace_and_source_locations_do_not_change_semantics(self) -> None:
+        first = normalize_compiler_analysis(
+            self._analysis(
+                """module demo
+query find(id: uuid, limit: int? default 10) -> string { read: value }
+"""
+            )
+        )
+        second = normalize_compiler_analysis(
+            self._analysis(
+                """\n\nmodule demo
+query find( id : uuid , limit : int?   default   10 ) -> string {
+  read : value
+}
+"""
+            )
+        )
+        self.assertTrue(first.ok, (first.diagnostics, first.type_issues))
+        self.assertTrue(second.ok, (second.diagnostics, second.type_issues))
+        self.assertEqual(first.semantic_hash(), second.semantic_hash())
+        self.assertEqual(first.semantic_json(), second.semantic_json())
+
+    def test_non_lossless_operation_shapes_remain_explicitly_excluded(self) -> None:
+        malformed = normalize_compiler_analysis(
+            self._analysis(
+                """module demo
+query getPet(id uuid) -> string { read: value }
+"""
+            )
+        )
+        generic = normalize_compiler_analysis(
+            self._analysis(
+                """module demo
+query getPet<T>(id: uuid) -> string { read: value }
+"""
+            )
+        )
+        unsupported_body = normalize_compiler_analysis(
+            self._analysis(
+                """module demo
+query getPet(id: uuid) -> string {
+  read: value
+  cache: local
+}
+"""
+            )
+        )
+
+        for surface in (malformed, generic, unsupported_body):
+            self.assertFalse(surface.ok)
+            self.assertIn("AIDL-N013", [item.code for item in surface.diagnostics])
+            self.assertNotIn("getPet", [item.name for item in surface.declarations])
+
     def test_modifier_target_arity_and_literal_value_mode_fail_closed(self) -> None:
         wrong_target = normalize_compiler_analysis(
             self._analysis(
@@ -183,18 +321,6 @@ query getPet() -> string { read: value }
         self.assertFalse(wrong_target.ok)
         self.assertFalse(wrong_arity.ok)
         self.assertFalse(wrong_mode.ok)
-
-    def test_non_lossless_operation_parameters_are_explicitly_not_integrated(self) -> None:
-        surface = normalize_compiler_analysis(
-            self._analysis(
-                """module demo
-query getPet(id: uuid) -> string { read: value }
-"""
-            )
-        )
-        self.assertFalse(surface.ok)
-        self.assertIn("AIDL-N013", [item.code for item in surface.diagnostics])
-        self.assertNotIn("getPet", [item.name for item in surface.declarations])
 
     def test_production_semantic_hash_ignores_source_locations_and_whitespace(self) -> None:
         first = normalize_compiler_analysis(self._analysis(_PROJECT))
@@ -254,13 +380,20 @@ query getPet(id: uuid) -> string { read: value }
     def test_same_version_formatter_and_explicit_migrator_remain_separate(self) -> None:
         surface = normalize_compiler_analysis(self._analysis(_PROJECT))
         token = next(item for item in surface.declarations if item.name == "Token")
-
-        from tools.compiler_language_surface import LanguageSurfaceBridge, UnsupportedMigration
-
         bridge = LanguageSurfaceBridge()
         self.assertEqual("opaque Token = uuid\n", bridge.format_legacy(token))
         with self.assertRaises(UnsupportedMigration):
             bridge.migrate_to_canonical_preview(token)
+
+        parameterized = bridge.normalize_text(
+            "query find(id: uuid) -> string { read: value }\n"
+        ).document.declarations[0]
+        self.assertEqual(
+            "query find(id: uuid) -> string {\n  read: value\n}\n",
+            bridge.format_legacy(parameterized),
+        )
+        with self.assertRaises(UnsupportedMigration):
+            bridge.migrate_to_canonical_preview(parameterized)
 
 
 if __name__ == "__main__":

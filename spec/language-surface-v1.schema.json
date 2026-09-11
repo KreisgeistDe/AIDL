@@ -7,6 +7,7 @@
   "required": ["schema_version", "authority", "status", "canonical_form", "declaration_kinds", "modifiers", "examples"],
   "properties": {
     "schema_version": {"const": "aidl.language-surface/v1"},
+    "contract_revision": {"type": "integer", "minimum": 1},
     "authority": {"const": "M10.1"},
     "status": {"const": "frozen"},
     "canonical_form": {"const": "[export] <kind> <name?> [(named-args)] [-> type] { slots }"},
@@ -57,6 +58,25 @@
         {"if": {"properties": {"kind": {"const": "reference"}}}, "then": {"required": ["target", "projection", "resolved_type"]}}
       ]
     },
+    "parameterType": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value_mode"],
+      "properties": {
+        "value_mode": {"const": "type_ref"}
+      }
+    },
+    "parameterSpec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name_policy", "unique", "type", "modifiers"],
+      "properties": {
+        "name_policy": {"const": "required"},
+        "unique": {"type": "boolean"},
+        "type": {"$ref": "#/$defs/parameterType"},
+        "modifiers": {"type": "array", "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
     "headerArg": {
       "type": "object",
       "additionalProperties": false,
@@ -64,11 +84,18 @@
       "properties": {
         "name": {"type": "string", "minLength": 1},
         "occurrence": {"$ref": "#/$defs/occurrence"},
-        "value_mode": {"enum": ["literal", "expression", "type_ref", "declaration_ref"]},
+        "value_mode": {"enum": ["literal", "expression", "type_ref", "declaration_ref", "parameter_list"]},
         "type": {"$ref": "#/$defs/typeRef"},
         "literal_kind": {"type": "string"},
-        "reference_kinds": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
-      }
+        "reference_kinds": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "parameter": {"$ref": "#/$defs/parameterSpec"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"value_mode": {"const": "parameter_list"}}, "required": ["value_mode"]},
+          "then": {"required": ["parameter"]}
+        }
+      ]
     },
     "bodySlot": {
       "type": "object",

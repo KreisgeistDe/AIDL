@@ -15,6 +15,7 @@ Legacy compatibility is one-way and versioned: **legacy parse -> canonical AST/I
 - Canonical declarations follow `[export] <kind> <name?> [(named-args)] [-> type] { slots }`.
 - `NamePolicy` is exactly `required | optional | none`.
 - `HeaderArgs` are named semantic facts; occurrence of the argument-list form is independent from each argument's own occurrence.
+- Query/mutation operation parameters are a contract-owned `parameters` HeaderArg with `parameter_list` value mode. Each parameter owns a unique name, a `TypeRef`, and only contract-declared parameter modifiers; `default` remains an expression-valued `ModifierCall`.
 - `BodySlot` owns explicit occurrence, ordering and uniqueness semantics.
 - `TypeRef.optional` is the sole meaning of `T?`; collection/body cardinality is separate.
 - `ReferenceProjection` represents target, projection and resolved projected type separately. `Pet.id` is not an opaque dotted string.
@@ -36,11 +37,11 @@ All declaration kinds listed by `docs/06-grammar.md` remain semantic declaration
 
 ## Compatibility bridge status
 
-`tools/compiler_language_surface.py` consumes `spec/language-surface-v1.json` as the single construction contract and normalizes representative legacy parser nodes into immutable canonical declarations, body slots, type/reference facts and modifier calls. `docs/m10-1-compatibility-bridge.md` records the executable boundary.
+`tools/compiler_language_surface.py` consumes `spec/language-surface-v1.json` as the single construction contract and normalizes representative legacy parser nodes into immutable canonical declarations, header arguments, operation parameters, body slots, type/reference facts and modifier calls. `docs/m10-1-compatibility-bridge.md` records the executable boundary.
 
-`tools/compiler_language_surface_integration.py` consumes real `CompilerAnalysis`/`CompilerProject` facts. The always-lossless production set remains `alias`/`opaque`, `entity`, `enum`, `migration`, `client`, `consumer` and `projection`.
+`tools/compiler_language_surface_integration.py` consumes real `CompilerAnalysis`/`CompilerProject` facts. The always-lossless production set remains `alias`/`opaque`, `entity`, `enum`, `migration`, `client`, `consumer` and `projection`; `query`, `mutation` and `app` are admitted only when all represented facts are lossless.
 
-The Core resolver/typechecker now has explicit frozen legacy reference-projection parity:
+The Core resolver/typechecker has explicit frozen legacy reference-projection parity:
 
 - exact entity resolution always wins;
 - only zero exact entity matches permit interpreting the final dotted segment as a field projection;
@@ -49,13 +50,15 @@ The Core resolver/typechecker now has explicit frozen legacy reference-projectio
 - unresolved/ambiguous targets, duplicate/missing fields and invalid projected field types fail closed;
 - legitimate qualified nominal references such as `ref demo.Pet` retain their existing meaning and are not reinterpreted heuristically.
 
-Production normalization now conditionally admits `query`, `mutation` and `app` only where existing compiler/parser facts are lossless under the frozen contract. Current admitted facts are parameterless operation result types, query `read` expression slots, app profile/version slots and contract-declared annotations. Unsupported operation parameters or body clauses emit `AIDL-N013` and remain outside the semantic hash rather than being approximated.
+Production normalization now admits lossless typed query/mutation operation signatures using contract revision 2. Parameter order and names are preserved; parameter types use the same `TypeRef`/resolver evidence as fields and result types; `TypeRef.optional` remains independent; and `default` is represented as an expression-valued `ModifierCall` targeted to `query.parameter` or `mutation.parameter`. Parameterless operations normalize to the same semantic shape whether or not an empty parameter list is present.
 
-Modifier target/arity remain contract-driven through `LanguageSurfaceBridge`. Literal-vs-expression argument evidence is checked against the existing parser AST; expression-like input in a literal-only modifier position emits `AIDL-N014`.
+Generic operation type parameters, malformed/untyped parameters, unsupported parameter modifiers, and query/mutation/app body clauses not fully represented by the frozen contract remain excluded from the complete production semantic set. They produce stable fail-closed diagnostics (`AIDL-N013` with bridge evidence such as `AIDL-N015`/`AIDL-N010`) instead of heuristic canonical facts.
 
-The production semantic envelope is now `aidl.m10.1-production/v2`. The compiler-owned in-memory summary consumes its hash/diagnostic state, while CLI JSON and Canonical IR schemas remain unchanged.
+Modifier target/arity remain contract-driven through `LanguageSurfaceBridge`. Literal-vs-expression annotation evidence is checked against the existing parser AST; expression-like input in a literal-only modifier position emits `AIDL-N014`.
 
-M10.1 remains open. The next dependency-ready step is the narrow operation-signature/remaining body-modifier parity slice. Parameter facts must not be normalized until the frozen contract has a lossless canonical representation. M10.5-03 remains blocked for semantic front-end/AST/IR work until the relevant compatibility path is complete.
+The bridge semantic envelope is `aidl.m10.1-normalized/v2`; the production semantic envelope is `aidl.m10.1-production/v3`. The compiler-owned in-memory summary consumes the production hash/diagnostic state, while CLI JSON and Canonical IR schemas remain unchanged.
+
+M10.1 remains open. The next dependency-ready step is the remaining contract-backed body/modifier parity slice for operation clauses and other currently excluded mini-languages only where existing compiler facts are lossless. M10.5-03 remains blocked for semantic front-end/AST/IR work until the relevant compatibility path is complete.
 
 ## Required regression set
 
@@ -64,13 +67,12 @@ The executable contract regression covers name policies, body occurrence/order/u
 Production integration additionally proves:
 
 - `ref Pet.id` and `ref Pet.id?` Core acceptance with separate target/projection/projected-type evidence;
-- preserved `TypeRef.optional` semantics;
-- unchanged exact qualified entity-reference behavior;
+- preserved `TypeRef.optional` semantics and exact qualified entity-reference priority;
 - fail-closed unresolved/ambiguous projection diagnostics (`AIDL-T001`/`AIDL-N012`);
-- lossless parameterless query/mutation/app normalization;
+- lossless typed query/mutation parameters, including projection-backed parameter types and expression-valued defaults;
+- semantic equivalence between legacy operation signatures and independently constructed canonical parameter facts;
+- deterministic parameter/body diagnostics and source-location/whitespace-independent M10.1 hashes;
+- explicit exclusion of generic, malformed, unsupported-modifier and unsupported-body operation shapes (`AIDL-N013`);
 - modifier target, arity and literal value-mode diagnostics (`AIDL-N008`, `AIDL-N009`, `AIDL-N014`);
-- explicit exclusion of non-lossless parameterized operations (`AIDL-N013`);
-- legacy/canonical semantic-hash equivalence for representative facts;
-- deterministic diagnostics and source-location/whitespace-independent M10.1 hashes;
 - unchanged Canonical IR semantic hashes for equivalent sources;
 - unchanged CLI JSON contract and formatter/migrator separation.
