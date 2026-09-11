@@ -1,0 +1,87 @@
+{
+  "schema_version": "aidl.roadmap/v1",
+  "document_type": "milestone",
+  "id": "M10",
+  "title": "Core Conformance Closure",
+  "order": 10,
+  "priority": "P1",
+  "packages": [
+    {
+      "id": "M10-01",
+      "title": "Replace the illustrative implementation-policy row with a machine-readable feature/conformance manifest.",
+      "order": 1,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": [],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": [{"kind": "path", "ref": "spec/conformance-manifest.json"}]
+    },
+    {
+      "id": "M10-02",
+      "title": "Track every Core declaration and semantic rule across Parse, Resolve, Validate, IR, Generate, and IDE layers.",
+      "order": 2,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10-01"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    },
+    {
+      "id": "M10-03",
+      "title": "Complete compiler-owned type checking for the declared Core Supported surface.",
+      "order": 3,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10-02"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    },
+    {
+      "id": "M10-04",
+      "title": "Reject every unsupported or unmaterialized semantic construct explicitly instead of accepting and silently dropping it.",
+      "order": 4,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10-03"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    },
+    {
+      "id": "M10-05",
+      "title": "Add positive, negative, IR, and compatibility fixtures for every Core Supported feature.",
+      "order": 5,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10-04"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    },
+    {
+      "id": "M10-06",
+      "title": "Generate documentation coverage tables from the conformance manifest so status pages cannot drift independently.",
+      "order": 6,
+      "priority": "P1",
+      "status": "complete",
+      "depends_on": ["M10-05"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    },
+    {
+      "id": "M10-07",
+      "title": "Add performance baselines and deterministic resource limits for representative small, medium, and large projects.",
+      "order": 7,
+      "priority": "P2",
+      "status": "complete",
+      "depends_on": ["M10-06"],
+      "acceptance_criteria": ["Preserve the integrated completion claim and its executable repository evidence."],
+      "evidence": [{"kind": "path", "ref": "backlog/m9-m10-release-conformance.md"}],
+      "references": []
+    }
+  ]
+}
