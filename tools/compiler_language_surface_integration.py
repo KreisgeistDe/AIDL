@@ -33,6 +33,7 @@ try:
         _check_type as compiler_check_type,
         _resolve as compiler_resolve,
         collect_type_issues,
+        operation_errors_evidence,
         parse_type,
         resolve_reference,
     )
@@ -54,13 +55,14 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
         _check_type as compiler_check_type,
         _resolve as compiler_resolve,
         collect_type_issues,
+        operation_errors_evidence,
         parse_type,
         resolve_reference,
     )
 
 
 LanguageSurfaceBridge = ContractBodyParityBridge
-PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v4"
+PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v5"
 _ALWAYS_INTEGRATED = frozenset(
     {"alias", "opaque", "entity", "enum", "migration", "client", "consumer", "projection"}
 )
@@ -263,6 +265,7 @@ def _projection_evidence(
 
 
 def _candidate_is_lossless(
+    project: CompilerProject,
     source: CompilerDeclarationName,
 ) -> tuple[bool, tuple[BridgeDiagnostic, ...]]:
     """Admit query/mutation/app only when frozen facts cover the complete shape."""
@@ -272,9 +275,10 @@ def _candidate_is_lossless(
     if source.declaration.kind not in _LOSSLESS_CANDIDATES:
         return False, ()
 
-    declaration, bridge_diagnostics = LanguageSurfaceBridge().normalize_declaration(
-        source.declaration.node
-    )
+    errors_evidence = operation_errors_evidence(project, source)
+    declaration, bridge_diagnostics = LanguageSurfaceBridge(
+        operation_errors_evidence=errors_evidence
+    ).normalize_declaration(source.declaration.node)
     reasons: list[str] = []
     if source.declaration.node.attrs.get("typeParameters"):
         reasons.append("generic operation type parameters are not frozen as canonical facts")
@@ -282,6 +286,10 @@ def _candidate_is_lossless(
         reasons.append("one or more operation parameters are not losslessly normalized")
     if any(item.code == "AIDL-N015" for item in bridge_diagnostics):
         reasons.append("one or more operation parameters are malformed or unsupported")
+    if errors_evidence and (
+        len(errors_evidence) != 1 or not errors_evidence[0].complete
+    ):
+        reasons.append("errors clause lacks complete compiler-owned error-list evidence")
     if any(item.code == "AIDL-N010" for item in bridge_diagnostics):
         reasons.append("one or more body clauses are not normalized by the frozen contract")
     if reasons:
@@ -349,7 +357,7 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
     item_by_node: dict[int, CompilerDeclarationName] = {}
     diagnostics: list[BridgeDiagnostic] = []
     for item in project.declaration_names:
-        admitted, admission_diagnostics = _candidate_is_lossless(item)
+        admitted, admission_diagnostics = _candidate_is_lossless(project, item)
         diagnostics.extend(admission_diagnostics)
         if admitted:
             item_by_node[id(item.declaration.node)] = item
@@ -378,7 +386,10 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
             projection_evidence, projection_diagnostics, normalized_type_issues = (
                 _projection_evidence(project, source)
             )
-            bridge = LanguageSurfaceBridge(reference_projections=projection_evidence)
+            bridge = LanguageSurfaceBridge(
+                reference_projections=projection_evidence,
+                operation_errors_evidence=operation_errors_evidence(project, source),
+            )
             declaration, declaration_diagnostics = bridge.normalize_declaration(
                 compiler_declaration.node
             )
