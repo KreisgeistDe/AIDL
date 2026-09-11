@@ -29,6 +29,26 @@ class ReferenceResolution:
     target:str
     projection:str|None=None
     projected_type:str|None=None
+@dataclass(frozen=True)
+class ClauseTypeMemberEvidence:
+    """Compiler-owned evidence for one member of a structured clause type list."""
+    source:str
+    type_ref:TypeRef|None
+    status:str
+    target:str|None=None
+    target_kind:str|None=None
+@dataclass(frozen=True)
+class ClauseTypeListEvidence:
+    """Ordered clause type-list evidence without changing source-language diagnostics."""
+    members:tuple[ClauseTypeMemberEvidence,...]=()
+    malformed:bool=False
+    error:str|None=None
+
+    @property
+    def complete(self)->bool:
+        return not self.malformed and all(
+            member.status in {"standard", "resolved"} for member in self.members
+        )
 class TypeSyntaxError(ValueError): pass
 
 def _split(text):
@@ -209,6 +229,59 @@ def _clauses(item,key):
     for n in item.declaration.node.children:
         if n.name and n.span and (m:=p.match(n.name.strip())): out.append((m.group(1).strip(),n.span))
     return tuple(out)
+
+def parse_clause_type_list(project,source,raw,*,standard_names=frozenset(),expected_kind=None):
+    """Return ordered Core/resolver evidence for a bracketed type list.
+
+    This is deliberately diagnostic-free. Consumers such as M10.1 production
+    admission may fail closed on incomplete evidence without changing the
+    generally accepted source-language diagnostics owned by ``_errors``.
+    """
+    text=raw.strip()
+    if not(text.startswith('[') and text.endswith(']')):
+        return ClauseTypeListEvidence(malformed=True,error="clause type list must be bracketed")
+    try:
+        parts=_split(text[1:-1]) if text[1:-1].strip() else ()
+    except TypeSyntaxError as error:
+        return ClauseTypeListEvidence(malformed=True,error=str(error))
+    members=[]
+    for part in parts:
+        clean=re.sub(r"\s*\.\s*",".",part.strip())
+        try:
+            type_ref=parse_type(clean)
+        except TypeSyntaxError as error:
+            members.append(ClauseTypeMemberEvidence(clean,None,"malformed"))
+            return ClauseTypeListEvidence(tuple(members),True,str(error))
+        if type_ref.kind!="named" or type_ref.args:
+            members.append(ClauseTypeMemberEvidence(clean,type_ref,"wrong_kind"))
+            continue
+        if clean.split('.')[-1] in standard_names:
+            members.append(ClauseTypeMemberEvidence(clean,type_ref,"standard",clean,"error" if expected_kind=="error" else None))
+            continue
+        matches=_resolve(project,source,clean)
+        if not matches:
+            members.append(ClauseTypeMemberEvidence(clean,type_ref,"unresolved"))
+            continue
+        if len(matches)>1:
+            members.append(ClauseTypeMemberEvidence(clean,type_ref,"ambiguous"))
+            continue
+        target=matches[0]
+        target_kind=target.declaration.kind
+        target_name=target.fully_qualified_name or clean
+        if expected_kind is not None and target_kind!=expected_kind:
+            members.append(ClauseTypeMemberEvidence(clean,type_ref,"wrong_kind",target_name,target_kind))
+            continue
+        members.append(ClauseTypeMemberEvidence(clean,type_ref,"resolved",target_name,target_kind))
+    return ClauseTypeListEvidence(tuple(members))
+
+def operation_errors_evidence(project,item):
+    """Expose structured errors-list evidence without altering ``_errors`` diagnostics."""
+    if item.declaration.kind not in {"query","mutation"}:
+        return ()
+    return tuple(
+        parse_clause_type_list(project,item,raw,standard_names=STD_ERRORS,expected_kind="error")
+        for raw,_ in _clauses(item,"errors")
+    )
 
 def _errors(project,item):
     out=[]
