@@ -90,6 +90,13 @@ class ContractBodyParityBridge(LanguageSurfaceBridge):
                     )
                 )
             ]
+
+        canonical_order = {
+            item["id"]: index
+            for index, item in enumerate(schema.get("body_slots", []))
+            if item.get("order") == "canonical"
+        }
+        result.sort(key=lambda slot: (canonical_order.get(slot.slot_id, len(canonical_order)), slot.slot_id))
         return result
 
     def format_legacy(self, declaration: Declaration) -> str:
