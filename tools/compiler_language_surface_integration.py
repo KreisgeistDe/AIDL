@@ -21,11 +21,11 @@ try:
         BridgeDiagnostic,
         Declaration,
         Document,
-        LanguageSurfaceBridge,
         OperationParameter,
         TypeRef as SurfaceTypeRef,
         _format_type as format_surface_type,
     )
+    from .compiler_language_surface_body_parity import ContractBodyParityBridge
     from .compiler_project import CompilerDeclarationName, CompilerProject
     from .compiler_typecheck import (
         TypeRef as CheckedTypeRef,
@@ -42,11 +42,11 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
         BridgeDiagnostic,
         Declaration,
         Document,
-        LanguageSurfaceBridge,
         OperationParameter,
         TypeRef as SurfaceTypeRef,
         _format_type as format_surface_type,
     )
+    from compiler_language_surface_body_parity import ContractBodyParityBridge
     from compiler_project import CompilerDeclarationName, CompilerProject
     from compiler_typecheck import (
         TypeRef as CheckedTypeRef,
@@ -59,7 +59,8 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
     )
 
 
-PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v3"
+LanguageSurfaceBridge = ContractBodyParityBridge
+PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v4"
 _ALWAYS_INTEGRATED = frozenset(
     {"alias", "opaque", "entity", "enum", "migration", "client", "consumer", "projection"}
 )

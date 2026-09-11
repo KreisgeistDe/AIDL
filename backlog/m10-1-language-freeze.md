@@ -16,6 +16,7 @@ Legacy compatibility is one-way and versioned: **legacy parse -> canonical AST/I
 - `NamePolicy` is exactly `required | optional | none`.
 - `HeaderArgs` are named semantic facts; occurrence of the argument-list form is independent from each argument's own occurrence.
 - Query/mutation operation parameters are a contract-owned `parameters` HeaderArg with `parameter_list` value mode. Each parameter owns a unique name, a `TypeRef`, and only contract-declared parameter modifiers; `default` remains an expression-valued `ModifierCall`.
+- Query body parity now includes contract-owned `read` and `allow` expression slots plus literal `timeout`; mutation parity includes expression `allow`/`call` plus literal `audit`/`timeout`. These singleton slots normalize in contract canonical order rather than incidental source order.
 - `BodySlot` owns explicit occurrence, ordering and uniqueness semantics.
 - `TypeRef.optional` is the sole meaning of `T?`; collection/body cardinality is separate.
 - `ReferenceProjection` represents target, projection and resolved projected type separately. `Pet.id` is not an opaque dotted string.
@@ -37,7 +38,7 @@ All declaration kinds listed by `docs/06-grammar.md` remain semantic declaration
 
 ## Compatibility bridge status
 
-`tools/compiler_language_surface.py` consumes `spec/language-surface-v1.json` as the single construction contract and normalizes representative legacy parser nodes into immutable canonical declarations, header arguments, operation parameters, body slots, type/reference facts and modifier calls. `docs/m10-1-compatibility-bridge.md` records the executable boundary.
+`tools/compiler_language_surface.py` consumes `spec/language-surface-v1.json` as the single construction contract and normalizes representative legacy parser nodes into immutable canonical declarations, header arguments, operation parameters, body slots, type/reference facts and modifier calls. `tools/compiler_language_surface_body_parity.py` extends that bridge only by interpreting scalar query/mutation body slots already declared by the same contract; it owns no separate clause inventory. `docs/m10-1-compatibility-bridge.md` records the executable boundary.
 
 `tools/compiler_language_surface_integration.py` consumes real `CompilerAnalysis`/`CompilerProject` facts. The always-lossless production set remains `alias`/`opaque`, `entity`, `enum`, `migration`, `client`, `consumer` and `projection`; `query`, `mutation` and `app` are admitted only when all represented facts are lossless.
 
@@ -50,15 +51,17 @@ The Core resolver/typechecker has explicit frozen legacy reference-projection pa
 - unresolved/ambiguous targets, duplicate/missing fields and invalid projected field types fail closed;
 - legitimate qualified nominal references such as `ref demo.Pet` retain their existing meaning and are not reinterpreted heuristically.
 
-Production normalization now admits lossless typed query/mutation operation signatures using contract revision 2. Parameter order and names are preserved; parameter types use the same `TypeRef`/resolver evidence as fields and result types; `TypeRef.optional` remains independent; and `default` is represented as an expression-valued `ModifierCall` targeted to `query.parameter` or `mutation.parameter`. Parameterless operations normalize to the same semantic shape whether or not an empty parameter list is present.
+Production normalization admits lossless typed query/mutation operation signatures using contract revision 3. Parameter order and names are preserved; parameter types use the same `TypeRef`/resolver evidence as fields and result types; `TypeRef.optional` remains independent; and `default` is represented as an expression-valued `ModifierCall` targeted to `query.parameter` or `mutation.parameter`. Parameterless operations normalize to the same semantic shape whether or not an empty parameter list is present.
 
-Generic operation type parameters, malformed/untyped parameters, unsupported parameter modifiers, and query/mutation/app body clauses not fully represented by the frozen contract remain excluded from the complete production semantic set. They produce stable fail-closed diagnostics (`AIDL-N013` with bridge evidence such as `AIDL-N015`/`AIDL-N010`) instead of heuristic canonical facts.
+Contract revision 3 additionally admits only the scalar operation-body facts for which the existing parser already carries lossless complete text: query `allow`/`timeout` and mutation `allow`/`call`/`audit`/`timeout`, alongside the existing query `read`. Expression slots preserve normalized expression text; `timeout` and `audit` remain literal-valued facts. All contract-canonical singleton slots are ordered by contract identity before hashing, so source clause order and whitespace do not perturb semantics.
+
+Generic operation type parameters, malformed/untyped parameters, unsupported parameter modifiers, and body clauses not fully represented by the frozen contract remain excluded from the complete production semantic set. In particular `auth`, `errors`, `cache`, `consistency`, `authorize`, `idempotency`, `transaction` and their nested mini-languages remain pending. They produce stable fail-closed diagnostics (`AIDL-N013` with bridge evidence such as `AIDL-N010`/`AIDL-N015`) instead of heuristic canonical facts.
 
 Modifier target/arity remain contract-driven through `LanguageSurfaceBridge`. Literal-vs-expression annotation evidence is checked against the existing parser AST; expression-like input in a literal-only modifier position emits `AIDL-N014`.
 
-The bridge semantic envelope is `aidl.m10.1-normalized/v2`; the production semantic envelope is `aidl.m10.1-production/v3`. The compiler-owned in-memory summary consumes the production hash/diagnostic state, while CLI JSON and Canonical IR schemas remain unchanged.
+The bridge semantic envelope remains `aidl.m10.1-normalized/v2` for the base bridge; production body parity is explicitly versioned by contract revision 3 and production envelope `aidl.m10.1-production/v4`. The compiler-owned in-memory summary consumes the production hash/diagnostic state, while CLI JSON and Canonical IR schemas remain unchanged.
 
-M10.1 remains open. The next dependency-ready step is the remaining contract-backed body/modifier parity slice for operation clauses and other currently excluded mini-languages only where existing compiler facts are lossless. M10.5-03 remains blocked for semantic front-end/AST/IR work until the relevant compatibility path is complete.
+M10.1 remains open. The next dependency-ready step is structured parity for one remaining mini-language whose parser/compiler evidence can be represented without flattening—for example auth/errors/cache or idempotency—before considering broader workflow/messaging/resource/UI/test bodies. M10.5-03 remains blocked for semantic front-end/AST/IR work until the relevant compatibility path is complete.
 
 ## Required regression set
 
@@ -70,9 +73,10 @@ Production integration additionally proves:
 - preserved `TypeRef.optional` semantics and exact qualified entity-reference priority;
 - fail-closed unresolved/ambiguous projection diagnostics (`AIDL-T001`/`AIDL-N012`);
 - lossless typed query/mutation parameters, including projection-backed parameter types and expression-valued defaults;
-- semantic equivalence between legacy operation signatures and independently constructed canonical parameter facts;
-- deterministic parameter/body diagnostics and source-location/whitespace-independent M10.1 hashes;
-- explicit exclusion of generic, malformed, unsupported-modifier and unsupported-body operation shapes (`AIDL-N013`);
+- contract-backed query `read`/`allow`/`timeout` and mutation `allow`/`call`/`audit`/`timeout` body parity;
+- semantic equivalence between legacy operation signatures/body facts and independently constructed canonical facts;
+- deterministic body/parameter diagnostics and source-location/whitespace/source-clause-order-independent M10.1 hashes;
+- explicit exclusion of generic, malformed, unsupported-modifier and unsupported mini-language operation shapes (`AIDL-N013`);
 - modifier target, arity and literal value-mode diagnostics (`AIDL-N008`, `AIDL-N009`, `AIDL-N014`);
 - unchanged Canonical IR semantic hashes for equivalent sources;
 - unchanged CLI JSON contract and formatter/migrator separation.
