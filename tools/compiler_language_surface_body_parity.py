@@ -18,6 +18,7 @@ try:
         BridgeDiagnostic,
         Declaration,
         LanguageSurfaceBridge,
+        TypeRef,
         UnsupportedMigration,
         _after_keyword,
         _annotation_prefix,
@@ -33,6 +34,7 @@ except ImportError:  # pragma: no cover
         BridgeDiagnostic,
         Declaration,
         LanguageSurfaceBridge,
+        TypeRef,
         UnsupportedMigration,
         _after_keyword,
         _annotation_prefix,
@@ -44,7 +46,11 @@ except ImportError:  # pragma: no cover
 
 
 class ContractBodyParityBridge(LanguageSurfaceBridge):
-    """Normalize only contract-declared scalar operation body slots losslessly."""
+    """Normalize only contract-declared operation body slots losslessly."""
+
+    def __init__(self, *args: Any, operation_errors_evidence: tuple[Any, ...] = (), **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self.operation_errors_evidence = tuple(operation_errors_evidence)
 
     def normalize_declaration(self, node: Node) -> tuple[Declaration, list[BridgeDiagnostic]]:
         declaration, diagnostics = super().normalize_declaration(node)
@@ -54,6 +60,13 @@ class ContractBodyParityBridge(LanguageSurfaceBridge):
                 facts={key: value for key, value in declaration.facts.items() if key != "legacy_parameters"},
             )
         return declaration, diagnostics
+
+    @staticmethod
+    def _error_type_values(evidence: Any) -> tuple[TypeRef, ...]:
+        return tuple(
+            TypeRef("named", name=(member.target or member.source))
+            for member in evidence.members
+        )
 
     def _body(
         self,
@@ -69,17 +82,36 @@ class ContractBodyParityBridge(LanguageSurfaceBridge):
 
         specs = {item["id"]: item for item in schema.get("body_slots", [])}
         normalized_texts: set[str] = set()
+        errors_index = 0
         for child in node.children:
             text = _surface(child.name or "")
             if not text:
                 continue
             for slot_id, spec in specs.items():
-                if slot_id == "read" or spec.get("name_policy") != "none":
+                if not (text.startswith(f"{slot_id}:") or text.startswith(f"{slot_id} ")):
                     continue
                 mode = spec.get("value_mode")
-                if mode not in {"expression", "literal"}:
+                if slot_id == "errors" and mode == "type_ref_list":
+                    evidence = (
+                        self.operation_errors_evidence[errors_index]
+                        if errors_index < len(self.operation_errors_evidence)
+                        else None
+                    )
+                    errors_index += 1
+                    if evidence is not None and evidence.complete:
+                        result.append(
+                            BodySlot(
+                                slot_id,
+                                None,
+                                mode,
+                                self._error_type_values(evidence),
+                            )
+                        )
+                        normalized_texts.add(text)
+                    break
+                if slot_id == "read" or spec.get("name_policy") != "none":
                     continue
-                if not (text.startswith(f"{slot_id}:") or text.startswith(f"{slot_id} ")):
+                if mode not in {"expression", "literal"}:
                     continue
                 value: Any = _after_keyword(text, slot_id)
                 if mode == "literal":
@@ -125,7 +157,12 @@ class ContractBodyParityBridge(LanguageSurfaceBridge):
         lines = [
             f"{prefix}{declaration.kind} {declaration.name}({parameters}){result_type} {{"
         ]
-        lines.extend(f"  {slot.slot_id}: {slot.value}" for slot in declaration.body_slots)
+        for slot in declaration.body_slots:
+            if slot.value_mode == "type_ref_list":
+                value = "[" + ", ".join(_format_type(item) for item in slot.value) + "]"
+            else:
+                value = str(slot.value)
+            lines.append(f"  {slot.slot_id}: {value}")
         return "\n".join(lines + ["}"]) + "\n"
 
     def migrate_to_canonical_preview(self, declaration: Declaration) -> str:
