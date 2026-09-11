@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aidl.dev/spec/roadmap-v1.schema.json",
+  "title": "AIDL roadmap v1",
+  "oneOf": [
+    {"$ref": "#/$defs/index"},
+    {"$ref": "#/$defs/milestone"}
+  ],
+  "$defs": {
+    "schemaVersion": {"const": "aidl.roadmap/v1"},
+    "priority": {"enum": ["P0", "P1", "P2"]},
+    "status": {"enum": ["open", "in_progress", "complete", "not_applicable", "excluded"]},
+    "milestoneId": {"type": "string", "pattern": "^M[0-9]+(?:\\.[0-9]+)?$"},
+    "packageId": {"type": "string", "pattern": "^M[0-9]+(?:\\.[0-9]+)?-[0-9]{2}$"},
+    "link": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": {"enum": ["path", "test", "schema", "pr", "commit", "issue"]},
+        "ref": {"type": "string", "minLength": 1},
+        "note": {"type": "string", "minLength": 1}
+      }
+    },
+    "package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "order", "priority", "status", "depends_on", "acceptance_criteria", "evidence", "references"],
+      "properties": {
+        "id": {"$ref": "#/$defs/packageId"},
+        "title": {"type": "string", "minLength": 1},
+        "order": {"type": "integer", "minimum": 1},
+        "priority": {"$ref": "#/$defs/priority"},
+        "status": {"$ref": "#/$defs/status"},
+        "depends_on": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/packageId"}},
+        "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "evidence": {"type": "array", "items": {"$ref": "#/$defs/link"}},
+        "references": {"type": "array", "items": {"$ref": "#/$defs/link"}},
+        "disposition_reason": {"type": "string", "minLength": 1}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"enum": ["not_applicable", "excluded"]}}, "required": ["status"]},
+          "then": {"required": ["disposition_reason"]}
+        },
+        {
+          "if": {"properties": {"status": {"enum": ["open", "in_progress", "complete"]}}, "required": ["status"]},
+          "then": {"not": {"required": ["disposition_reason"]}}
+        }
+      ]
+    },
+    "milestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "document_type", "id", "title", "order", "priority", "packages"],
+      "properties": {
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "document_type": {"const": "milestone"},
+        "id": {"$ref": "#/$defs/milestoneId"},
+        "title": {"type": "string", "minLength": 1},
+        "order": {"type": "integer", "minimum": 1},
+        "priority": {"$ref": "#/$defs/priority"},
+        "packages": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/package"}}
+      }
+    },
+    "indexMilestone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "path", "order", "priority", "authority"],
+      "properties": {
+        "id": {"$ref": "#/$defs/milestoneId"},
+        "title": {"type": "string", "minLength": 1},
+        "path": {"type": "string", "pattern": "^roadmap/v1/milestones/[^/]+\\.json$"},
+        "order": {"type": "integer", "minimum": 1},
+        "priority": {"$ref": "#/$defs/priority"},
+        "authority": {"const": "authoritative"}
+      }
+    },
+    "index": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema_version", "document_type", "milestone_order", "milestones", "migration"],
+      "properties": {
+        "schema_version": {"$ref": "#/$defs/schemaVersion"},
+        "document_type": {"const": "index"},
+        "milestone_order": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/milestoneId"}},
+        "milestones": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/indexMilestone"}},
+        "migration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["authoritative_milestones", "pending_milestones"],
+          "properties": {
+            "authoritative_milestones": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/milestoneId"}},
+            "pending_milestones": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/milestoneId"}}
+          }
+        }
+      }
+    }
+  }
+}
