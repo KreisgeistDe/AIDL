@@ -32,6 +32,7 @@ try:
         _resolve as compiler_resolve,
         collect_type_issues,
         parse_type,
+        resolve_reference,
     )
 except ImportError:  # pragma: no cover - direct tools/ execution/import path
     from compiler_diagnostics import CompilerAnalysis
@@ -51,13 +52,16 @@ except ImportError:  # pragma: no cover - direct tools/ execution/import path
         _resolve as compiler_resolve,
         collect_type_issues,
         parse_type,
+        resolve_reference,
     )
 
 
-PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v1"
-INTEGRATED_DECLARATION_KINDS = frozenset(
+PRODUCTION_NORMALIZATION_VERSION = "aidl.m10.1-production/v2"
+_ALWAYS_INTEGRATED = frozenset(
     {"alias", "opaque", "entity", "enum", "migration", "client", "consumer", "projection"}
 )
+_LOSSLESS_CANDIDATES = frozenset({"query", "mutation", "app"})
+INTEGRATED_DECLARATION_KINDS = _ALWAYS_INTEGRATED | _LOSSLESS_CANDIDATES
 
 
 @dataclass(frozen=True)
@@ -150,6 +154,38 @@ def _entity_matches(
     )
 
 
+def _entity_id_projection(
+    project: CompilerProject,
+    source: CompilerDeclarationName,
+    target_reference: str,
+) -> tuple[dict[str, tuple[str, str, str]], list[BridgeDiagnostic]]:
+    evidence: dict[str, tuple[str, str, str]] = {}
+    diagnostics: list[BridgeDiagnostic] = []
+    projection = "id"
+    surface_reference = f"{target_reference}.{projection}"
+    matches = _entity_matches(project, source, target_reference)
+    if len(matches) != 1:
+        diagnostics.append(
+            BridgeDiagnostic(
+                "AIDL-N012",
+                f"reference projection {surface_reference} needs exactly one resolved entity; found {len(matches)}",
+            )
+        )
+        return evidence, diagnostics
+    resolved_type = _field_type(matches[0], projection)
+    if resolved_type is None:
+        diagnostics.append(
+            BridgeDiagnostic(
+                "AIDL-N012",
+                f"reference projection {surface_reference} has no typechecker-backed field evidence",
+            )
+        )
+        return evidence, diagnostics
+    target_name = matches[0].declaration.name or target_reference
+    evidence[surface_reference] = (target_name, projection, resolved_type)
+    return evidence, diagnostics
+
+
 def _projection_for_checked_type(
     project: CompilerProject,
     source: CompilerDeclarationName,
@@ -168,57 +204,31 @@ def _projection_for_checked_type(
         return evidence, diagnostics
 
     if checked.kind == "entity-id" and checked.name:
-        target_reference = checked.name
-        projection = "id"
-        surface_reference = f"{target_reference}.{projection}"
-        matches = _entity_matches(project, source, target_reference)
-        if len(matches) != 1:
-            diagnostics.append(
-                BridgeDiagnostic(
-                    "AIDL-N012",
-                    f"reference projection {surface_reference} needs exactly one resolved entity; found {len(matches)}",
-                )
-            )
-            return evidence, diagnostics
-        resolved_type = _field_type(matches[0], projection)
-        if resolved_type is None:
-            diagnostics.append(
-                BridgeDiagnostic(
-                    "AIDL-N012",
-                    f"reference projection {surface_reference} has no typechecker-backed field evidence",
-                )
-            )
-            return evidence, diagnostics
-        target_name = matches[0].declaration.name or target_reference
-        evidence[surface_reference] = (target_name, projection, resolved_type)
-        return evidence, diagnostics
+        return _entity_id_projection(project, source, checked.name)
 
-    if checked.kind == "ref" and checked.name and "." in checked.name:
-        # Prefer an exact qualified entity before interpreting the final segment
-        # as a field projection. This preserves existing qualified-name meaning.
-        if len(_entity_matches(project, source, checked.name)) == 1:
-            return evidence, diagnostics
-        target_reference, projection = checked.name.rsplit(".", 1)
-        matches = _entity_matches(project, source, target_reference)
-        if len(matches) != 1:
+    if checked.kind == "ref" and checked.name:
+        resolution = resolve_reference(project, source, checked.name)
+        if resolution is None:
             diagnostics.append(
                 BridgeDiagnostic(
                     "AIDL-N012",
-                    f"reference projection {checked.name} needs exactly one resolved entity; found {len(matches)}",
+                    f"reference {checked.name} has no unique compiler-owned entity/projection resolution",
                 )
             )
             return evidence, diagnostics
-        resolved_type = _field_type(matches[0], projection)
-        if resolved_type is None:
-            diagnostics.append(
-                BridgeDiagnostic(
-                    "AIDL-N012",
-                    f"reference projection {checked.name} has no typechecker-backed field evidence",
-                )
+        if resolution.kind == "projection":
+            target_reference, projection = checked.name.rsplit(".", 1)
+            target_matches = _entity_matches(project, source, target_reference)
+            target_name = (
+                target_matches[0].declaration.name
+                if len(target_matches) == 1 and target_matches[0].declaration.name
+                else target_reference
             )
-            return evidence, diagnostics
-        target_name = matches[0].declaration.name or target_reference
-        evidence[checked.name] = (target_name, projection, resolved_type)
+            evidence[checked.name] = (
+                target_name,
+                projection,
+                resolution.projected_type or "",
+            )
     return evidence, diagnostics
 
 
@@ -241,9 +251,6 @@ def _projection_evidence(
             checked = parse_type(raw)
         except TypeSyntaxError:
             continue
-        # This deliberately reuses the existing typechecker's validation over
-        # the normalized type spelling. It catches parser-token spacing losses
-        # (notably legacy ``ref Pet.id``) without weakening current diagnostics.
         type_issues.extend(compiler_check_type(project, source, raw))
         item_evidence, item_diagnostics = _projection_for_checked_type(
             project, source, checked
@@ -251,6 +258,34 @@ def _projection_evidence(
         evidence.update(item_evidence)
         diagnostics.extend(item_diagnostics)
     return evidence, diagnostics, type_issues
+
+
+def _candidate_is_lossless(
+    source: CompilerDeclarationName,
+) -> tuple[bool, tuple[BridgeDiagnostic, ...]]:
+    """Admit query/mutation/app only when frozen facts cover the complete shape."""
+
+    if source.declaration.kind in _ALWAYS_INTEGRATED:
+        return True, ()
+    if source.declaration.kind not in _LOSSLESS_CANDIDATES:
+        return False, ()
+    declaration, diagnostics = LanguageSurfaceBridge().normalize_declaration(
+        source.declaration.node
+    )
+    reasons: list[str] = []
+    if declaration.facts.get("legacy_parameters"):
+        reasons.append("legacy operation parameters are not frozen as canonical HeaderArgs yet")
+    if any(item.code == "AIDL-N010" for item in diagnostics):
+        reasons.append("one or more body clauses are not normalized by the frozen contract")
+    if reasons:
+        name = source.fully_qualified_name or source.declaration.name or "<unnamed>"
+        return False, (
+            BridgeDiagnostic(
+                "AIDL-N013",
+                f"{source.declaration.kind} {name} is outside lossless production normalization: {'; '.join(reasons)}",
+            ),
+        )
+    return True, ()
 
 
 def _type_issue_key(issue: Any) -> tuple[Path, str, str]:
@@ -269,7 +304,7 @@ def _type_issue_identity(issue: Any) -> tuple[Any, ...]:
 
 
 def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguageSurface:
-    """Normalize the supported production slice from an existing compiler analysis.
+    """Normalize the lossless production slice from an existing compiler analysis.
 
     Parser nodes and project resolution stay authoritative for the current source
     version. Type parsing/checking and reference candidates are supplied by the
@@ -278,11 +313,14 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
     """
 
     project = analysis.project
-    item_by_node = {
-        id(item.declaration.node): item
-        for item in project.declaration_names
-        if item.declaration.kind in INTEGRATED_DECLARATION_KINDS
-    }
+    item_by_node: dict[int, CompilerDeclarationName] = {}
+    diagnostics: list[BridgeDiagnostic] = []
+    for item in project.declaration_names:
+        admitted, admission_diagnostics = _candidate_is_lossless(item)
+        diagnostics.extend(admission_diagnostics)
+        if admitted:
+            item_by_node[id(item.declaration.node)] = item
+
     integrated_keys = {
         (
             item.document.source_path,
@@ -298,7 +336,6 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
     ]
 
     documents: list[Document] = []
-    diagnostics: list[BridgeDiagnostic] = []
     for compiler_document in project.documents:
         declarations: list[Declaration] = []
         for compiler_declaration in compiler_document.declarations:
@@ -345,6 +382,7 @@ def normalize_compiler_analysis(analysis: CompilerAnalysis) -> ProductionLanguag
         seen_type_issues.add(identity)
         unique_type_issues.append(issue)
 
+    diagnostics.sort(key=lambda item: (item.code, item.message, item.severity))
     return ProductionLanguageSurface(
         documents=tuple(documents),
         diagnostics=tuple(diagnostics),
