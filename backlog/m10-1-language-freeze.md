@@ -36,6 +36,33 @@ All declaration kinds listed by `docs/06-grammar.md` remain semantic declaration
 3. **M16.5** — later syntax adoption that changes the frozen model requires an explicit versioned language decision and compatibility plan.
 4. **Parser/AST/IR migration** — production integration proceeds only as bounded M10.1 slices with differential evidence; broad replacement remains out of scope until compatibility is complete.
 
+## Stable work packages
+
+M10.1 roadmap identity is package-based, not PR-based. Merged PRs and tests are evidence assigned to these stable packages; they do not create new roadmap IDs. A checked package means the current repository still contains the required normative decision, implementation and regression evidence.
+
+- [x] **M10.1-01 — Freeze the canonical language-surface contract.** The normative freeze, machine-readable contract and contract regressions are integrated. Evidence includes the accepted freeze package originally merged through PR #59.
+- [x] **M10.1-02 — Establish the executable legacy-to-canonical compatibility bridge.** The contract-driven bridge, deterministic normalized semantics/hashes and explicit formatter/migrator separation are integrated. Evidence includes PR #60.
+- [x] **M10.1-03 — Integrate canonical normalization into the production compiler path.** Real `CompilerAnalysis`/`CompilerProject` facts feed bounded production normalization with deterministic fail-closed exclusion outside the lossless envelope. Evidence includes PRs #61 and #62.
+- [x] **M10.1-04 — Close operation signatures and baseline body parity.** Typed query/mutation signatures, reference projections, defaults and contract-backed scalar body slots are integrated. Evidence includes PRs #63 and #64.
+- [x] **M10.1-05 — Close structured operation error parity.** Compiler-owned structured `errors` evidence and contract revision 4 production admission are integrated with ordered deterministic semantics and fail-closed incomplete evidence. Evidence includes PRs #65 and #66.
+- [ ] **M10.1-06 — Close structured operation policy semantics.** Complete `auth`, `authorize`, `cache` and `consistency` semantics through frozen-contract facts plus compiler-owned evidence. PR #67 provides the compiler-owned auth evidence prerequisite. PR #68 adds the bounded `policy-bool-no-parameters/v1` qualifiedName auth-target contract: a unique non-generic, parameterless `policy` returning `bool` is eligible, while unresolved, ambiguous, wrong-kind, generic, parameterized and non-`bool` targets remain fail-closed. These merged prerequisites do **not** establish auth Production-Parity, and this package remains open.
+- [ ] **M10.1-07 — Close operation execution semantics.** Complete `idempotency`, `transaction`, remaining operation modifiers and any frozen-v1 operation generics/constraints that require an explicit compatibility disposition. Unsupported shapes remain fail-closed until represented losslessly.
+- [ ] **M10.1-08 — Close declaration-family production parity.** Every remaining frozen-v1 declaration family must have an explicit disposition: `production-parity`, `intentionally excluded`, or `not applicable`, backed by deterministic evidence rather than inferred from parser acceptance.
+- [ ] **M10.1-09 — Add complete language-surface coverage and differential conformance.** Maintain a complete machine-readable frozen-v1 inventory/disposition, differential legacy/canonical evidence, and CI drift protection covering compatibility and Production Normalization.
+- [ ] **M10.1-10 — Certify M10.1 closure and unblock M10.5-03.** Audit all package evidence, close the regression matrix and Production Semantic Envelope, and unblock M10.5-03 only when it can implement the frozen surface without making any unresolved language decision of its own.
+
+## M10.1 acceptance criteria
+
+M10.1 closes only when all of the following hold:
+
+- Every frozen-v1 semantic fact is normalized losslessly or rejected deterministically fail-closed; no heuristic partial semantics are admitted as complete.
+- Equivalent legacy and canonical representations converge on identical semantic facts and stable semantic hashes.
+- Production Normalization is derived only from `spec/language-surface-v1.json` plus compiler-owned evidence; there is no parallel grammar, independent declaration/body inventory, or parallel semantic table.
+- Same-version formatting and explicit language-version migration remain separate operations.
+- Query/mutation and every required frozen-v1 declaration family have complete production parity or an explicit justified exclusion/not-applicable disposition.
+- The complete coverage/compatibility inventory and differential conformance checks are deterministic and protected against drift in CI.
+- M10.5-03 can implement the frozen front-end/IR model without inventing, selecting or resolving a language decision not already closed by M10.1.
+
 ## Compatibility bridge status
 
 `tools/compiler_language_surface.py` consumes `spec/language-surface-v1.json` as the single construction contract and normalizes representative legacy parser nodes into immutable canonical declarations, header arguments, operation parameters, body slots, type/reference facts and modifier calls. `tools/compiler_language_surface_body_parity.py` extends that bridge only by interpreting operation body slots already declared by the same contract; it owns no separate clause inventory. Structured query/mutation `errors` admission is supplied only by `tools/compiler_typecheck.py` through compiler-owned ordered resolution evidence. `docs/m10-1-compatibility-bridge.md` records the executable boundary.
@@ -57,11 +84,13 @@ Contract revision 4 retains scalar operation-body parity and additionally admits
 
 Generic operation type parameters, malformed/untyped parameters, unsupported parameter modifiers, and body clauses not fully represented by the frozen contract remain excluded from the complete production semantic set. In particular `auth`, `cache`, `consistency`, `authorize`, `idempotency`, `transaction` and their nested mini-languages remain pending. They produce stable fail-closed diagnostics (`AIDL-N013` with bridge evidence such as `AIDL-N010`/`AIDL-N015`) instead of heuristic canonical facts. Incomplete `errors` evidence likewise yields fail-closed production admission without changing the compiler's existing `_errors` diagnostics or the M10-04 unresolved-nominal deferral.
 
+The merged auth prerequisites provide diagnostic-neutral compiler-owned evidence without changing that production envelope. Builtin `public`, `authenticated` and `service` modes are explicit and complete at the evidence layer. Qualified auth names use the bounded `policy-bool-no-parameters/v1` target contract from PR #68: exactly one non-generic, parameterless `policy` with declared result `bool` is eligible and complete evidence, while unresolved, ambiguous, wrong-kind, generic, parameterized and non-`bool` targets remain explicit fail-closed states. This evidence and target contract still do not add an `auth` body slot to the frozen contract and therefore do not establish auth Production-Parity.
+
 Modifier target/arity remain contract-driven through `LanguageSurfaceBridge`. Literal-vs-expression annotation evidence is checked against the existing parser AST; expression-like input in a literal-only modifier position emits `AIDL-N014`.
 
 The bridge semantic envelope remains `aidl.m10.1-normalized/v2` for the base bridge; production errors parity is explicitly versioned by contract revision 4 and production envelope `aidl.m10.1-production/v5`. The compiler-owned in-memory summary consumes the production hash/diagnostic state, while CLI JSON and Canonical IR schemas remain unchanged.
 
-M10.1 remains open. The next dependency-ready step is one further structured mini-language whose parser/compiler evidence can be represented without flattening—for example auth/cache or idempotency—before considering broader workflow/messaging/resource/UI/test bodies. M10.5-03 remains blocked for semantic front-end/AST/IR work until the relevant compatibility path is complete.
+M10.1 remains open at **M10.1-06**. The next auth step is a bounded contract-owned Production-Parity slice that represents eligible builtins and qualified-policy evidence losslessly while keeping unsupported auth states excluded; the package remains incomplete until `auth`, `authorize`, `cache` and `consistency` have explicit frozen-contract/compiler-evidence dispositions and Production-Parity where required. M10.5-03 remains blocked for semantic front-end/AST/IR work until all relevant M10.1 packages through closure certification are complete.
 
 ## Required regression set
 
