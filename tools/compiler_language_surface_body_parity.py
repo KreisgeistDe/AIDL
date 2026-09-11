@@ -8,6 +8,7 @@ that decides which query/mutation body facts may enter canonical semantics.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any, Mapping
 
 try:
@@ -44,6 +45,15 @@ except ImportError:  # pragma: no cover
 
 class ContractBodyParityBridge(LanguageSurfaceBridge):
     """Normalize only contract-declared scalar operation body slots losslessly."""
+
+    def normalize_declaration(self, node: Node) -> tuple[Declaration, list[BridgeDiagnostic]]:
+        declaration, diagnostics = super().normalize_declaration(node)
+        if declaration.kind in {"query", "mutation"} and declaration.facts.get("legacy_parameters") == "()":
+            declaration = replace(
+                declaration,
+                facts={key: value for key, value in declaration.facts.items() if key != "legacy_parameters"},
+            )
+        return declaration, diagnostics
 
     def _body(
         self,
