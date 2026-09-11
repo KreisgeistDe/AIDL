@@ -15,16 +15,16 @@ Goal: turn the repository toolchain into a reproducible, installable, and protec
 
 ### M9-09 — Roadmap and Agent State Consistency
 
-- [x] **P1** Make `TODO.md` the sole handwritten authority for roadmap order, milestone identity, and completion state; keep conformance manifests as the separate authority for implementation/support claims. *(The roadmap policy now states this split explicitly, and the offline repository-state validator checks both authority markers.)*
+- [x] **P1** Establish one deterministic roadmap authority while keeping conformance manifests separate from roadmap completion. *(The initial handwritten-only model has now migrated M10 and M10.1 to `roadmap/v1/`: JSON owns their machine-readable IDs/order/priority/status/dependencies/disposition, Markdown remains a checked human projection and narrative, and unmigrated milestones remain explicitly `pending_migration` rather than gaining overlapping authority.)*
 - [x] **P1** Eliminate independently maintained durable project `.ai/**` milestone/current-state documents, or derive any retained committed projection deterministically from the authoritative roadmap instead of maintaining a second handwritten roadmap. *(The split-repository migration is already complete: the project tree contains no `.ai/**`; operational state lives only in `AIDL_channel@agents/channel`.)*
-- [x] **P1** Add deterministic offline CI validation for any committed project `.ai/**` current-state exposure so lagging, contradictory, or independently edited agent-facing milestone state is rejected without network access. *(`python3 -m tools.validate_repository_state` rejects tracked `.ai/**` paths and missing roadmap/channel/conformance authority markers, and standard Validation CI runs it without network access.)*
-- [x] **P1** Reconcile legacy `BACKLOG`, `TASK`, `HANDOFF`, and applicable `CONTEXT` current-state content against `TODO.md` before it is frozen, removed, or replaced by deterministic generation. *(This migration point is obsolete rather than pending: those legacy project files have already been removed, no project `.ai/**` projection remains to reconcile, and the boundary validator no longer carries deletion exceptions for them.)*
-- [x] **P1** Define the policy-safe maintenance path for that reconciliation or migration while preserving the rule that ordinary project PRs targeting `main` must continue to reject every `.ai/**` mutation. *(Project PRs now reject every `.ai/**` endpoint, including deletions and renames; operational or transport-workflow maintenance belongs only in `KreisgeistDe/AIDL_channel@agents/channel`.)*
+- [x] **P1** Add deterministic offline CI validation for committed project and roadmap current-state exposure so lagging, contradictory, or independently edited agent-facing milestone state is rejected without network access. *(`python3 -m tools.validate_repository_state` rejects tracked `.ai/**`, validates `roadmap/v1/`, and rejects Markdown/JSON drift for migrated milestones; standard Validation CI runs it without network access.)*
+- [x] **P1** Reconcile legacy `BACKLOG`, `TASK`, `HANDOFF`, and applicable `CONTEXT` current-state content before it is frozen, removed, or replaced by deterministic generation/checking. *(This migration point is obsolete rather than pending: those legacy project files have already been removed and no project `.ai/**` projection remains to reconcile.)*
+- [x] **P1** Define the policy-safe maintenance path for roadmap migration while preserving the rule that ordinary project PRs targeting `main` must continue to reject every `.ai/**` mutation. *(Project roadmap data lives outside `.ai/**`; operational or transport-workflow maintenance belongs only in `KreisgeistDe/AIDL_channel@agents/channel`.)*
 
 #### M9-09 acceptance criteria
 
-- [x] `TODO.md` is the sole handwritten roadmap, milestone, and completion authority.
-- [x] No committed agent-facing current-state projection lags or contradicts the authoritative roadmap.
+- [x] `roadmap/v1/` is the sole machine-readable completion authority for explicitly migrated milestones; unmigrated milestones remain explicitly pending migration under their existing Markdown authority.
+- [x] No committed agent-facing or Markdown status projection lags or contradicts the authoritative roadmap for migrated milestones.
 - [x] Conformance manifests remain the separate implementation/support-claim authority and are not derived from roadmap completion state.
 - [x] Roadmap/agent-state consistency validation is deterministic and offline.
 
