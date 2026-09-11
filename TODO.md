@@ -10,6 +10,21 @@ The guiding principle is to finish one deterministic vertical slice before expan
 
 [M10.1 — Normative Language Surface Freeze Gate](backlog/m10-1-language-freeze.md) is the language-design authority sequenced after completed M10 Core conformance and before M10.5. It must be reviewed before M10.5-03 front-end/IR migration and before further M16.5 syntax adoption. M10.5-01/-02 work that is genuinely migration-neutral may continue independently where the M10.5 roadmap permits it. Existing legacy syntax remains accepted until an explicit versioned parser/migrator implementation; there is no permanent parallel grammar.
 
+Stable M10.1 work packages are numbered independently of PRs. Completed packages stay checked only while the repository continues to contain the required normative contract, production bridge and regression evidence.
+
+- [x] **M10.1-01 — Freeze the canonical language-surface contract.** `docs/m10-1-language-surface-freeze.md` and `spec/language-surface-v1.json` remain the normative frozen-v1 target.
+- [x] **M10.1-02 — Establish the executable legacy-to-canonical compatibility bridge.** Legacy source facts normalize through the contract-owned bridge with deterministic semantic hashes and explicit migration separation.
+- [x] **M10.1-03 — Integrate canonical normalization into the production compiler path.** Production normalization consumes real compiler analysis and fails closed outside its lossless semantic envelope.
+- [x] **M10.1-04 — Close operation signatures and baseline body parity.** Typed query/mutation parameters, reference projections, defaults and scalar body facts have production parity.
+- [x] **M10.1-05 — Close structured operation error parity.** Ordered query/mutation `errors` semantics are contract-backed and admitted only from complete compiler-owned evidence.
+- [ ] **M10.1-06 — Close structured operation policy semantics.** Complete `auth`, `authorize`, `cache` and `consistency` parity. Evidence includes merged PR #67 for compiler-owned auth evidence and merged PR #68 for the bounded `policy-bool-no-parameters/v1` qualifiedName auth-target contract; both are prerequisites only, and auth Production-Parity is not yet established.
+- [ ] **M10.1-07 — Close operation execution semantics.** Complete `idempotency`, `transaction`, remaining operation modifiers and any frozen-v1 operation generics/constraints that require explicit compatibility treatment.
+- [ ] **M10.1-08 — Close declaration-family production parity.** Every remaining frozen-v1 declaration family receives an explicit disposition: production-parity, intentionally excluded or not applicable.
+- [ ] **M10.1-09 — Add complete language-surface coverage and differential conformance.** Maintain a complete machine-readable inventory/disposition, differential evidence and deterministic CI drift protection.
+- [ ] **M10.1-10 — Certify M10.1 closure and unblock M10.5-03.** Complete the final audit, regression set and Production Semantic Envelope certification with no unresolved language decision required by M10.5-03.
+
+M10.1 acceptance requires all frozen-v1 semantics to be lossless or deterministically fail-closed; equivalent legacy/canonical representations to converge on identical semantics and hashes; Production Normalization to derive only from the frozen contract plus compiler-owned evidence without parallel grammars or semantic tables; formatter and migration behavior to remain separate; query/mutation and required declaration families to have complete parity or explicit exclusion; coverage/compatibility drift to be deterministic in CI; and M10.5-03 to be implementable without inventing an unresolved language decision.
+
 ## Priority legend
 
 - **P0** — required for the first usable end-to-end AIDL workflow
