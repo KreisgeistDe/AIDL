@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression checks for the normative M11-1 language-surface freeze."""
+"""Regression checks for the normative M10.1 language-surface freeze."""
 
 from __future__ import annotations
 

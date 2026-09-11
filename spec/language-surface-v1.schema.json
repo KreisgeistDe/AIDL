@@ -7,7 +7,7 @@
   "required": ["schema_version", "authority", "status", "canonical_form", "declaration_kinds", "modifiers", "examples"],
   "properties": {
     "schema_version": {"const": "aidl.language-surface/v1"},
-    "authority": {"const": "M11-1"},
+    "authority": {"const": "M10.1"},
     "status": {"const": "frozen"},
     "canonical_form": {"const": "[export] <kind> <name?> [(named-args)] [-> type] { slots }"},
     "declaration_kinds": {

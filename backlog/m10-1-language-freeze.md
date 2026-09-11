@@ -1,12 +1,12 @@
-# M11-1 — Normative Language Surface Freeze Gate
+# M10.1 — Normative Language Surface Freeze Gate
 
 Status: **normative language-design authority for the Kotlin front-end migration target**.
 
-This gate is sequenced before M10.5-03 front-end/IR migration and before any further M16.5 syntax adoption. Migrationsneutral M10.5 scaffolding (module boundaries, build wiring, serialization/test infrastructure and differential-harness plumbing) may continue, but no Kotlin parser/AST/IR slice may encode a language-surface choice that is not represented by the frozen contract in `spec/language-surface-v1.json`.
+This gate is sequenced after completed M10 Core conformance, before M10.5, before M10.5-03 front-end/IR migration, and before any further M16.5 syntax adoption. Migration-neutral M10.5 scaffolding (module boundaries, build wiring, serialization/test infrastructure and differential-harness plumbing) may continue only where the existing M10.5 roadmap permits it, but no Kotlin parser/AST/IR slice may encode a language-surface choice that is not represented by the frozen contract in `spec/language-surface-v1.json`.
 
 ## Authority and compatibility
 
-For the next compiler front-end, `docs/m11-1-language-surface-freeze.md` and `spec/language-surface-v1.json` are the normative target design. `docs/06-grammar.md` remains the normative grammar for the currently accepted legacy source version until a separately versioned parser/migrator change is implemented. M16.5 design/evaluation documents remain evidence and tooling/adoption gates; where an M16.5 candidate conflicts with this freeze, M11-1 wins. There is no permanent parallel grammar.
+For the next compiler front-end, `docs/m10-1-language-surface-freeze.md` and `spec/language-surface-v1.json` are the normative target design. `docs/06-grammar.md` remains the normative grammar for the currently accepted legacy source version until a separately versioned parser/migrator change is implemented. M16.5 design/evaluation documents remain evidence and tooling/adoption gates; where an M16.5 candidate conflicts with this freeze, M10.1 wins. There is no permanent parallel grammar.
 
 Legacy compatibility is one-way and versioned: **legacy parse -> canonical AST/IR -> canonical formatter/migrator**. Equivalent legacy and canonical source must converge on the same normalized semantic IR/hash. A formatter never performs a language-version migration implicitly.
 
@@ -35,10 +35,10 @@ No semantic declaration kind is removed by this package. The items marked **remo
 
 ## Gates
 
-1. **M11-1 Freeze** — this document, target schema, contract instance and regression fixtures are reviewed; no unresolved semantic question remains in the frozen model.
+1. **M10.1 Freeze** — this document, target schema, contract instance and regression fixtures are reviewed; no unresolved semantic question remains in the frozen model.
 2. **M10.5-03** — Kotlin front-end slices may begin only against the frozen model plus legacy compatibility corpus. Differential parity must compare normalized semantics, not accidental legacy parser node shape.
 3. **M16.5** — evaluation/tooling may measure or prototype the frozen target, but later adoption that changes this model requires an explicit versioned language decision and compatibility plan.
-4. **Parser/AST/IR migration** — broad production implementation is the next sequential M11-1 package, not part of this freeze commit.
+4. **Parser/AST/IR migration** — broad production implementation is the next sequential M10.1 package, not part of this freeze commit.
 
 ## Required regression set
 

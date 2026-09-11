@@ -1,4 +1,4 @@
-# M11-1 Normative Language Surface Freeze
+# M10.1 Normative Language Surface Freeze
 
 **Status:** accepted target design for review; normative for post-freeze front-end work once merged.
 
@@ -10,7 +10,7 @@ The canonical declaration direction is:
 [export] <kind> <name?> [(named-args)] [-> type] { slots }
 ```
 
-The exact machine-readable contract is `spec/language-surface-v1.json`, validated by `spec/language-surface-v1.schema.json`. The roadmap authority and sequencing rules are in `backlog/m11-1-language-freeze.md`.
+The exact machine-readable contract is `spec/language-surface-v1.json`, validated by `spec/language-surface-v1.schema.json`. The roadmap authority and sequencing rules are in `backlog/m10-1-language-freeze.md`.
 
 ## Metamodel semantics
 
@@ -56,10 +56,10 @@ There is no source-form fork with two independently evolving semantics. The only
 
 ## Relation to M16.5 and M10.5
 
-M16.5 E1/E2 records remain useful evidence for kernel boundaries, migration discipline and evaluation methodology, but their target shapes are no longer merely free-standing candidates where this ADR makes a decision. M11-1 is the design authority; M16.5 becomes the downstream evaluation/tooling/adoption gate. A later proposal that changes the frozen model requires a new versioned language decision, M7 compatibility classification, migration plan and evidence.
+M16.5 E1/E2 records remain useful evidence for kernel boundaries, migration discipline and evaluation methodology, but their target shapes are no longer merely free-standing candidates where this ADR makes a decision. M10.1 is the design authority; M16.5 becomes the downstream evaluation/tooling/adoption gate. A later proposal that changes the frozen model requires a new versioned language decision, M7 compatibility classification, migration plan and evidence.
 
-M10.5-01/-02 may continue where work is language-neutral. M10.5-03 parser/source-projection and later IR ownership are blocked on this freeze and must implement this canonical model while preserving the legacy compatibility corpus. This package intentionally does not perform the broad parser/AST/resolver/typechecker migration.
+M10.1 is sequenced after completed M10 Core conformance and before M10.5. M10.5-01/-02 may continue where work is genuinely language-neutral and the existing M10.5 roadmap allows it. M10.5-03 parser/source-projection and later IR ownership are blocked on this freeze and must implement this canonical model while preserving the legacy compatibility corpus. M10.5, not M11.5, is the Kotlin compiler-core migration gate. This package intentionally does not perform the broad parser/AST/resolver/typechecker migration.
 
 ## Consequences and next step
 
-The next sequential M11-1 package is the compatibility bridge: introduce the canonical in-memory model and normalization layer behind the existing parser, map representative legacy forms into it, compute normalized semantic hashes, and add a formatter/migrator prototype without changing default accepted syntax. Only after that evidence is green should Kotlin M10.5-03 front-end slices encode the frozen model.
+The next sequential M10.1 package is the compatibility bridge: introduce the canonical in-memory model and normalization layer behind the existing parser, map representative legacy forms into it, compute normalized semantic hashes, and add a formatter/migrator prototype without changing default accepted syntax. Only after that evidence is green should Kotlin M10.5-03 front-end slices encode the frozen model.
