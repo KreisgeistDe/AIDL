@@ -88,6 +88,12 @@ class ProjectSummary:
     language_surface_diagnostic_codes: tuple[str, ...]
 
     def to_json(self) -> dict[str, Any]:
+        """Preserve the frozen CLI summary JSON contract.
+
+        M10.1 semantic evidence is compiler-owned in-memory state on this summary
+        object. Exposing it through CLI JSON requires an explicit CLI schema/version
+        change and is intentionally not part of this production-integration slice.
+        """
         return {
             "declarationCount": self.declaration_count,
             "declarationKinds": [item.to_json() for item in self.declaration_kinds],
@@ -95,12 +101,6 @@ class ProjectSummary:
             "documentCount": self.document_count,
             "documentsWithoutModuleCount": self.documents_without_module_count,
             "exportedDeclarationCount": self.exported_declaration_count,
-            "languageSurface": {
-                "declarationCount": self.language_surface_declaration_count,
-                "diagnosticCodes": list(self.language_surface_diagnostic_codes),
-                "ok": self.language_surface_ok,
-                "semanticHash": self.language_surface_semantic_hash,
-            },
             "moduleCount": self.module_count,
             "moduleDependencies": [item.to_json() for item in self.module_dependencies],
             "modules": [item.to_json() for item in self.modules],
@@ -125,7 +125,7 @@ def _counts(kinds: list[str]) -> tuple[ProjectCount, ...]:
 
 
 def summarize_project(analysis: CompilerAnalysis) -> ProjectSummary:
-    """Project existing compiler-owned facts into a deterministic bounded agent summary."""
+    """Project compiler facts and consume the M10.1 normalized semantic surface."""
 
     project = analysis.project
     surface = normalize_compiler_analysis(analysis)
