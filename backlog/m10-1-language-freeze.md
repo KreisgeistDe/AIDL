@@ -40,6 +40,14 @@ No semantic declaration kind is removed by this package. The items marked **remo
 3. **M16.5** — evaluation/tooling may measure or prototype the frozen target, but later adoption that changes this model requires an explicit versioned language decision and compatibility plan.
 4. **Parser/AST/IR migration** — broad production implementation is the next sequential M10.1 package, not part of this freeze commit.
 
+## Compatibility bridge status
+
+The representative bridge is implemented in `tools/compiler_language_surface.py` and specified operationally in `docs/m10-1-compatibility-bridge.md`. It consumes `spec/language-surface-v1.json` directly, normalizes representative current-parser legacy forms into immutable canonical semantic records, provides deterministic semantic JSON/SHA-256 fingerprints, and separates same-version legacy formatting from explicit target-version migration previews.
+
+Covered executable cases include declaration-specific relationship headers, entity fields, optional/reference types, resolver-backed `Pet.id`, opaque aliases, enum cases, app profile/version slots, `@publicReason`, query `read` expressions, body occurrence/uniqueness checks and modifier target/arity checks. Unsupported body mini-languages are diagnosed instead of silently canonicalized, and migration preview refuses facts that the frozen contract cannot yet express losslessly.
+
+M10.1 remains open after this package. The next sequential dependency-ready step is parser/AST/resolver/typechecker integration with real project resolution/type facts and wider contract-backed normalization; M10.5-03 remains blocked until that compatibility path and parity evidence are complete.
+
 ## Required regression set
 
 The executable contract regression covers: a `User` entity; `migration`; `@publicReason` on `query getPet`; an `app` profile; all three `NamePolicy` values; BodySlot cardinality/order/uniqueness; modifier target/arity; enum cases; resolved `Pet.id` reference projection; and literal-vs-expression rejection. Negative cases must fail for missing required names, forbidden names, duplicate unique slots, occurrence overflow, wrong modifier target/arity, unresolved projection shape, and expressions supplied to literal-only positions.
