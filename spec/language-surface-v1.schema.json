@@ -97,6 +97,15 @@
         }
       ]
     },
+    "bodyListItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value_mode", "reference_kinds"],
+      "properties": {
+        "value_mode": {"const": "type_ref"},
+        "reference_kinds": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
     "bodySlot": {
       "type": "object",
       "additionalProperties": false,
@@ -108,11 +117,18 @@
         "occurrence": {"$ref": "#/$defs/occurrence"},
         "order": {"enum": ["source", "canonical", "unordered"]},
         "unique": {"type": "boolean"},
-        "value_mode": {"enum": ["literal", "expression", "type_ref", "declaration_ref", "block", "enum_case"]},
+        "value_mode": {"enum": ["literal", "expression", "type_ref", "type_ref_list", "declaration_ref", "block", "enum_case"]},
         "type": {"$ref": "#/$defs/typeRef"},
+        "item": {"$ref": "#/$defs/bodyListItem"},
         "literal_kind": {"type": "string"},
         "nested_slots": {"type": "array", "items": {"$ref": "#/$defs/bodySlot"}}
-      }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"value_mode": {"const": "type_ref_list"}}, "required": ["value_mode"]},
+          "then": {"required": ["item"]}
+        }
+      ]
     },
     "declarationKind": {
       "type": "object",
