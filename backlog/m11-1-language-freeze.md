@@ -35,7 +35,7 @@ No semantic declaration kind is removed by this package. The items marked **remo
 
 ## Gates
 
-1. **M11-1 Freeze** — this document, target schema, contract instance and regression fixtures are reviewed; no unresolved semantic TODO remains in the frozen model.
+1. **M11-1 Freeze** — this document, target schema, contract instance and regression fixtures are reviewed; no unresolved semantic question remains in the frozen model.
 2. **M10.5-03** — Kotlin front-end slices may begin only against the frozen model plus legacy compatibility corpus. Differential parity must compare normalized semantics, not accidental legacy parser node shape.
 3. **M16.5** — evaluation/tooling may measure or prototype the frozen target, but later adoption that changes this model requires an explicit versioned language decision and compatibility plan.
 4. **Parser/AST/IR migration** — broad production implementation is the next sequential M11-1 package, not part of this freeze commit.
