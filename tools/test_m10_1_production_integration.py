@@ -64,12 +64,14 @@ class M101ProductionIntegrationTest(unittest.TestCase):
     def test_existing_summary_is_a_real_downstream_semantic_hash_consumer(self) -> None:
         analysis = self._analysis(_PROJECT)
         surface = normalize_compiler_analysis(analysis)
-        payload = summarize_project(analysis).to_json()
+        summary = summarize_project(analysis)
+        payload = summary.to_json()
 
-        self.assertEqual(surface.semantic_hash(), payload["languageSurface"]["semanticHash"])
-        self.assertEqual(len(surface.declarations), payload["languageSurface"]["declarationCount"])
-        self.assertTrue(payload["languageSurface"]["ok"])
-        self.assertEqual([], payload["languageSurface"]["diagnosticCodes"])
+        self.assertEqual(surface.semantic_hash(), summary.language_surface_semantic_hash)
+        self.assertEqual(len(surface.declarations), summary.language_surface_declaration_count)
+        self.assertTrue(summary.language_surface_ok)
+        self.assertEqual((), summary.language_surface_diagnostic_codes)
+        self.assertNotIn("languageSurface", payload)
 
     def test_legacy_ref_projection_remains_fail_closed_until_core_typechecker_accepts_it(self) -> None:
         source = _PROJECT.replace("Pet.id?", "ref Pet.id?")
