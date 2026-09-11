@@ -92,6 +92,39 @@ export query read() -> string {
         self.assertTrue(any("NotAnError" in diagnostic.message for diagnostic in diagnostics))
         self.assertTrue(any("duplicate declared error" in diagnostic.message for diagnostic in diagnostics))
 
+    def test_typed_body_clause_nominals_resolve_or_report(self) -> None:
+        resolved = self._analysis(
+            """module test.errors
+export error KnownError {
+  code "KNOWN"
+  httpStatus 400
+  retry never
+  safeMessage "Known error"
+}
+export query read() -> string {
+  errors: [KnownError]
+}
+"""
+        )
+        self.assertFalse(
+            [diagnostic for diagnostic in resolved if diagnostic.code.value == "AIDL-T001"]
+        )
+
+        unresolved = self._analysis(
+            """module test.errors
+export query read() -> string {
+  errors: [MissingError]
+}
+"""
+        )
+        unknown = [
+            diagnostic for diagnostic in unresolved if diagnostic.code.value == "AIDL-T001"
+        ]
+        self.assertEqual(len(unknown), 1)
+        self.assertIn("MissingError", unknown[0].message)
+        self.assertEqual(unknown[0].phase, "type")
+        self.assertEqual(unknown[0].docs, "aidl://diagnostics/AIDL-T001")
+
     def test_public_api_rejects_owner_local_refs_and_sensitive_values(self) -> None:
         diagnostics = self._analysis(
             """module test.serialization
