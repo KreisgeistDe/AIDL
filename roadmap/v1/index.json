@@ -13,6 +13,8 @@
     "M9",
     "M10",
     "M10.1",
+    "M10.2",
+    "M10.3",
     "M10.5",
     "M11",
     "M12",
@@ -43,12 +45,30 @@
       "order": 11,
       "priority": "P1",
       "authority": "authoritative"
+    },
+    {
+      "id": "M10.2",
+      "title": "Canonical Language Documentation & Source Migration Gate",
+      "path": "roadmap/v1/milestones/m10.2.json",
+      "order": 12,
+      "priority": "P1",
+      "authority": "authoritative"
+    },
+    {
+      "id": "M10.3",
+      "title": "Reference Example & Production Semantic Closure Gate",
+      "path": "roadmap/v1/milestones/m10.3.json",
+      "order": 13,
+      "priority": "P1",
+      "authority": "authoritative"
     }
   ],
   "migration": {
     "authoritative_milestones": [
       "M10",
-      "M10.1"
+      "M10.1",
+      "M10.2",
+      "M10.3"
     ],
     "pending_milestones": [
       "M1",
