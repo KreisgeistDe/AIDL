@@ -2,7 +2,7 @@
 
 ## Purpose
 
-M10.5 is an additive architecture and execution gate between full M10 Core-conformance closure and any further deepening of M11-04.1 dependency-aware incremental analysis or M11.5 unified compiler-service internals. It does not renumber, reopen, or reinterpret M1–M21 milestone identities or completion states. Existing completed M11-01 through M11-04 work remains completed; this gate controls only subsequent compiler-core investment.
+M10.5 is an additive architecture and execution gate after the completed M10.1 freeze and the required M10.2/M10.3 pre-Kotlin source/documentation/example migration gates, before any further deepening of M11-04.1 dependency-aware incremental analysis or M11.5 unified compiler-service internals. It does not renumber, reopen, or reinterpret M1–M21 milestone identities or completion states. Existing completed M11-01 through M11-04 work remains completed; this gate controls only subsequent compiler-core investment.
 
 M10.5 plans a staged migration of the compiler core from Python to Kotlin without a big-bang rewrite. Python remains the reference/conformance implementation until the explicit exit criteria below are met. No roadmap item in this gate by itself changes language semantics, conformance claims, Canonical IR, generator/runtime support, IDE support, release readiness, or public support status.
 
@@ -28,7 +28,11 @@ A JVM-only rewrite is not the target architecture, and a Kotlin/Native fork with
 
 ## Dependencies and sequencing
 
-M10.5 begins only after M10 acceptance criteria are fully complete. Until then, M10 closure remains higher priority than migration implementation.
+The whole M10.5 migration, including M10.5-01, begins only after M10.3 is integrated. The required order is `M10.1 -> M10.2 -> M10.3 -> refreshed M10.5-01 -> M10.5-02 and later Kotlin work`.
+
+M10.2 first classifies and aligns the complete committed source/documentation surface against the frozen M10.1 authority. M10.3 then migrates intended reference examples and explicitly resolves every production semantic mismatch, with any actual semantic/admission change requiring a versioned contract update, re-freeze, exhaustive coverage, and certification. M16.5 remains a later broader normalization/metamodel milestone and is not a substitute for these pre-Kotlin gates.
+
+Current PR #77 and any pre-M10.2 M10.5-01 inventory/fingerprint are provisional/deferred evidence only. They cannot serve as the final Kotlin parity baseline. After M10.3 is integrated, M10.5-01 must be refreshed or rebased from the resulting Python reference state, its evidence inventory regenerated, and its deterministic fingerprint recomputed before M10.5-02 may begin.
 
 Before additional M11-04.1 or M11.5 compiler-core architecture is implemented, the migration plan and parity harness defined here must be accepted so new cache/index/service architecture is not unnecessarily coupled to Python-only internals.
 
@@ -38,6 +42,8 @@ Completed M11-01 through M11-04 behavior is an input contract for migration pari
 
 ### M10.5-01 — Contract inventory and differential harness
 
+M10.5-01 is executable only after integrated M10.3. Any earlier inventory or fingerprint, including PR #77's pre-M10.2 baseline, must be treated as provisional and refreshed against the post-M10.3 Python reference baseline before this phase can satisfy Gate 01.
+
 - [ ] Inventory the Python compiler-owned semantic surface used by CLI, LSP, agent tools, fixtures, compatibility, and IntelliJ integration, including deterministic ordering, stable identities, source locations, diagnostic payloads, Canonical IR, and failure modes.
 - [ ] Freeze a machine-readable parity corpus from existing Golden Fixtures, Core conformance evidence, negative diagnostics, Canonical-IR snapshots, reference applications, compatibility fixtures, and representative CLI inputs without inventing new support claims.
 - [ ] Define normalized differential comparison rules for Python-versus-Kotlin outputs, explicitly listing any transport-only fields that may differ while rejecting semantic normalization that hides real divergence.
@@ -46,7 +52,7 @@ Completed M11-01 through M11-04 behavior is an input contract for migration pari
 
 #### Gate 01
 
-No Kotlin semantic implementation proceeds beyond scaffolding until the parity corpus and differential comparison contract cover the supported Core source surface and the current completed M11 query behavior relevant to compiler semantics.
+No Kotlin semantic implementation proceeds beyond scaffolding until integrated M10.3 exists and the refreshed parity corpus and differential comparison contract cover the supported Core source surface and the current completed M11 query behavior relevant to compiler semantics.
 
 ### M10.5-02 — Kotlin Multiplatform compiler skeleton
 
@@ -139,8 +145,8 @@ Python may cease to be the reference/default compiler only when all of the follo
 
 ## Completion criteria
 
-M10.5 planning is complete when the architecture, phases, differential harness contract, hard parity gates, coverage-quality requirement, and Python exit criteria are versioned in the roadmap and accepted without changing implementation or support claims.
+M10.5 planning is complete when the architecture, phases, differential harness contract, hard parity gates, coverage-quality requirement, Python exit criteria, and mandatory dependency on integrated M10.3 are versioned in the roadmap and accepted without changing implementation or support claims.
 
 M10.5 implementation is complete only after all phase gates and Python exit criteria are satisfied by executable evidence. Until then, Python remains the reference/conformance implementation and Kotlin migration work is incremental.
 
-This milestone does not authorize Kotlin/build/compiler implementation by itself; implementation requires separately dispatched work packages after M10 is fully complete.
+This milestone does not authorize Kotlin/build/compiler implementation by itself; implementation requires separately dispatched work packages after M10.3 and the refreshed M10.5-01 gate are complete.
