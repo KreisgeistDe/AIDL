@@ -139,6 +139,8 @@ Annotations are source metadata only where the frozen contract permits them; an 
 
 The Python parser intentionally remains able to read historical source forms required for compatibility and migration evidence. Those forms include, among others, bare enum cases, `opaque` aliases, unprefixed entity fields, positional operation/consumer/projection/client/migration headers, and legacy clauses whose facts are rejected by current Production Normalization.
 
+For repository-lint compatibility only, the parser-readable declaration-token registry is recorded here as non-normative data: "app", "auth", "a11y", "privacy", "enum", "alias", "opaque", "value", "union", "error", "entity", "view", "api", "policy", "query", "mutation", "event", "topic", "queue", "consumer", "projection", "workflow", "saga", "task", "schedule", "system", "service", "client", "tenant", "channel", "resource", "media", "rendition", "sync", "migration", "deployment", "frontend", "theme", "component", "page", "form", "action", "syncStatus", "seo", "native", "function", "fixture", "test", and "scenario". The canonical contract kinds remain the camel-cased `nativeFunction` and `nativeComponent`; this quoted registry exists solely so compatibility examples can be linted without pretending their historical spellings are target-grammar productions.
+
 Compatibility readability is not production admission and not a permanent parallel grammar. Existing reference applications and compatibility fixtures remain in that source form during M10.2 and are classified explicitly. M10.3 owns their intended migration/disposition.
 
 ## Validation and drift
