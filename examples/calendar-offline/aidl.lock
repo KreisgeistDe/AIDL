@@ -7,7 +7,7 @@
     "cloud": 1
   },
   "standardLibrary": "aidl.std",
-  "grammar": "sha256:57f79c714a040b19ea3520cbc8ecfac68c4236fc62da735758860eada75ab4f9",
+  "grammar": "sha256:705afdbc4138fa301ff77c45ad30cc2dc8639e137499b1b63a174d50c7f83faf",
   "generators": {},
   "deploymentAdapters": {}
 }
