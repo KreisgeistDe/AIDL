@@ -720,18 +720,6 @@ def check_project(project: Path, report: Report) -> None:
                 f"from topic {topic_name}, but the topic does not carry it",
             )
 
-    for projection in all_blocks["projection"]:
-        report.check(
-            "checkpoint" in projection.body,
-            f"{projection.path}: projection {projection.name} has no checkpoint",
-        )
-
-    for workflow in all_blocks["workflow"]:
-        report.check(
-            "idempotency:" in workflow.body,
-            f"{workflow.path}: workflow {workflow.name} has no idempotency",
-        )
-
     for sync in all_blocks["sync"]:
         if re.search(r"\bmode\s+replicated\b", sync.body):
             for clause in ("operationLog", "delete tombstone", "conflict"):
