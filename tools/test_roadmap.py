@@ -50,13 +50,13 @@ class RoadmapTest(unittest.TestCase):
         summary = roadmap.summary_data(self.root)
         self.assertEqual(summary["milestones"], 2)
         self.assertEqual(summary["packages"], 17)
-        self.assertEqual(summary["status_counts"]["complete"], 13)
-        self.assertEqual(summary["status_counts"]["open"], 4)
-        self.assertEqual(summary["blocked"], 3)
-        self.assertEqual(roadmap.next_data(self.root)["id"], "M10.1-07")
+        self.assertEqual(summary["status_counts"]["complete"], 14)
+        self.assertEqual(summary["status_counts"]["open"], 3)
+        self.assertEqual(summary["blocked"], 2)
+        self.assertEqual(roadmap.next_data(self.root)["id"], "M10.1-08")
         _, _, packages = roadmap.load_authority(self.root)
         self.assertEqual(roadmap.blocker_ids(packages, "M10.1-10", False), ["M10.1-09"])
-        self.assertEqual(roadmap.blocker_ids(packages, "M10.1-10", True), ["M10.1-07", "M10.1-08", "M10.1-09"])
+        self.assertEqual(roadmap.blocker_ids(packages, "M10.1-10", True), ["M10.1-08", "M10.1-09"])
         completed = roadmap.completed_data(self.root)
         self.assertIn("M10", completed["complete_milestones"])
         self.assertNotIn("M10.1", completed["complete_milestones"])
@@ -112,7 +112,7 @@ class RoadmapTest(unittest.TestCase):
 
     def test_markdown_json_drift(self) -> None:
         path = self.root / "TODO.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("- [x] **M10.1-06", "- [ ] **M10.1-06"), encoding="utf-8")
+        path.write_text(path.read_text(encoding="utf-8").replace("- [x] **M10.1-07", "- [ ] **M10.1-07"), encoding="utf-8")
         self.assertIn("ROADMAP-E008", self.codes())
 
     def test_migration_scope_violation(self) -> None:
