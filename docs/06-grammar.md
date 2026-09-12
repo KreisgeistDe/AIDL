@@ -89,12 +89,15 @@ Unprefixed `name: Type` entity members are compatibility input only.
 
 ### Query and mutation
 
+Revision 4 models operation parameters as the named HeaderArg `parameters`; the parameter list is that argument's value, not a positional declaration signature.
+
 ~~~ebnf
-queryDecl    = [ "export" ] "query" identifier [ parameterList ] "->" typeRef
+queryDecl    = [ "export" ] "query" identifier [ operationHeaderArguments ] "->" typeRef
                "{" { querySlot } "}" ;
-mutationDecl = [ "export" ] "mutation" identifier [ parameterList ] "->" typeRef
+mutationDecl = [ "export" ] "mutation" identifier [ operationHeaderArguments ] "->" typeRef
                "{" { mutationSlot } "}" ;
-parameterList = "(" [ parameter { "," parameter } ] ")" ;
+operationHeaderArguments = "(" "parameters" ":" parameterList ")" ;
+parameterList = "[" [ parameter { "," parameter } ] "]" ;
 parameter     = identifier ":" typeRef [ "default" value ] ;
 querySlot     = "read" value newline
               | "allow" value newline
@@ -106,6 +109,8 @@ mutationSlot  = "allow" value newline
               | "audit" value newline
               | "timeout" duration newline ;
 ~~~
+
+The frozen HeaderArg occurrence is optional and singular for both operations. A source spelling such as `query name(param: Type) -> Result` or `mutation name(param: Type) -> Result` is the contract-declared legacy operation-signature form and is not canonical target syntax.
 
 Legacy operation source may contain additional readable clauses. Clauses not represented by revision-4 BodySlots remain explicit fail-closed compatibility facts; they are not normative target slots merely because the parser can read them.
 
