@@ -38,11 +38,13 @@ Completed M11-01 through M11-04 behavior is an input contract for migration pari
 
 ### M10.5-01 — Contract inventory and differential harness
 
-- [ ] Inventory the Python compiler-owned semantic surface used by CLI, LSP, agent tools, fixtures, compatibility, and IntelliJ integration, including deterministic ordering, stable identities, source locations, diagnostic payloads, Canonical IR, and failure modes.
-- [ ] Freeze a machine-readable parity corpus from existing Golden Fixtures, Core conformance evidence, negative diagnostics, Canonical-IR snapshots, reference applications, compatibility fixtures, and representative CLI inputs without inventing new support claims.
-- [ ] Define normalized differential comparison rules for Python-versus-Kotlin outputs, explicitly listing any transport-only fields that may differ while rejecting semantic normalization that hides real divergence.
-- [ ] Add a differential test runner design that can execute the same source/config/profile inputs through both implementations and compare diagnostics, Canonical IR, semantic identities, ordering, and exit behavior.
-- [ ] Define version/fingerprint inputs for parity runs so compiler/schema/profile/config changes cannot accidentally compare mismatched contracts.
+- [x] Inventory the Python compiler-owned semantic surface used by CLI, LSP, agent tools, fixtures, compatibility, and IntelliJ integration, including deterministic ordering, stable identities, source locations, diagnostic payloads, Canonical IR, and failure modes.
+- [x] Freeze a machine-readable parity corpus from existing Golden Fixtures, Core conformance evidence, negative diagnostics, Canonical-IR snapshots, reference applications, compatibility fixtures, and representative CLI inputs without inventing new support claims.
+- [x] Define normalized differential comparison rules for Python-versus-Kotlin outputs, explicitly listing any transport-only fields that may differ while rejecting semantic normalization that hides real divergence.
+- [x] Add a differential test runner design that can execute the same source/config/profile inputs through both implementations and compare diagnostics, Canonical IR, semantic identities, ordering, and exit behavior.
+- [x] Define version/fingerprint inputs for parity runs so compiler/schema/profile/config changes cannot accidentally compare mismatched contracts.
+
+`tools/m10_5_reference_contract.json` is the machine-readable M10.5-01 inventory. `tools/m10_5_reference_contract.py` validates it, fingerprints the frozen M10.1 contract plus existing Python/compiler/IR/CLI/query/fixture/CI evidence, and fails closed on inventory or comparison-contract drift. `tools/test_m10_5_reference_contract.py` supplies deterministic positive and negative regressions. The inventory is audit-only: it copies no language semantics and Python remains the reference implementation. `docs/m10-5-reference-contract.md` records the boundary. M10.5-02 and M10.5-03 remain open.
 
 #### Gate 01
 
