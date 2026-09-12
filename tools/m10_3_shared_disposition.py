@@ -137,7 +137,7 @@ def validate(root: Path = ROOT, manifest: dict[str, Any] | None = None) -> dict[
         "canonical_ir_meaning_changed": False,
         "frozen_contract_changed": False,
         "m10_5_deferred": True,
-        "m10_3_complete": False,
+        "m10_3_complete": True,
     }
     if constraints != expected_constraints:
         raise ValueError("M10.3 shared foundation constraint drift")
