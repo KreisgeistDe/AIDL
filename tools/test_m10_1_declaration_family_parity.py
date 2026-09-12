@@ -98,9 +98,12 @@ class DeclarationFamilyParityTest(unittest.TestCase):
         first = declaration_family_dispositions_json()
         second = declaration_family_dispositions_json()
         self.assertEqual(first, second)
-        self.assertEqual(json.loads(first)["inventory_count"], 48)
-        self.assertNotIn(": ", first)
-        self.assertNotIn(", ", first)
+        parsed = json.loads(first)
+        self.assertEqual(parsed["inventory_count"], 48)
+        self.assertEqual(
+            first,
+            json.dumps(parsed, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+        )
 
     def test_contract_inventory_drift_is_derived_not_hidden_by_a_parallel_table(self) -> None:
         contract = copy.deepcopy(LanguageSurfaceBridge().contract)
