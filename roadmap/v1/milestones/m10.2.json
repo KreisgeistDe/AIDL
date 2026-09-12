@@ -1,0 +1,33 @@
+{
+  "schema_version": "aidl.roadmap/v1",
+  "document_type": "milestone",
+  "id": "M10.2",
+  "title": "Canonical Language Documentation & Source Migration Gate",
+  "order": 12,
+  "priority": "P1",
+  "packages": [
+    {
+      "id": "M10.2-01",
+      "title": "Classify and migrate the canonical language documentation and committed source surface.",
+      "order": 1,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.1-10"],
+      "acceptance_criteria": [
+        "Exhaustively account for every committed AIDL source and documented syntax surface, including all three reference applications and all committed fixtures, against the frozen M10.1 language authority.",
+        "Classify every source or documentation surface as production-admitted canonical, canonical-but-not-yet-admitted, legacy-readable compatibility, negative/rejection fixture, or illustrative/aspirational material; newly unclassified grammar/source/documentation surfaces fail closed in deterministic CI checks.",
+        "Align docs/06-grammar.md and relevant overview, core, diagnostics, evolution, and reference documentation to the frozen unified target design and eliminate contradictory legacy syntax from normative target-language documentation without changing compiler/parser/runtime/Canonical-IR semantics.",
+        "Preserve explicit distinctions between parser readability, production semantic admission, compatibility-only readability, rejection expectations, and illustrative material for all reference applications and fixtures.",
+        "Do not widen the frozen Production Semantic Envelope implicitly; any semantic or admission change is deferred to an explicit versioned contract decision."
+      ],
+      "evidence": [
+        {"kind": "path", "ref": "backlog/m10-2-m10-3-language-example-migration.md"},
+        {"kind": "path", "ref": "TODO.md"}
+      ],
+      "references": [
+        {"kind": "path", "ref": "docs/06-grammar.md"},
+        {"kind": "path", "ref": "spec/language-surface-v1.json"}
+      ]
+    }
+  ]
+}

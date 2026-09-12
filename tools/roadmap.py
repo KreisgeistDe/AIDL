@@ -19,8 +19,11 @@ NONTERMINAL = {"open", "in_progress"}
 MARKDOWN_PROJECTIONS = {
     "M10": Path("backlog/m9-m10-release-conformance.md"),
     "M10.1": Path("backlog/m10-1-language-freeze.md"),
+    "M10.2": Path("backlog/m10-2-m10-3-language-example-migration.md"),
+    "M10.3": Path("backlog/m10-2-m10-3-language-example-migration.md"),
 }
-TODO_M10_1 = Path("TODO.md")
+TODO_PROJECTIONS = {"M10.1", "M10.2", "M10.3"}
+TODO_PATH = Path("TODO.md")
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -169,8 +172,9 @@ def validate_repository(root: Path = ROOT, *, check_markdown: bool = True) -> li
         for milestone_id, markdown_path in MARKDOWN_PROJECTIONS.items():
             if milestone_id in milestone_by_id:
                 errors.extend(_check_projection(root, milestone_by_id[milestone_id], markdown_path))
-        if "M10.1" in milestone_by_id:
-            errors.extend(_check_projection(root, milestone_by_id["M10.1"], TODO_M10_1))
+        for milestone_id in sorted(TODO_PROJECTIONS):
+            if milestone_id in milestone_by_id:
+                errors.extend(_check_projection(root, milestone_by_id[milestone_id], TODO_PATH))
 
     return sorted(errors, key=lambda item: (item["code"], item["subject"], item["message"]))
 
