@@ -5,10 +5,18 @@ import petstore.system.api.PetstoreApi
 import petstore.ui.app.PetstoreWeb
 
 app Petstore {
-  profile core version 1
-  profile web version 1
-  profile distributed version 1
-  profile cloud version 1
+  profile core {
+    version 1
+  }
+  profile web {
+    version 1
+  }
+  profile distributed {
+    version 1
+  }
+  profile cloud {
+    version 1
+  }
   system PetstoreSystem
   frontend PetstoreWeb
   api PetstoreApi

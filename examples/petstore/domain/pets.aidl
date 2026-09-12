@@ -32,27 +32,27 @@ export value UpdatePetProfileInput {
 }
 
 export entity Shelter {
-  id: uuid primary generated immutable
-  revision: revision generated concurrencyToken
-  name: string(1..120) required mutable
-  city: string(1..120) required mutable
-  email: email required mutable sensitive
-  pets: [Pet] via shelter
+  field id: uuid primary generated immutable
+  field revision: revision generated concurrencyToken
+  field name: string(1..120) required mutable
+  field city: string(1..120) required mutable
+  field email: email required mutable sensitive
+  field pets: [Pet] via shelter
 }
 
 export entity Pet {
-  id: uuid primary generated immutable
-  revision: revision generated concurrencyToken
-  name: string(1..80) required mutable
-  species: Species required immutable
-  ageMonths: int(min: 0, max: 480) required mutable
-  shortDescription: string(1..300) required mutable
-  description: string(1..4000) required mutable
-  primaryImage: PetImage required mutable
-  status: PetStatus default available mutable
-  shelter: ref Shelter required immutable onDelete restrict
-  adoptedAt: datetime? mutable
-  createdAt: datetime generated immutable
+  field id: uuid primary generated immutable
+  field revision: revision generated concurrencyToken
+  field name: string(1..80) required mutable
+  field species: Species required immutable
+  field ageMonths: int(min: 0, max: 480) required mutable
+  field shortDescription: string(1..300) required mutable
+  field description: string(1..4000) required mutable
+  field primaryImage: PetImage required mutable
+  field status: PetStatus default available mutable
+  field shelter: ref Shelter required immutable onDelete restrict
+  field adoptedAt: datetime? mutable
+  field createdAt: datetime generated immutable
 
   index byCatalog(status, species, createdAt desc)
   invariant adoptionTimestamp:
