@@ -6,7 +6,9 @@ import videohub.system.resources.*
 
 @publicReason("Anonyme oder authentifizierte Wiedergabe-Telemetrie.")
 export mutation recordWatch(
-  input: RecordWatchInput
+  parameters: [
+    input: RecordWatchInput
+  ]
 ) -> bool {
   auth: public
   allow: true
@@ -50,7 +52,9 @@ export projection WatchArchiveProjection
 
 @publicReason("Öffentlicher aggregierter Aufrufzähler.")
 export query getViewCount(
-  videoId: VideoId
+  parameters: [
+    videoId: VideoId
+  ]
 ) -> int {
   auth: public
   read: ViewCounters.get(videoId, default: 0)

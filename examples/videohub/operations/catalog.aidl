@@ -9,7 +9,9 @@ import videohub.system.resources.MetadataDb
 
 @publicReason("Öffentlicher Videokatalog.")
 export query listPublicVideos(
-  page: PageInput default { size: 24 }
+  parameters: [
+    page: PageInput default { size: 24 }
+  ]
 ) -> Page<VideoSummary> {
   auth: public
   read: Video.where(
@@ -26,7 +28,11 @@ export query listPublicVideos(
 }
 
 @publicReason("Öffentliche oder nicht gelistete Videoseite.")
-export query getPlayableVideo(videoId: VideoId) -> VideoDetails? {
+export query getPlayableVideo(
+  parameters: [
+    videoId: VideoId
+  ]
+) -> VideoDetails? {
   auth: public
   read: Video.where(
                id == videoId
@@ -42,8 +48,10 @@ export query getPlayableVideo(videoId: VideoId) -> VideoDetails? {
 }
 
 export query authorizeVideoUpload(
-  videoId: VideoId,
-  subjectId: SubjectId
+  parameters: [
+    videoId: VideoId,
+    subjectId: SubjectId
+  ]
 ) -> bool {
   auth: service
   allow: principal.serviceId == "MediaService"
@@ -57,7 +65,9 @@ export query authorizeVideoUpload(
 }
 
 export query authorizeComment(
-  videoId: VideoId
+  parameters: [
+    videoId: VideoId
+  ]
 ) -> bool {
   auth: service
   allow: principal.serviceId == "CommentsService"
@@ -72,7 +82,9 @@ export query authorizeComment(
 }
 
 export mutation createChannel(
-  input: CreateChannelInput
+  parameters: [
+    input: CreateChannelInput
+  ]
 ) -> Channel {
   auth: authenticated
   allow: principal.hasRole(creator) or principal.hasRole(admin)
@@ -100,7 +112,9 @@ export mutation createChannel(
 }
 
 export mutation createDraftVideo(
-  input: CreateVideoInput
+  parameters: [
+    input: CreateVideoInput
+  ]
 ) -> VideoDetails {
   auth: authenticated
   allow: canManageChannel(input.channelId)
@@ -132,7 +146,9 @@ export mutation createDraftVideo(
 }
 
 export mutation attachReadyMedia(
-  input: AttachMediaInput
+  parameters: [
+    input: AttachMediaInput
+  ]
 ) -> VideoDetails {
   auth: service
   allow: principal.serviceId == "CatalogService"

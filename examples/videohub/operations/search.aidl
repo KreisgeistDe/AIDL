@@ -22,8 +22,10 @@ export projection PublicVideoSearch
 
 @publicReason("Öffentliche Videosuche.")
 export query searchVideos(
-  text: string(1..200),
-  page: PageInput default { size: 24 }
+  parameters: [
+    text: string(1..200),
+    page: PageInput default { size: 24 }
+  ]
 ) -> Page<VideoSearchDocument> {
   auth: public
   read: VideoSearch.search(text).page(page)

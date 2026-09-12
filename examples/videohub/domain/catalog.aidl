@@ -29,30 +29,30 @@ export value AttachMediaInput {
 }
 
 export entity Channel {
-  id: ChannelId primary generated immutable
-  revision: revision generated concurrencyToken
-  ownerId: SubjectId required immutable
-  name: string(1..120) required mutable
-  description: string(0..2000) default "" mutable
-  createdAt: datetime generated immutable
+  field id: ChannelId primary generated immutable
+  field revision: revision generated concurrencyToken
+  field ownerId: SubjectId required immutable
+  field name: string(1..120) required mutable
+  field description: string(0..2000) default "" mutable
+  field createdAt: datetime generated immutable
 
   index byOwner(ownerId, createdAt desc)
 }
 
 export entity Video {
-  id: VideoId primary generated immutable
-  revision: revision generated concurrencyToken
-  channel: ref Channel required immutable onDelete restrict
-  title: string(1..200) required mutable
-  description: string(0..5000) default "" mutable
-  status: VideoStatus default draft mutable
-  visibility: VideoVisibility default private mutable
-  assetId: MediaAssetId? mutable
-  playbackManifest: DeliveryHandle<StreamingManifest>? mutable
-  duration: duration? mutable
-  publishedAt: datetime? mutable
-  createdAt: datetime generated immutable
-  updatedAt: datetime generated mutable
+  field id: VideoId primary generated immutable
+  field revision: revision generated concurrencyToken
+  field channel: ref Channel required immutable onDelete restrict
+  field title: string(1..200) required mutable
+  field description: string(0..5000) default "" mutable
+  field status: VideoStatus default draft mutable
+  field visibility: VideoVisibility default private mutable
+  field assetId: MediaAssetId? mutable
+  field playbackManifest: DeliveryHandle<StreamingManifest>? mutable
+  field duration: duration? mutable
+  field publishedAt: datetime? mutable
+  field createdAt: datetime generated immutable
+  field updatedAt: datetime generated mutable
 
   index byPublicFeed(visibility, status, publishedAt desc)
   invariant readyHasMedia:
