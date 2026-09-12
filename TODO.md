@@ -25,6 +25,16 @@ Stable M10.1 work packages are numbered independently of PRs. Completed packages
 
 M10.1 acceptance is certified by `docs/m10-1-closure-certification.md`: all frozen-v1 semantics are lossless or deterministically fail-closed; equivalent legacy/canonical representations converge on stable semantics/hashes; Production Normalization remains contract-derived without parallel grammars or semantic tables; formatter and migration remain separate; query/mutation and declaration-family dispositions are complete; coverage/differential drift is deterministic in CI; and M10.5-03 can implement revision 4 without inventing a language decision.
 
+## M10.5 Kotlin compiler-core migration gate
+
+[M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md) keeps Python authoritative while migration evidence and later Kotlin slices are introduced incrementally.
+
+- [x] **M10.5-01 — Freeze the Python reference contract and differential harness boundary.** `tools/m10_5_reference_contract.json` and `tools/m10_5_reference_contract.py` inventory existing compiler/IR/CLI/query/fixture/CI evidence, fingerprint it deterministically, and fail closed on contract or comparison drift without becoming a second language authority.
+- [ ] **M10.5-02 — Establish the Kotlin Multiplatform compiler skeleton.** Keep semantic authority in Python while defining common/Native/JVM module boundaries and coverage gates.
+- [ ] **M10.5-03 — Begin bounded front-end parity slices.** Migrate only against frozen-v1 revision 4 with Python-versus-Kotlin differential evidence.
+
+Later M10.5 phases remain governed by the backlog and are not implied complete by M10.5-01.
+
 ## Priority legend
 
 - **P0** — required for the first usable end-to-end AIDL workflow
