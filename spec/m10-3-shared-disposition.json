@@ -1,0 +1,207 @@
+{
+  "schema_version": "aidl.m10.3-shared-disposition/v1",
+  "authority": "M10.3-01-shared-foundation",
+  "status": "active",
+  "frozen_language_contract": {
+    "path": "spec/language-surface-v1.json",
+    "authority": "M10.1",
+    "status": "frozen",
+    "contract_revision": 4
+  },
+  "canonical_source_support": [
+    {
+      "id": "app.profile-block",
+      "disposition": "supported-equivalent-source-form",
+      "detail": "Canonical profile Name { version N } is the frozen revision-4 source projection of the same app profile fact as legacy profile Name version N. Lint/profile-lock checks must treat both forms equivalently."
+    },
+    {
+      "id": "entity.field-slot",
+      "disposition": "supported-equivalent-source-form",
+      "detail": "Canonical field name: Type modifiers is the frozen revision-4 source projection of an entity field. Existing entity lint invariants, including revision concurrencyToken and ref-owner checks, apply identically to canonical and historical unprefixed fields."
+    },
+    {
+      "id": "operation.parameters-header-arg",
+      "disposition": "supported-equivalent-source-form",
+      "detail": "Canonical query/mutation parameters: [..] named HeaderArg remains the frozen revision-4 target form; positional query/mutation parameters remain legacy compatibility input."
+    }
+  ],
+  "shared_mismatch_dispositions": [
+    {
+      "id": "app.links",
+      "disposition": "requires-versioned-admission",
+      "detail": "Revision 4 admits only app profile facts. system/frontend/api/defaultDeployment and similar app links cannot become production reference evidence without a separately versioned contract/admission change and re-certification."
+    },
+    {
+      "id": "auth",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "a11y",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "privacy",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "value",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "union",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "view",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "entity.invariant",
+      "disposition": "non-production-fail-closed",
+      "detail": "Entity family is admitted, but invariant semantics are outside the frozen entity BodySlots and remain non-production reference material."
+    },
+    {
+      "id": "operation.auth",
+      "disposition": "non-production-fail-closed",
+      "detail": "Legacy query/mutation auth clause is outside frozen operation BodySlots and remains on the certified AIDL-N010 to AIDL-N013 fail-closed boundary."
+    },
+    {
+      "id": "operation.cache",
+      "disposition": "non-production-fail-closed",
+      "detail": "Legacy query cache clause is outside frozen operation BodySlots and remains fail closed for production evidence."
+    },
+    {
+      "id": "operation.consistency",
+      "disposition": "non-production-fail-closed",
+      "detail": "Legacy query consistency clause is outside frozen operation BodySlots and remains fail closed for production evidence."
+    },
+    {
+      "id": "operation.idempotency",
+      "disposition": "non-production-fail-closed",
+      "detail": "Mutation idempotency is an explicit M10.1 execution exclusion and remains fail closed."
+    },
+    {
+      "id": "operation.transaction",
+      "disposition": "non-production-fail-closed",
+      "detail": "Mutation transaction is an explicit M10.1 execution exclusion and remains fail closed."
+    },
+    {
+      "id": "type-ref.generic-arguments",
+      "disposition": "non-production-fail-closed",
+      "detail": "Productive generic TypeRef arguments remain an explicit M10.1 exclusion and cannot be used as production parity evidence."
+    },
+    {
+      "id": "error",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "event",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "topic",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "policy",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "workflow",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "api",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "resource",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "service",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "system",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "deployment",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "frontend",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "theme",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "component",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "page",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "form",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "action",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "sync",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "syncStatus",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "seo",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "test",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    }
+  ],
+  "constraints": {
+    "production_admission_changed": false,
+    "canonical_ir_meaning_changed": false,
+    "frozen_contract_changed": false,
+    "m10_5_deferred": true,
+    "m10_3_complete": false
+  }
+}

@@ -113,6 +113,36 @@ class ContextualKeywordRegressionTest(unittest.TestCase):
         )
 
 
+class FrozenCanonicalSourceParserTest(unittest.TestCase):
+    def test_profile_field_and_named_operation_header_forms_parse_deterministically(self) -> None:
+        source = """module example.canonical
+app Example {
+  profile core {
+    version 1
+  }
+}
+entity Record {
+  field id: uuid primary immutable
+  field revision: revision generated concurrencyToken
+  field name: string mutable
+}
+query getRecord(parameters: [id: uuid]) -> Record {
+  read: Record.byId(id)
+}
+"""
+
+        first_program, first_diagnostics, _ = aidl_parser.parse_text(source)
+        second_program, second_diagnostics, _ = aidl_parser.parse_text(source)
+
+        self.assertEqual([], first_diagnostics)
+        self.assertEqual([], second_diagnostics)
+        self.assertEqual(first_program.to_json(), second_program.to_json())
+        self.assertEqual(
+            [child.kind for child in first_program.children],
+            ["module", "app", "entity", "query"],
+        )
+
+
 class EnumParserStateTest(unittest.TestCase):
     def test_enum_cases_preserve_assignment_and_malformed_source_state(self) -> None:
         source = """module example.enums

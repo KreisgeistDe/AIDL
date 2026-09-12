@@ -259,6 +259,26 @@ def line_number(text: str, offset: int) -> int:
     return text.count("\n", 0, offset) + 1
 
 
+def app_profile_versions(text: str) -> dict[str, int]:
+    """Return legacy and frozen-v1 canonical app profile activations."""
+
+    masked = mask_strings_and_comments(text)
+    profiles: dict[str, int] = {}
+    for profile, major in re.findall(
+        r"(?m)^\s*profile\s+([a-z][a-z0-9-]*)\s+version\s+(\d+)\s*$",
+        masked,
+    ):
+        profiles[profile] = int(major)
+    for match in re.finditer(
+        r"(?ms)^\s*profile\s+([a-z][a-z0-9-]*)\s*\{([^{}]*)\}",
+        masked,
+    ):
+        versions = re.findall(r"(?m)^\s*version\s+(\d+)\s*$", match.group(2))
+        if len(versions) == 1:
+            profiles[match.group(1)] = int(versions[0])
+    return profiles
+
+
 def check_balanced(path: Path, text: str, report: Report) -> None:
     masked = mask_strings_and_comments(text)
     pairs = {"{": "}", "[": "]", "(": ")"}
@@ -479,7 +499,7 @@ def check_project(project: Path, report: Report) -> None:
         service_reliability[service.name] = (
             set(
                 re.findall(
-                    r"(?m)^\s*([a-z][A-Za-z0-9_]*)\s+", 
+                    r"(?m)^\s*([a-z][A-Za-z0-9_]*)\s+",
                     reliability_match.group(1),
                 )
             )
@@ -560,7 +580,7 @@ def check_project(project: Path, report: Report) -> None:
             report.check(
                 bool(
                     re.search(
-                        r"(?m)^\s*\w+\s*:\s*revision\b[^\n]*"
+                        r"(?m)^\s*(?:field\s+)?\w+\s*:\s*revision\b[^\n]*"
                         r"\bconcurrencyToken\b",
                         entity.body,
                     )
@@ -569,7 +589,7 @@ def check_project(project: Path, report: Report) -> None:
                 "concurrencyToken",
             )
         for target in re.findall(
-            r"(?m)^\s*\w+\s*:\s*ref\s+([A-Z][A-Za-z0-9_]*)\b",
+            r"(?m)^\s*(?:field\s+)?\w+\s*:\s*ref\s+([A-Z][A-Za-z0-9_]*)\b",
             entity.body,
         ):
             if target not in entities:
@@ -739,11 +759,7 @@ def check_project(project: Path, report: Report) -> None:
 
         app_profiles: dict[str, int] = {}
         for text in files.values():
-            for profile, major in re.findall(
-                r"(?m)^\s*profile\s+([a-z][a-z0-9-]*)\s+version\s+(\d+)\s*$",
-                text,
-            ):
-                app_profiles[profile] = int(major)
+            app_profiles.update(app_profile_versions(text))
         report.check(
             data.get("profiles") == app_profiles,
             f"{lock}: locked profiles do not match app profiles "
@@ -751,7 +767,7 @@ def check_project(project: Path, report: Report) -> None:
         )
 
     report.check(
-        any(re.search(r"\bprofile\s+core\s+version\s+1\b", text) for text in files.values()),
+        any(app_profile_versions(text).get("core") == 1 for text in files.values()),
         f"{project}: app does not activate core profile version 1",
     )
 
