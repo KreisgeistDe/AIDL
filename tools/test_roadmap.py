@@ -19,7 +19,10 @@ COPIED = (
     "backlog/m10-1-language-freeze.md",
     "spec/conformance-manifest.json",
     "docs/m10-1-language-surface-freeze.md",
+    "docs/m10-1-closure-certification.md",
     "spec/language-surface-v1.json",
+    "tools/compiler_language_surface_certification.py",
+    "tools/test_m10_1_language_surface_certification.py",
 )
 
 
