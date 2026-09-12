@@ -11,7 +11,7 @@
       "title": "Migrate intended reference examples and close production semantic mismatches.",
       "order": 1,
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["M10.2-01"],
       "acceptance_criteria": [
         "Consume the complete M10.2 classification and migrate every intended reference example to the unified target grammar while preserving explicit negative/rejection and legacy-compatibility fixture classifications.",
@@ -21,12 +21,21 @@
         "Complete M10.3 before any M10.5 parity baseline is final; the post-M10.3 Python reference state is the only eligible source for refreshed M10.5-01 fingerprinting."
       ],
       "evidence": [
+        {"kind": "path", "ref": "spec/m10-3-closure-certification.json"},
+        {"kind": "path", "ref": "spec/m10-3-shared-disposition.json"},
+        {"kind": "path", "ref": "tools/m10_3_closure_certification.py"},
+        {"kind": "test", "ref": "tools/test_m10_3_closure_certification.py"},
+        {"kind": "path", "ref": "docs/m10-3-closure-certification.md"},
         {"kind": "path", "ref": "backlog/m10-2-m10-3-language-example-migration.md"},
         {"kind": "path", "ref": "TODO.md"}
       ],
       "references": [
         {"kind": "path", "ref": "spec/language-surface-v1.json"},
-        {"kind": "path", "ref": "docs/m10-1-closure-certification.md"}
+        {"kind": "path", "ref": "spec/m10-2-language-surface-classification.json"},
+        {"kind": "path", "ref": "docs/m10-1-closure-certification.md"},
+        {"kind": "path", "ref": "examples/calendar-offline/README.md"},
+        {"kind": "path", "ref": "examples/petstore/M10.3.md"},
+        {"kind": "path", "ref": "examples/videohub/README.md"}
       ]
     }
   ]
