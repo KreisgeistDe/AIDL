@@ -12,9 +12,10 @@ class LanguageSurfaceClassificationTest(unittest.TestCase):
     def test_repository_inventory_is_exhaustive_and_deterministic(self) -> None:
         first = classification.validate()
         second = classification.validate()
+        manifest = classification._load(classification.ROOT / classification.MANIFEST)
         self.assertEqual(first, second)
         self.assertGreater(first["source_count"], 57)
-        self.assertEqual(first["document_count"], 19)
+        self.assertEqual(first["document_count"], len(manifest["document_surfaces"]))
         self.assertEqual(first["contract_revision"], 4)
         self.assertGreater(first["source_classes"]["legacy-readable-compatibility"], 0)
         self.assertGreater(first["source_classes"]["negative-rejection-fixture"], 0)
