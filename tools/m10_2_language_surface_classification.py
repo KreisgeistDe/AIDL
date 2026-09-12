@@ -15,6 +15,7 @@ CLASSES = {
     "negative-rejection-fixture",
     "illustrative-aspirational",
 }
+SYNTAX_FENCE_RE = re.compile(r"(?:```|~~~)(?:aidl|ebnf)\b", re.IGNORECASE)
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -26,6 +27,18 @@ def _load(path: Path) -> dict[str, Any]:
 
 def _repo_path(root: Path, path: Path) -> str:
     return path.relative_to(root).as_posix()
+
+
+def _document_candidates(root: Path) -> set[str]:
+    candidates: set[str] = set()
+    for path in sorted(root.rglob("*.md")):
+        rel = _repo_path(root, path)
+        if rel.startswith(".git/"):
+            continue
+        text = path.read_text(encoding="utf-8")
+        if SYNTAX_FENCE_RE.search(text):
+            candidates.add(rel)
+    return candidates
 
 
 def validate(root: Path = ROOT, manifest: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -76,11 +89,14 @@ def validate(root: Path = ROOT, manifest: dict[str, Any] | None = None) -> dict[
             raise ValueError(f"invalid document class: {path}")
         if not (root / path).is_file():
             raise ValueError(f"classified document is missing: {path}")
+
     required = data.get("required_document_surfaces", [])
     if len(required) != len(set(required)):
         raise ValueError("required document surfaces must be unique")
-    missing = sorted(set(required) - set(doc_map))
-    extra = sorted(set(doc_map) - set(required))
+    discovered = _document_candidates(root)
+    expected_docs = set(required) | discovered
+    missing = sorted(expected_docs - set(doc_map))
+    extra = sorted(set(doc_map) - expected_docs)
     if missing or extra:
         raise ValueError(f"document classification drift: missing={missing}, extra={extra}")
 
@@ -94,6 +110,7 @@ def validate(root: Path = ROOT, manifest: dict[str, Any] | None = None) -> dict[
         "source_classes": {cls: sum(row["class"] == cls for row in source_rows) for cls in sorted(CLASSES)},
         "document_count": len(doc_map),
         "document_classes": {cls: sum(value == cls for value in doc_map.values()) for cls in sorted(CLASSES)},
+        "syntax_document_count": len(discovered),
         "sources": source_rows,
     }
 
