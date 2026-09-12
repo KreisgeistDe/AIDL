@@ -1,5 +1,7 @@
 # 1. Kernsprache
 
+> **M10.2 Support-Tier-Hinweis:** Dieses Kapitel ist als `illustrative-aspirational` klassifiziert. Seine Beispiele dokumentieren die spezifizierte Kernsprachen-Vision und enthalten teilweise `legacy-readable-compatibility`-Schreibweisen. Die kanonische Zielsprache wird ausschließlich durch `spec/language-surface-v1.json` Revision 4 und deren Projektion in `docs/06-grammar.md` definiert; aktuelle Production Admission folgt der M10.1-Zertifizierung. Beispiele in diesem Kapitel erweitern diese Zulassung nicht. M10.3 migriert beabsichtigte Referenzbeispiele oder disponiert Abweichungen explizit.
+
 ## Projekt, Module und Profile
 
 ~~~aidl
@@ -103,8 +105,7 @@ alias PetId = uuid
 opaque SubjectReference = string(1..200)
 ~~~
 
-alias erzeugt keinen neuen Typ. opaque erzeugt einen nominal verschiedenen Typ
-mit expliziten Konvertierungen an einer Adaptergrenze.
+Die bare Enum-Schreibweise und `opaque` in diesem historischen Beispiel sind **nicht** kanonische Revision-4-Zielsyntax. Kanonische Enums verwenden explizite `case`-Slots; `opaque Name = Type` ist nur eine Legacy-Alias-Schreibweise. `alias` erzeugt keinen neuen nominalen Typ. Produktanforderungen an nominale Alias-Semantik werden in M10.3 explizit disponiert statt hier implizit zugelassen.
 
 ## Diskriminierte Unions
 
@@ -160,6 +161,8 @@ entity Pet {
     status != adopted or adoptedAt != null
 }
 ~~~
+
+Die unpräfixierten Felder dieses historischen Beispiels sind `legacy-readable-compatibility`; kanonische Revision-4-Entitätsfelder verwenden den expliziten `field`-Slot. Die folgenden Produktregeln bleiben Spezifikationsmaterial, soweit sie nicht separat produktiv zertifiziert sind.
 
 Regeln:
 
