@@ -1,6 +1,6 @@
 # M10.1 — Normative Language Surface Freeze Gate
 
-Status: **normative language-design authority for the Kotlin front-end migration target**.
+Status: **normative language-design authority for the Kotlin front-end migration target; closure certified for frozen-v1 revision 4**.
 
 This gate is sequenced after completed M10 Core conformance, before M10.5, before M10.5-03 front-end/IR migration, and before any further M16.5 syntax adoption. Migration-neutral M10.5 scaffolding may continue only where the existing M10.5 roadmap permits it; no Kotlin parser/AST/IR slice may encode a language-surface choice absent from `spec/language-surface-v1.json`.
 
@@ -31,10 +31,10 @@ All declaration kinds listed by `docs/06-grammar.md` remain semantic declaration
 
 ## Gates
 
-1. **M10.1 Freeze** — target design, contract instance and regression corpus are authoritative.
-2. **M10.5-03** — Kotlin front-end/IR slices may begin only after the M10.1 compatibility path has executable parity for the semantics they encode.
+1. **M10.1 Freeze** — target design, contract instance and regression corpus are authoritative and closure-certified for revision 4.
+2. **M10.5-03** — Kotlin front-end/IR slices are unblocked only to implement the certified frozen-v1 revision 4 model through the existing Python-versus-Kotlin differential gates; this does not authorize a semantic change.
 3. **M16.5** — later syntax adoption that changes the frozen model requires an explicit versioned language decision and compatibility plan.
-4. **Parser/AST/IR migration** — production integration proceeds only as bounded M10.1 slices with differential evidence; broad replacement remains out of scope until compatibility is complete.
+4. **Parser/AST/IR migration** — production migration must remain bounded and differential; M10.1 certification is an input contract, not permission for a broad replacement or silent semantic divergence.
 
 ## Stable work packages
 
@@ -49,11 +49,11 @@ M10.1 roadmap identity is package-based, not PR-based. Merged PRs and tests are 
 - [x] **M10.1-07 — Close operation execution semantics.** `TypeRef.range` and operation-parameter `default` are the frozen-v1 execution facts with Production-Parity for query/mutation. Generic TypeRef arguments, non-range constraints and operation generics are explicit fail-closed exclusions; mutation `idempotency` and `transaction` are likewise excluded because revision 4 declares no such BodySlots. `tools/compiler_operation_execution_parity.py` derives the package audit from the frozen contract and existing bridges; no new parser, runtime or canonical execution fact is introduced.
 - [x] **M10.1-08 — Close declaration-family production parity.** `tools/compiler_declaration_family_parity.py` derives all 48 canonical semantic declaration kinds directly from frozen-v1 and projects admission from the existing Production Normalization gates. `alias`, `entity`, `enum`, `migration`, `client`, `consumer`, `projection`, `app`, `query` and `mutation` are the ten admitted canonical kinds; the other 38 frozen kinds have explicit intentional non-admission/fail-closed dispositions. `module`/`import` remain file directives and legacy `opaque` maps to canonical `alias`, so neither adds a canonical declaration kind.
 - [x] **M10.1-09 — Add complete language-surface coverage and differential conformance.** `tools/compiler_language_surface_coverage.py` walks every non-example frozen-v1 contract leaf generically and correlates it with the existing declaration-family, policy, execution and Production Normalization evidence. Modifier target/arity/value mode, HeaderArg/BodySlot occurrence/order/uniqueness, TypeRef optional/range facts and reference-projection shapes remain derived from the frozen contract and executable bridges rather than a second semantic table. `tools/test_m10_1_language_surface_coverage.py` adds byte-stable coverage output, compiler/contract drift detection, independent canonical-fact differential checks and production fail-closed regressions.
-- [ ] **M10.1-10 — Certify M10.1 closure and unblock M10.5-03.** Audit all package evidence, close the regression matrix and Production Semantic Envelope, and unblock M10.5-03 only when it can implement the frozen surface without making any unresolved language decision of its own.
+- [x] **M10.1-10 — Certify M10.1 closure and unblock M10.5-03.** `tools/compiler_language_surface_certification.py` composes the integrated contract-derived audits, verifies the complete Production Semantic Envelope and acceptance matrix, fails closed on unresolved disposition/drift, and records no unresolved language decision for M10.5-03. `docs/m10-1-closure-certification.md` defines the bounded unblock: differential implementation of frozen-v1 revision 4 only, with any semantic change requiring a separately versioned language decision.
 
 ## M10.1 acceptance criteria
 
-M10.1 closes only when all of the following hold:
+M10.1 closes only when all of the following hold; `aidl.m10.1-closure-certification/v1` now certifies each condition from executable repository evidence:
 
 - Every frozen-v1 semantic fact is normalized losslessly or rejected deterministically fail-closed; no heuristic partial semantics are admitted as complete.
 - Equivalent legacy and canonical representations converge on identical semantic facts and stable semantic hashes.
@@ -92,11 +92,13 @@ M10.1-08 closes declaration-family disposition evidence without changing the fro
 
 M10.1-09 closes complete coverage/differential evidence without changing the frozen contract or parser/runtime/IR semantics. `tools/compiler_language_surface_coverage.py` derives every normative/compatibility leaf except illustrative examples from the exact frozen contract, then attaches production admission from the existing declaration-family audit and target-dependent modifier dispositions from the same compiler gates. TypeRef optional/range and reference-projection shapes are sampled from the executable compatibility bridge itself, while existing policy/execution audits carry their established exclusions. The builder compares the base and body bridges against the same contract and rejects drift before emitting deterministic `aidl.m10.1-language-surface-coverage/v1` JSON. Focused unittest differentials compare representative legacy entity/operation sources with independently constructed canonical `Declaration` facts, compare equivalent production sources for byte-identical semantic JSON/hash, and retain `AIDL-N013` fail-closed evidence for generic/non-range/idempotency shapes.
 
+M10.1-10 certifies those integrated facts without adding language semantics. `tools/compiler_language_surface_certification.py` requires the frozen M10.1 authority/status and common contract revision, complete unique coverage leaves, explicit declaration/policy/execution dispositions, fail-closed boundaries for every exclusion, executable TypeRef/reference-projection shapes, distinct deterministic formatter/migration operations and all ten roadmap packages complete. The deterministic `aidl.m10.1-closure-certification/v1` result records the certified Production Semantic Envelope, an empty unresolved-language-decision set and the bounded M10.5-03 unblock condition.
+
 Modifier target/arity remain contract-driven through `LanguageSurfaceBridge`. Literal-vs-expression annotation evidence is checked against the existing parser AST; expression-like input in a literal-only modifier position emits `AIDL-N014`.
 
-The bridge semantic envelope remains `aidl.m10.1-normalized/v2` for the base bridge and `aidl.m10.1-production/v5` for production normalization. Policy, execution, declaration-family and complete-coverage evidence add only deterministic audit envelopes `aidl.m10.1-operation-policy-parity/v1`, `aidl.m10.1-operation-execution-parity/v1`, `aidl.m10.1-declaration-family-parity/v1` and `aidl.m10.1-language-surface-coverage/v1`; they do not alter canonical hashes, parser behavior, CLI JSON, runtime behavior or Canonical IR schemas.
+The bridge semantic envelope remains `aidl.m10.1-normalized/v2` for the base bridge and `aidl.m10.1-production/v5` for production normalization. Policy, execution, declaration-family, complete-coverage and closure evidence add only deterministic audit envelopes `aidl.m10.1-operation-policy-parity/v1`, `aidl.m10.1-operation-execution-parity/v1`, `aidl.m10.1-declaration-family-parity/v1`, `aidl.m10.1-language-surface-coverage/v1` and `aidl.m10.1-closure-certification/v1`; they do not alter canonical hashes, parser behavior, CLI JSON, runtime behavior or Canonical IR schemas.
 
-M10.1 remains open at **M10.1-10**. M10.1-09 is complete because the frozen-v1 contract is now exhaustively walked into machine-readable coverage evidence, all declaration/modifier production dispositions are correlated to existing compiler-owned gates, representative legacy/canonical and production-equivalence hashes are differential-tested, and unsupported shapes retain deterministic fail-closed diagnostics. M10.5-03 remains blocked for semantic front-end/AST/IR work until M10.1 closure certification is complete.
+M10.1 is complete. The closure certification proves no unresolved revision-4 language decision remains for M10.5-03. M10.5-03 is therefore unblocked only for bounded differential implementation of the frozen front-end/IR model; Python remains the reference/conformance implementation under the M10.5 roadmap, and any semantic change still requires a separately versioned language decision.
 
 ## Required regression set
 
@@ -114,6 +116,7 @@ Production integration additionally proves:
 - contract-derived M10.1-07 execution dispositions for query/mutation, byte-stable audit JSON, lossless `TypeRef.range` and `default` preservation, and fail-closed generic/non-range/`idempotency`/`transaction` boundaries;
 - contract-derived M10.1-08 declaration-family dispositions with exact frozen inventory parity, production admission projected from existing compiler gates, explicit non-admission for every other frozen kind, byte-stable audit JSON and drift derivation without a parallel declaration table;
 - contract-derived M10.1-09 complete contract-leaf coverage, modifier-target production correlation, executable TypeRef/reference-projection shapes, byte-stable coverage JSON and bridge/contract drift rejection;
+- M10.1-10 closure certification with a complete seven-condition acceptance matrix, explicit Production Semantic Envelope, empty unresolved-language-decision set, deterministic JSON and bounded M10.5-03 unblock signal;
 - semantic equivalence between legacy operation/entity facts and independently constructed canonical facts;
 - deterministic body/parameter diagnostics and source-location/whitespace/source-clause-order-independent M10.1 hashes;
 - explicit exclusion of generic, malformed, unsupported-modifier and unsupported mini-language operation shapes (`AIDL-N013`);
