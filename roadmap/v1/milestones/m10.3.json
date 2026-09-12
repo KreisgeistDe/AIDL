@@ -1,0 +1,33 @@
+{
+  "schema_version": "aidl.roadmap/v1",
+  "document_type": "milestone",
+  "id": "M10.3",
+  "title": "Reference Example & Production Semantic Closure Gate",
+  "order": 13,
+  "priority": "P1",
+  "packages": [
+    {
+      "id": "M10.3-01",
+      "title": "Migrate intended reference examples and close production semantic mismatches.",
+      "order": 1,
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["M10.2-01"],
+      "acceptance_criteria": [
+        "Consume the complete M10.2 classification and migrate every intended reference example to the unified target grammar while preserving explicit negative/rejection and legacy-compatibility fixture classifications.",
+        "Resolve every grammar/design/example mismatch explicitly by canonical example migration, an explicit non-production disposition, or a separately versioned Python reference semantic/admission change; do not preserve ambiguous mismatches as implicit compatibility.",
+        "Align required diagnostics, semantics, and example explanations for all three reference applications and committed fixtures, with executable deterministic grammar-to-examples conformance checks that fail closed on newly inconsistent surfaces.",
+        "Where Python reference semantics or production admission must change, update and re-freeze the versioned language contract and complete the full coverage/certification gates before treating the changed surface as production-admitted.",
+        "Complete M10.3 before any M10.5 parity baseline is final; the post-M10.3 Python reference state is the only eligible source for refreshed M10.5-01 fingerprinting."
+      ],
+      "evidence": [
+        {"kind": "path", "ref": "backlog/m10-2-m10-3-language-example-migration.md"},
+        {"kind": "path", "ref": "TODO.md"}
+      ],
+      "references": [
+        {"kind": "path", "ref": "spec/language-surface-v1.json"},
+        {"kind": "path", "ref": "docs/m10-1-closure-certification.md"}
+      ]
+    }
+  ]
+}
