@@ -19,7 +19,10 @@ COPIED = (
     "backlog/m10-1-language-freeze.md",
     "spec/conformance-manifest.json",
     "docs/m10-1-language-surface-freeze.md",
+    "docs/m10-1-closure-certification.md",
     "spec/language-surface-v1.json",
+    "tools/compiler_language_surface_certification.py",
+    "tools/test_m10_1_language_surface_certification.py",
 )
 
 
@@ -50,16 +53,16 @@ class RoadmapTest(unittest.TestCase):
         summary = roadmap.summary_data(self.root)
         self.assertEqual(summary["milestones"], 2)
         self.assertEqual(summary["packages"], 17)
-        self.assertEqual(summary["status_counts"]["complete"], 16)
-        self.assertEqual(summary["status_counts"]["open"], 1)
+        self.assertEqual(summary["status_counts"]["complete"], 17)
+        self.assertEqual(summary["status_counts"]["open"], 0)
         self.assertEqual(summary["blocked"], 0)
-        self.assertEqual(roadmap.next_data(self.root)["id"], "M10.1-10")
+        self.assertIsNone(roadmap.next_data(self.root))
         _, _, packages = roadmap.load_authority(self.root)
         self.assertEqual(roadmap.blocker_ids(packages, "M10.1-10", False), [])
         self.assertEqual(roadmap.blocker_ids(packages, "M10.1-10", True), [])
         completed = roadmap.completed_data(self.root)
         self.assertIn("M10", completed["complete_milestones"])
-        self.assertNotIn("M10.1", completed["complete_milestones"])
+        self.assertIn("M10.1", completed["complete_milestones"])
 
     def test_terminal_dispositions_satisfy_dependencies(self) -> None:
         data = self.load("roadmap/v1/milestones/m10.1.json")
