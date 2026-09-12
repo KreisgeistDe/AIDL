@@ -115,10 +115,15 @@
       "title": "Certify M10.1 closure and unblock M10.5-03.",
       "order": 10,
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["M10.1-09"],
-      "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
-      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
+      "acceptance_criteria": ["Certify the complete frozen-v1 Production Semantic Envelope with no unresolved language decision required by M10.5-03; preserve fail-closed behavior outside that envelope and treat the M10.5-03 transition as an unblock signal only."],
+      "evidence": [
+        {"kind": "path", "ref": "backlog/m10-1-language-freeze.md"},
+        {"kind": "path", "ref": "docs/m10-1-closure-certification.md"},
+        {"kind": "path", "ref": "tools/compiler_language_surface_certification.py"},
+        {"kind": "path", "ref": "tools/test_m10_1_language_surface_certification.py"}
+      ],
       "references": []
     }
   ]
