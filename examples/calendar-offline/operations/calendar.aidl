@@ -4,8 +4,10 @@ import calendar.domain.*
 import calendar.system.resources.CalendarDb
 
 export query listMyEvents(
-  filter: CalendarFilter,
-  page: PageInput default { size: 100 }
+  parameters: [
+    filter: CalendarFilter,
+    page: PageInput default { size: 100 }
+  ]
 ) -> Page<CalendarEventView> {
   auth: authenticated
   allow: principal.authenticated
