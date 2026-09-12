@@ -1,0 +1,89 @@
+{
+  "schema_version": "aidl.m10.2-language-surface-classification/v1",
+  "authority": "M10.2-01",
+  "frozen_language_contract": {
+    "path": "spec/language-surface-v1.json",
+    "authority": "M10.1",
+    "status": "frozen",
+    "contract_revision": 4
+  },
+  "classes": [
+    "production-admitted-canonical",
+    "canonical-but-not-yet-admitted",
+    "legacy-readable-compatibility",
+    "negative-rejection-fixture",
+    "illustrative-aspirational"
+  ],
+  "source_rules": [
+    {
+      "id": "reference-app-sources",
+      "pattern": "^examples/(calendar-offline|petstore|videohub)/.*\\.aidl$",
+      "class": "legacy-readable-compatibility",
+      "note": "Committed reference applications remain intentionally unmigrated until M10.3; parser readability is not a production-admission claim."
+    },
+    {
+      "id": "negative-fixtures",
+      "pattern": "^fixtures/invalid/.*\\.aidl$",
+      "class": "negative-rejection-fixture",
+      "note": "Inputs are committed rejection evidence."
+    },
+    {
+      "id": "valid-compatibility-fixtures",
+      "pattern": "^fixtures/valid/.*\\.aidl$",
+      "class": "legacy-readable-compatibility",
+      "note": "Valid parser/tooling fixtures preserve the current readable source surface and are not by themselves canonical production-admission evidence."
+    },
+    {
+      "id": "semantic-diagnostic-fixtures",
+      "pattern": "^tools/m2_semantic_fixtures/.*\\.aidl$",
+      "class": "negative-rejection-fixture",
+      "note": "M2 semantic fixtures are diagnostic/conformance evidence whose expected semantic disposition is owned by their fixture manifest/tests."
+    }
+  ],
+  "document_surfaces": [
+    {"path": "README.md", "class": "illustrative-aspirational"},
+    {"path": "docs/00-overview.md", "class": "illustrative-aspirational"},
+    {"path": "docs/01-core-language.md", "class": "illustrative-aspirational"},
+    {"path": "docs/05-diagnostics-testing.md", "class": "illustrative-aspirational"},
+    {"path": "docs/06-grammar.md", "class": "canonical-but-not-yet-admitted"},
+    {"path": "docs/10-evolution-compatibility.md", "class": "illustrative-aspirational"},
+    {"path": "docs/12-coverage-and-limits.md", "class": "illustrative-aspirational"},
+    {"path": "docs/aidl-core-subset.md", "class": "production-admitted-canonical"},
+    {"path": "docs/m10-1-language-surface-freeze.md", "class": "production-admitted-canonical"},
+    {"path": "docs/m10-1-closure-certification.md", "class": "production-admitted-canonical"},
+    {"path": "references/core-language.md", "class": "illustrative-aspirational"},
+    {"path": "references/diagnostics.md", "class": "illustrative-aspirational"},
+    {"path": "references/evolution-compatibility.md", "class": "illustrative-aspirational"},
+    {"path": "references/grammar.md", "class": "illustrative-aspirational"},
+    {"path": "examples/calendar-offline/README.md", "class": "legacy-readable-compatibility"},
+    {"path": "examples/petstore/README.md", "class": "legacy-readable-compatibility"},
+    {"path": "examples/videohub/README.md", "class": "legacy-readable-compatibility"},
+    {"path": "fixtures/README.md", "class": "legacy-readable-compatibility"},
+    {"path": "tools/m2_semantic_fixtures/README.md", "class": "negative-rejection-fixture"}
+  ],
+  "required_document_surfaces": [
+    "README.md",
+    "docs/00-overview.md",
+    "docs/01-core-language.md",
+    "docs/05-diagnostics-testing.md",
+    "docs/06-grammar.md",
+    "docs/10-evolution-compatibility.md",
+    "docs/12-coverage-and-limits.md",
+    "docs/aidl-core-subset.md",
+    "docs/m10-1-language-surface-freeze.md",
+    "docs/m10-1-closure-certification.md",
+    "references/core-language.md",
+    "references/diagnostics.md",
+    "references/evolution-compatibility.md",
+    "references/grammar.md",
+    "examples/calendar-offline/README.md",
+    "examples/petstore/README.md",
+    "examples/videohub/README.md",
+    "fixtures/README.md",
+    "tools/m2_semantic_fixtures/README.md"
+  ],
+  "m10_3_mismatches": [
+    "Reference applications and compatibility fixtures still contain legacy source spellings and broad declaration families; M10.3 owns executable migration/disposition.",
+    "Broad overview/reference documents describe specified language families beyond the ten revision-4 production-admitted declaration families; their support claims must remain explicitly tiered until M10.3 resolves intended production examples."
+  ]
+}

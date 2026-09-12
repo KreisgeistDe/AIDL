@@ -1,5 +1,7 @@
 # 0. Überblick
 
+> **M10.2 Support-Tier-Hinweis:** Dieses Kapitel beschreibt die spezifizierte Produkt-/Architekturvision und ist als `illustrative-aspirational` klassifiziert, sofern eine Fähigkeit nicht zusätzlich durch die eingefrorene M10.1-Revision 4 und Production-Normalization-Evidenz als produktiv zugelassen ist. Parser-Lesbarkeit, kanonische Zielsprache und aktuelle Produktionszulassung sind getrennte Aussagen. Die normative Zielgrammatik steht in `docs/06-grammar.md`; die Repository-Klassifikation in `spec/m10-2-language-surface-classification.json`.
+
 ## Ziel
 
 AIDL minimiert den Lösungsraum für Coding-Agenten, ohne wesentliche
@@ -77,6 +79,8 @@ in versionierten Adaptern oder Binding-Dateien, nicht in der Fachdomäne.
 
 ## Unterstützte Architekturklassen
 
+Die folgende Tabelle beschreibt die **Zielvision**, nicht automatisch die aktuelle Production-Semantic-Envelope-Zulassung einzelner Deklarationsfamilien.
+
 | Klasse | Status |
 |---|---|
 | Modularer Monolith | erstklassig |
@@ -93,10 +97,10 @@ in versionierten Adaptern oder Binding-Dateien, nicht in der Fachdomäne.
 
 ## Normative Begriffe
 
-- MUSS / DARF NICHT: zwingend; Verletzung ist ein Compilerfehler.
-- SOLL / SOLL NICHT: Standard; Abweichung benötigt eine Annotation mit Grund.
+- MUSS / DARF NICHT: zwingend innerhalb der jeweils ausdrücklich als normativ markierten und aktuell zugelassenen Oberfläche.
+- SOLL / SOLL NICHT: Standard innerhalb dieser Oberfläche; Abweichung benötigt eine Annotation mit Grund.
 - DARF: optionale Fähigkeit innerhalb deklarierter Grenzen.
-- kanonisch: Ausgabeform des offiziellen Formatters.
+- kanonisch: Form der eingefrorenen Zielsprache; dies allein ist keine Production-Admission-Aussage.
 - Owner: einziger Service, der eine Entität direkt persistieren darf.
 - Authority: Instanz, die einen Wert validiert oder final bestätigt.
 

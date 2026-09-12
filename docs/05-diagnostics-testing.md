@@ -1,5 +1,7 @@
 # 5. Diagnostik und Tests
 
+> **M10.2 Support-Tier-Hinweis:** Dieses Kapitel ist als `illustrative-aspirational` klassifiziert. Diagnose- und Testszenarien beschreiben die spezifizierte Zieloberfläche; nur repository-eigene implementierte Diagnose-/Testpfade und M10.1-zertifizierte Production-Semantic-Envelope-Fakten sind aktuelle Support-Aussagen. Die unten gezeigten `test`-Deklarationen und weitere nicht produktiv zugelassene Familien sind keine implizite Production Admission. Negative Fixtures bleiben explizite Rejection-Evidenz; M10.3 disponiert beabsichtigte Referenzbeispiele.
+
 ## Compilerphasen
 
 | Phase | Prüfung | Ergebnis |
@@ -76,7 +78,11 @@
 | AIDL-UI252 | freier Designwert |
 | AIDL-UI271 | Sync-Konflikt in UI unbehandelt |
 
+Die Tabelle ist Spezifikations-/Dokumentationsmaterial. Ob ein konkreter Code heute erzeugt wird, ergibt sich aus aktuellem Compiler-Code und Tests, nicht allein aus dieser Liste.
+
 ## Testarten
+
+Die folgenden AIDL-Blöcke sind illustrative Zielbeispiele; sie sind nicht automatisch parser- oder production-admitted, nur weil sie hier dokumentiert sind.
 
 ### Fachlicher Full-Stack-Test
 
@@ -177,8 +183,4 @@ Ein Test darf keine stärkere Garantie annehmen als der deklarierte Vertrag.
 
 ## Abschlusskriterium
 
-check, plan, compatibility, build und alle relevanten Tests müssen fehlerfrei
-laufen. Neue Warnungen sind behoben oder mit einer überprüfbaren Annotation
-begründet. Für distributed, offline oder cloud aktivierte Projekte gehören
-Failure-, Concurrency- beziehungsweise Deployment-Prüfungen zwingend zur
-Suite all.
+Für tatsächlich implementierte/zugelassene Oberflächen müssen `check`, `plan`, `compatibility`, `build` und die jeweils repository-eigenen Tests fehlerfrei laufen. Illustrative Zielsyntax erzeugt keine Support-Garantie. Neue Warnungen im unterstützten Pfad sind behoben oder mit einer überprüfbaren Annotation begründet.
