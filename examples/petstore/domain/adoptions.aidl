@@ -41,18 +41,18 @@ export value ExpireAdoptionInput {
 }
 
 export entity AdoptionRequest {
-  id: uuid primary generated immutable
-  revision: revision generated concurrencyToken
-  pet: ref Pet required immutable onDelete restrict
-  applicantId: SubjectId required immutable
-  applicantName: string(2..120) required immutable sensitive
-  applicantEmail: email required immutable sensitive
-  status: AdoptionStatus default submitted mutable
-  motivation: string(30..2000) required immutable sensitive
-  termsAcceptedAt: datetime required immutable
-  decisionReason: string(1..1000)? mutable
-  createdAt: datetime generated immutable
-  decidedAt: datetime? mutable
+  field id: uuid primary generated immutable
+  field revision: revision generated concurrencyToken
+  field pet: ref Pet required immutable onDelete restrict
+  field applicantId: SubjectId required immutable
+  field applicantName: string(2..120) required immutable sensitive
+  field applicantEmail: email required immutable sensitive
+  field status: AdoptionStatus default submitted mutable
+  field motivation: string(30..2000) required immutable sensitive
+  field termsAcceptedAt: datetime required immutable
+  field decisionReason: string(1..1000)? mutable
+  field createdAt: datetime generated immutable
+  field decidedAt: datetime? mutable
 
   index byApplicant(applicantId, createdAt desc)
   index byPet(pet, createdAt desc)
