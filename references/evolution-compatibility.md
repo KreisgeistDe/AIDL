@@ -1,5 +1,7 @@
 # Evolution and Compatibility
 
+> **M10.2 support tier:** This reference is `illustrative-aspirational` unless a behavior is separately covered by current repository implementation/tests and the frozen M10.1 Production Semantic Envelope. It does not expand production admission. Canonical target syntax is owned by revision 4 and `docs/06-grammar.md`; parser-readable compatibility forms and M16.5 experiments remain separate from that authority.
+
 ## Versioned Artifacts
 
 Independently versioned:
