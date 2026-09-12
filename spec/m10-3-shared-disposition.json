@@ -32,6 +32,21 @@
       "detail": "Revision 4 admits only app profile facts. system/frontend/api/defaultDeployment and similar app links cannot become production reference evidence without a separately versioned contract/admission change and re-certification."
     },
     {
+      "id": "auth",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "a11y",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
+      "id": "privacy",
+      "disposition": "non-production-fail-closed",
+      "detail": "Frozen canonical top-level declaration family used by Calendar and Petstore, intentionally not Production-Normalization admitted for M10.3 reference evidence."
+    },
+    {
       "id": "value",
       "disposition": "non-production-fail-closed",
       "detail": "Frozen canonical declaration family, intentionally not Production-Normalization admitted for M10.3 reference evidence."
