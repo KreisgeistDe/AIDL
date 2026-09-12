@@ -40,7 +40,7 @@ M10.2 is complete through `spec/m10-2-language-surface-classification.json`, `to
 
 M10.3 depends on completed M10.2. It resolves the classified mismatches needed for the intended reference examples and production story before any Kotlin parity baseline is considered final.
 
-- [ ] **M10.3-01 — Migrate intended reference examples and close production semantic mismatches.** **P1**
+- [x] **M10.3-01 — Migrate intended reference examples and close production semantic mismatches.** **P1**
 
 ### Required scope
 
@@ -56,7 +56,11 @@ Required diagnostics, semantics, and example explanations must agree. Executable
 
 ### M10.3 completion gate
 
-M10.3 completes only after all M10.2 mismatches are explicitly resolved, intended reference examples use the unified target grammar, negative and compatibility fixtures remain explicitly classified, grammar/example conformance is deterministic, and any semantic/admission change has gone through a versioned re-freeze and certification rather than implicit widening.
+M10.3 is certified by `spec/m10-3-closure-certification.json`, `tools/m10_3_closure_certification.py`, its focused negative regressions, and `docs/m10-3-closure-certification.md`. The certifier composes the complete M10.2 classification with `spec/m10-3-shared-disposition.json`, then verifies the integrated inventories for Calendar (13 committed `.aidl` files), Petstore (19), and VideoHub (25) and the committed valid/compatibility, invalid/rejection, and semantic-diagnostic fixture roots.
+
+The only already-admitted canonical source migrations used by the reference applications are the three shared equivalent-source forms: app profile blocks, explicit entity `field` slots, and named operation `parameters` header arguments. `app.links` remains `requires-versioned-admission`; all other shared mismatches remain explicitly `non-production-fail-closed`. No separately versioned semantic/admission change was required, so frozen revision 4, Production Normalization, Canonical IR meaning, parser/compiler/runtime behavior, and the negative/legacy compatibility evidence remain unchanged.
+
+The executable closure fails closed if a new reference-app source is not documented in its app inventory, if any committed `.aidl` or AIDL/EBNF documentation surface escapes M10.2 classification, if fixture classes drift, if the shared mismatch set changes without a matching explicit disposition, or if the revision-4/constraint pins change. M10.3 therefore closes the ambiguity gate without claiming universal production admission for the broad product-story syntax demonstrated by the examples.
 
 ## M10.5 handoff
 
