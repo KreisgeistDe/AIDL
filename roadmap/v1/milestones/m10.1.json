@@ -104,7 +104,7 @@
       "title": "Add complete language-surface coverage and differential conformance.",
       "order": 9,
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["M10.1-08"],
       "acceptance_criteria": ["Preserve the integrated package completion state and fail closed outside the frozen semantic envelope."],
       "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}],
