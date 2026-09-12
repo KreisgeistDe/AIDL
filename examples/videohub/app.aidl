@@ -5,12 +5,24 @@ import videohub.system.api.VideoHubApi
 import videohub.ui.app.VideoHubWeb
 
 app VideoHub {
-  profile core version 1
-  profile web version 1
-  profile distributed version 1
-  profile cloud version 1
-  profile media version 1
-  profile realtime version 1
+  profile core {
+    version 1
+  }
+  profile web {
+    version 1
+  }
+  profile distributed {
+    version 1
+  }
+  profile cloud {
+    version 1
+  }
+  profile media {
+    version 1
+  }
+  profile realtime {
+    version 1
+  }
   system VideoHubSystem
   frontend VideoHubWeb
   api VideoHubApi

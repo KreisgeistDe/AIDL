@@ -41,17 +41,17 @@ export value TranscodeOutput {
 }
 
 export entity MediaAsset {
-  id: MediaAssetId primary generated immutable
-  revision: revision generated concurrencyToken
-  videoId: VideoId required immutable unique
-  source: BlobHandle<VideoObject> required immutable
-  status: MediaStatus default uploaded mutable
-  renditions: RenditionSet<VideoObject>? mutable
-  playbackManifest: DeliveryHandle<StreamingManifest>? mutable
-  duration: duration? mutable
-  failureCode: string(1..200)? mutable
-  createdAt: datetime generated immutable
-  updatedAt: datetime generated mutable
+  field id: MediaAssetId primary generated immutable
+  field revision: revision generated concurrencyToken
+  field videoId: VideoId required immutable unique
+  field source: BlobHandle<VideoObject> required immutable
+  field status: MediaStatus default uploaded mutable
+  field renditions: RenditionSet<VideoObject>? mutable
+  field playbackManifest: DeliveryHandle<StreamingManifest>? mutable
+  field duration: duration? mutable
+  field failureCode: string(1..200)? mutable
+  field createdAt: datetime generated immutable
+  field updatedAt: datetime generated mutable
 
   index byVideo(videoId, createdAt desc)
   invariant readyComplete:

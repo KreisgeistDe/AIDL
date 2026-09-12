@@ -9,14 +9,14 @@ export value AddCommentInput {
 }
 
 export entity Comment {
-  id: CommentId primary generated immutable
-  revision: revision generated concurrencyToken
-  videoId: VideoId required immutable
-  authorId: SubjectId required immutable sensitive
-  authorDisplayName: string(1..120) required immutable
-  body: string(1..2000) required mutable
-  createdAt: datetime generated immutable
-  deletedAt: datetime? mutable
+  field id: CommentId primary generated immutable
+  field revision: revision generated concurrencyToken
+  field videoId: VideoId required immutable
+  field authorId: SubjectId required immutable sensitive
+  field authorDisplayName: string(1..120) required immutable
+  field body: string(1..2000) required mutable
+  field createdAt: datetime generated immutable
+  field deletedAt: datetime? mutable
 
   index byVideo(videoId, createdAt asc)
 }

@@ -9,8 +9,10 @@ import videohub.system.resources.CommentsDb
 
 @publicReason("Öffentliche Kommentare eines sichtbaren Videos.")
 export query listComments(
-  forVideoId: VideoId,
-  page: PageInput default { size: 100 }
+  parameters: [
+    forVideoId: VideoId,
+    page: PageInput default { size: 100 }
+  ]
 ) -> Page<CommentView> {
   auth: public
   read: Comment.where(
@@ -27,7 +29,9 @@ export query listComments(
 }
 
 export mutation addComment(
-  input: AddCommentInput
+  parameters: [
+    input: AddCommentInput
+  ]
 ) -> CommentView {
   auth: authenticated
   allow: principal.authenticated

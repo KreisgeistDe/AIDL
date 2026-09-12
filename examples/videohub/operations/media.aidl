@@ -9,7 +9,9 @@ import videohub.operations.catalog.authorizeVideoUpload
 import videohub.system.resources.*
 
 export mutation beginVideoUpload(
-  input: BeginUploadInput
+  parameters: [
+    input: BeginUploadInput
+  ]
 ) -> UploadSession<VideoObject> {
   auth: authenticated
   allow: principal.hasRole(creator) or principal.hasRole(admin)
@@ -40,7 +42,9 @@ export mutation beginVideoUpload(
 }
 
 export mutation completeVideoUpload(
-  input: CompleteUploadInput
+  parameters: [
+    input: CompleteUploadInput
+  ]
 ) -> MediaAssetView {
   auth: authenticated
   allow: principal.hasRole(creator) or principal.hasRole(admin)
@@ -81,7 +85,9 @@ export mutation completeVideoUpload(
 }
 
 export query getMediaAsset(
-  assetId: MediaAssetId
+  parameters: [
+    assetId: MediaAssetId
+  ]
 ) -> MediaAssetView? {
   auth: service
   allow: principal.serviceId == "MediaService"
@@ -105,7 +111,9 @@ export task TranscodeVideo(
 }
 
 export mutation markMediaReady(
-  input: MarkMediaReadyInput
+  parameters: [
+    input: MarkMediaReadyInput
+  ]
 ) -> MediaAssetView {
   auth: service
   allow: principal.serviceId == MediaService
