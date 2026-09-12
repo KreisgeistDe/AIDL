@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Deterministic, read-only metrics for docs/06-grammar.md.
 
-This module measures the normative grammar text. It is review tooling only: it
-neither parses AIDL source nor changes compiler/language behavior.
+This module measures the normative target-grammar projection. Top-level declaration
+coverage is derived from the frozen language-surface contract rather than from
+legacy special-case EBNF alternatives, so documentation metrics cannot make a
+second declaration inventory.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ from collections import Counter, defaultdict
 from pathlib import Path
 
 GRAMMAR = Path("docs/06-grammar.md")
+CONTRACT = Path("spec/language-surface-v1.json")
 WORD = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 PRODUCTION_START = re.compile(r"^([A-Za-z][A-Za-z0-9]*)\s*=(.*)$")
 PRODUCTION_NAME_ONLY = re.compile(r"^([A-Za-z][A-Za-z0-9]*)\s*$")
@@ -84,7 +87,6 @@ def productions(sections: list[tuple[str, str]]) -> dict[str, tuple[str, str]]:
 
 
 def split_top_level_alternatives(rhs: str) -> list[str]:
-    """Split EBNF alternatives at un-nested | tokens."""
     result: list[str] = []
     start = 0
     stack: list[str] = []
@@ -115,7 +117,6 @@ def split_top_level_alternatives(rhs: str) -> list[str]:
 
 
 def pattern_signature(alt: str) -> str:
-    """Return a coarse surface-shape signature, deliberately syntax-only."""
     literals = TERMINAL.findall(alt)
     flags: list[str] = []
     if '"{"' in alt:
@@ -132,18 +133,30 @@ def pattern_signature(alt: str) -> str:
         flags.append("list")
     if '"("' in alt:
         flags.append("paren")
-    if "profileProperty" in alt or "uiStatement" in alt or "testStatement" in alt:
-        flags.append("generic-sublanguage")
     if not flags:
         flags.append("plain")
     starter = next((item for item in literals if WORD.fullmatch(item)), "<nonterminal>")
     return starter + ":" + "+".join(flags)
 
 
-def measure(path: Path = GRAMMAR) -> dict[str, object]:
+def _contract_declaration_kinds(contract_path: Path) -> list[str]:
+    data = json.loads(contract_path.read_text(encoding="utf-8"))
+    if data.get("authority") != "M10.1" or data.get("status") != "frozen" or data.get("contract_revision") != 4:
+        raise ValueError("frozen language contract identity drift")
+    rows = data.get("declaration_kinds")
+    if not isinstance(rows, list):
+        raise ValueError("frozen language contract declaration_kinds drift")
+    kinds = [row.get("kind") for row in rows if isinstance(row, dict)]
+    if len(kinds) != len(rows) or not all(isinstance(kind, str) and kind for kind in kinds) or len(set(kinds)) != len(kinds):
+        raise ValueError("frozen language contract declaration kind drift")
+    return kinds
+
+
+def measure(path: Path = GRAMMAR, contract_path: Path = CONTRACT) -> dict[str, object]:
     text = path.read_text(encoding="utf-8")
     sections = ebnf_sections(text)
     prods = productions(sections)
+    declaration_kinds = _contract_declaration_kinds(contract_path)
 
     terminals: set[str] = set()
     terminal_sections: dict[str, set[str]] = defaultdict(set)
@@ -151,28 +164,6 @@ def measure(path: Path = GRAMMAR) -> dict[str, object]:
         for terminal in TERMINAL.findall(block):
             terminals.add(terminal)
             terminal_sections[terminal].add(section)
-
-    lexical_names = {
-        "letter", "digit", "identifier", "typeName", "upperLetter", "qualifiedName",
-        "integer", "decimalLiteral", "percentage", "durationLiteral", "byteLiteral",
-        "cpuLiteral", "number", "string", "regex", "comment", "annotation", "newline",
-    }
-    lexical_terminals: set[str] = set()
-    for name in lexical_names:
-        item = prods.get(name)
-        if item:
-            lexical_terminals.update(TERMINAL.findall(item[1]))
-
-    syntax_terminals = terminals - lexical_terminals
-    syntax_words = sorted(item for item in syntax_terminals if WORD.fullmatch(item))
-    syntax_symbols = sorted(item for item in syntax_terminals if not WORD.fullmatch(item))
-    lexical_words = sorted(item for item in lexical_terminals if WORD.fullmatch(item))
-    lexical_symbols = sorted(item for item in lexical_terminals if not WORD.fullmatch(item))
-
-    declaration_rhs = prods["declaration"][1]
-    declaration_alts = split_top_level_alternatives(declaration_rhs)
-    declaration_refs = [re.sub(r"[ ;]", "", item) for item in declaration_alts]
-    concrete_top_level_forms = len(declaration_refs) + 1  # aliasDecl => alias | opaque
 
     alternative_count = 0
     signatures: Counter[str] = Counter()
@@ -194,19 +185,11 @@ def measure(path: Path = GRAMMAR) -> dict[str, object]:
                 marker_counts["arrow_alternatives"] += 1
             if '"["' in alt:
                 marker_counts["list_alternatives"] += 1
-            if "profileProperty" in alt:
-                marker_counts["profile_property_alternatives"] += 1
-            if "uiStatement" in alt:
-                marker_counts["ui_statement_alternatives"] += 1
-            if "testStatement" in alt:
-                marker_counts["test_statement_alternatives"] += 1
 
     inline_block_duals = []
     for name, (_, rhs) in prods.items():
         alts = split_top_level_alternatives(rhs)
-        has_block = any('"{"' in alt for alt in alts)
-        has_leaf = any("newline" in alt for alt in alts)
-        if has_block and has_leaf:
+        if any('"{"' in alt for alt in alts) and any("newline" in alt for alt in alts):
             inline_block_duals.append(name)
 
     by_section: dict[str, dict[str, int]] = {}
@@ -220,25 +203,19 @@ def measure(path: Path = GRAMMAR) -> dict[str, object]:
 
     return {
         "grammar": str(path),
+        "contract": str(contract_path),
+        "contract_revision": 4,
         "ebnf_sections": len(sections),
         "productions": len(prods),
         "production_alternatives": alternative_count,
         "quoted_terminals_total": len(terminals),
-        "lexical_terminals": len(lexical_terminals),
-        "lexical_word_terminals": len(lexical_words),
-        "lexical_symbol_terminals": len(lexical_symbols),
-        "syntax_terminals": len(syntax_terminals),
-        "syntax_word_terminals": len(syntax_words),
-        "syntax_symbol_terminals": len(syntax_symbols),
-        "top_level_declaration_productions": len(declaration_refs),
-        "concrete_top_level_forms": concrete_top_level_forms,
-        "declaration_productions": declaration_refs,
+        "top_level_declaration_productions": len(declaration_kinds),
+        "concrete_top_level_forms": len(declaration_kinds),
+        "declaration_productions": declaration_kinds,
         "surface_signatures": len(signatures),
         "surface_signature_counts": dict(sorted(signatures.items())),
         "structural_markers": dict(sorted(marker_counts.items())),
         "inline_block_dual_productions": sorted(inline_block_duals),
-        "syntax_word_terminal_values": syntax_words,
-        "lexical_word_terminal_values": lexical_words,
         "terminals_by_section": by_section,
     }
 
@@ -246,9 +223,10 @@ def measure(path: Path = GRAMMAR) -> dict[str, object]:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("path", nargs="?", type=Path, default=GRAMMAR)
+    parser.add_argument("--contract", type=Path, default=CONTRACT)
     parser.add_argument("--pretty", action="store_true")
     args = parser.parse_args(argv)
-    print(json.dumps(measure(args.path), indent=2 if args.pretty else None, sort_keys=True))
+    print(json.dumps(measure(args.path, args.contract), indent=2 if args.pretty else None, sort_keys=True))
     return 0
 
 
