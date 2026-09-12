@@ -71,10 +71,16 @@
       "title": "Close structured operation policy semantics.",
       "order": 6,
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["M10.1-05"],
       "acceptance_criteria": ["Complete auth, authorize, cache, and consistency Production-Parity where required; PR #67 and PR #68 remain prerequisite evidence only and do not close this package."],
-      "evidence": [{"kind": "path", "ref": "backlog/m10-1-language-freeze.md"}, {"kind": "pr", "ref": "#67"}, {"kind": "pr", "ref": "#68"}],
+      "evidence": [
+        {"kind": "path", "ref": "backlog/m10-1-language-freeze.md"},
+        {"kind": "pr", "ref": "#67"},
+        {"kind": "pr", "ref": "#68"},
+        {"kind": "path", "ref": "tools/compiler_operation_policy_parity.py"},
+        {"kind": "test", "ref": "tools/test_m10_1_operation_policy_parity.py"}
+      ],
       "references": []
     },
     {
