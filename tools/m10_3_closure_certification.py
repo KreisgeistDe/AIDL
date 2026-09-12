@@ -5,7 +5,10 @@ import re
 from pathlib import Path
 from typing import Any
 
-from tools import m10_2_language_surface_classification as m10_2
+try:
+    from tools import m10_2_language_surface_classification as m10_2
+except ModuleNotFoundError:  # direct `python3 tools/...py` execution
+    import m10_2_language_surface_classification as m10_2
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = Path("spec/m10-3-closure-certification.json")
