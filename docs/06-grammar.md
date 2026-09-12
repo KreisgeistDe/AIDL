@@ -1,779 +1,146 @@
-# 6. Normative Grammatik
+# 6. Normative grammar
 
-## Geltungsbereich
+## Authority and support tiers
 
-Diese EBNF ist für die konkrete AIDL-Syntax normativ. Profilkapitel
-definieren zusätzlich die erlaubten Property-Namen, Reihenfolgen und
-semantischen Constraints. Ein syntaktisch gültiger unbekannter Profil-Key ist
-deshalb weiterhin ein AIDL-E101-Fehler.
+This chapter is the human-readable grammar projection of the frozen M10.1 language-surface contract in `spec/language-surface-v1.json`, currently revision 4. The JSON contract remains the machine-readable semantic authority if this prose and the contract ever disagree.
 
-Alle in Anführungszeichen stehenden Terminals sind reservierte Schlüsselwörter
-im jeweiligen Kontext.
+The **canonical target language** and **current production admission** are separate concepts. Revision 4 defines the canonical representation for the complete frozen declaration surface, while Production Normalization currently admits only the declaration families certified by M10.1. Canonical syntax therefore does not imply production support. Parser-readable historical spellings are compatibility input only and are not part of the normative target grammar below.
 
-## Lexikalische Regeln
+The repository-wide support tiers are:
 
-~~~ebnf
-letter          = "A".."Z" | "a".."z" | "_" ;
-digit           = "0".."9" ;
-identifier      = letter { letter | digit } ;
-typeName        = upperLetter { letter | digit } ;
-upperLetter     = "A".."Z" ;
-qualifiedName   = identifier { "." identifier }
-                | typeName { "." identifier | "." typeName } ;
+- **production-admitted canonical** — canonical target syntax with certified Production Normalization evidence;
+- **canonical-but-not-yet-admitted** — canonical target syntax frozen by M10.1 but intentionally fail-closed in current production admission;
+- **legacy-readable compatibility** — historical source accepted for compatibility and migration, never a second canonical grammar;
+- **negative/rejection fixture** — input whose rejection/diagnostic behavior is the evidence;
+- **illustrative/aspirational** — explanatory material that does not itself make a production support claim.
 
-integer         = [ "-" ] digit { digit } ;
-decimalLiteral  = [ "-" ] digit { digit } "." digit { digit } ;
-percentage      = digit { digit } "%" ;
-durationLiteral = number ( "ms" | "s" | "m" | "h" | "d" ) ;
-byteLiteral     = number ( "B" | "KB" | "MB" | "GB" | "TB" ) ;
-cpuLiteral      = number ( "mCPU" | "core" | "cores" ) ;
-number          = integer | decimalLiteral ;
+`spec/m10-2-language-surface-classification.json` classifies the committed source/documentation corpus into these tiers. M10.3, not this chapter, owns executable migration of intended reference applications and resolution of any product requirement that would need new Python semantics or production admission.
 
-string          = '"' { escapedChar | nonQuoteChar } '"' ;
-regex           = "/" { escapedChar | nonSlashChar } "/" ;
-comment         = "//" { nonNewlineChar }
-                | "/*" { anyChar } "*/" ;
-annotation      = "@" identifier [ "(" [ arguments ] ")" ] ;
-newline         = ? logical line ending ? ;
-~~~
+## Canonical program shape
 
-Kommentare und Whitespace sind außerhalb von Strings nicht signifikant, mit
-einer Ausnahme: Ein logical newline beendet Feld- und Leaf-Klauseln. Eine
-physische Zeile wird fortgesetzt, wenn Klammern offen sind, der Parser nach
-einem Operator oder Doppelpunkt einen Ausdruck erwartet oder die nächste Zeile
-mit einem Punkt beginnt. Semikolons sind ungültig.
-
-## Programme und Module
+The canonical language uses one uniform declaration envelope:
 
 ~~~ebnf
-program         = { moduleDecl | importDecl | exportDecl | declaration } ;
+program         = { directive | declaration } ;
+directive       = moduleDirective | importDirective ;
+moduleDirective = "module" qualifiedName newline ;
+importDirective = "import" qualifiedName [ "." "*" ] newline ;
 
-moduleDecl      = "module" qualifiedName newline ;
-importDecl      = "import" qualifiedName [ "." "*" ] newline ;
-exportDecl      = "export" declaration ;
-
-declaration     = appDecl
-                | authDecl
-                | a11yDecl
-                | privacyDecl
-                | enumDecl
-                | aliasDecl
-                | valueDecl
-                | unionDecl
-                | errorDecl
-                | entityDecl
-                | viewDecl
-                | apiDecl
-                | policyDecl
-                | queryDecl
-                | mutationDecl
-                | eventDecl
-                | topicDecl
-                | queueDecl
-                | consumerDecl
-                | projectionDecl
-                | workflowDecl
-                | sagaDecl
-                | taskDecl
-                | scheduleDecl
-                | systemDecl
-                | serviceDecl
-                | clientDecl
-                | tenantDecl
-                | channelDecl
-                | resourceDecl
-                | mediaDecl
-                | renditionDecl
-                | syncDecl
-                | migrationDecl
-                | deploymentDecl
-                | frontendDecl
-                | themeDecl
-                | componentDecl
-                | pageDecl
-                | formDecl
-                | actionDecl
-                | syncStatusDecl
-                | seoDecl
-                | nativeFunctionDecl
-                | nativeComponentDecl
-                | fixtureDecl
-                | testDecl
-                | scenarioDecl ;
+declaration     = { annotation } [ "export" ] kind [ name ]
+                  [ headerArguments ] [ "->" typeRef ]
+                  "{" { bodySlot } "}" ;
+headerArguments = "(" [ namedArgument { "," namedArgument } ] ")" ;
+namedArgument   = identifier ":" value ;
+bodySlot        = slotKeyword [ slotName ] slotValue newline
+                | slotKeyword [ slotName ] "{" { bodySlot } "}" ;
 ~~~
 
-Eine Datei darf höchstens eine module-Deklaration besitzen; sie muss vor
-Imports und Deklarationen stehen.
+The exact name policy, permitted header arguments, result-type allowance, body-slot vocabulary, occurrence bounds, ordering, reference-kind constraints and legacy spellings for each declaration are defined by the frozen contract. A spelling not represented by that contract is not added to the target grammar by examples or older prose.
 
-## App und Profile
+## Frozen canonical declaration kinds
+
+Revision 4 freezes these canonical declaration kinds:
+
+`app`, `auth`, `a11y`, `privacy`, `enum`, `alias`, `value`, `union`, `error`, `entity`, `view`, `api`, `policy`, `query`, `mutation`, `event`, `topic`, `queue`, `consumer`, `projection`, `workflow`, `saga`, `task`, `schedule`, `system`, `service`, `client`, `tenant`, `channel`, `resource`, `media`, `rendition`, `sync`, `migration`, `deployment`, `frontend`, `theme`, `component`, `page`, `form`, `action`, `syncStatus`, `seo`, `nativeFunction`, `nativeComponent`, `fixture`, `test`, and `scenario`.
+
+Only the M10.1-certified subset is production-admitted today. All other canonical kinds remain fail-closed until an explicit versioned admission decision and certification says otherwise.
+
+## Canonical forms with revision-4 structural detail
+
+The following forms are normative projections of contract-owned structure, not independent language rules.
+
+### App
 
 ~~~ebnf
-appDecl         = { annotation }
-                  "app" typeName
-                  "{" { appClause } "}" ;
-
-appClause       = "profile" identifier "version" integer newline
-                | "system" typeName newline
-                | "frontend" typeName newline
-                | "api" typeName newline
-                | "defaultDeployment" identifier newline
-                | "compatibility" identifier newline ;
-
-authDecl        = "auth" "{" { profileProperty } "}" ;
-a11yDecl        = "a11y" "{" { profileProperty } "}" ;
-privacyDecl     = "privacy" "{" { profileProperty } "}" ;
+appDecl      = [ "export" ] "app" identifier "{" profileSlot { profileSlot } "}" ;
+profileSlot  = "profile" identifier "{" "version" integer "}" ;
 ~~~
 
-## Typen
+### Enum
+
+Canonical enum members are explicit `case` slots:
 
 ~~~ebnf
-type            = primaryType [ "?" ] ;
-
-primaryType     = scalarType
-                | namedType
-                | constrainedType
-                | genericType
-                | listType
-                | refType
-                | recordType
-                | inlineEnumType ;
-
-scalarType      = "string" | "int" | "decimal" | "bool" | "uuid"
-                | "date" | "datetime" | "duration" | "revision"
-                | "email" | "url" | "bytes" ;
-
-namedType       = qualifiedName ;
-constrainedType = ( scalarType | qualifiedName ) constraintArguments ;
-genericType     = qualifiedName typeArguments ;
-listType        = "[" type "]" ;
-refType         = "ref" qualifiedName ;
-recordType      = "{" [ recordField { "," recordField } ] "}" ;
-recordField     = identifier ":" type ;
-inlineEnumType  = "enum" "(" string { "," string } ")" ;
-
-typeArguments   = "<" type { "," type } ">" ;
-typeParameters  = "<" typeParameter { "," typeParameter } ">" ;
-typeParameter   = typeName [ ":" typeBound { "&" typeBound } ] ;
-typeBound       = "serializable" | "scalar" | "value" | "entityView"
-                | "ErrorValue" | "comparable" | "hashable" ;
-
-constraintArguments
-                = "(" [ constraintArgument { "," constraintArgument } ] ")" ;
-constraintArgument
-                = identifier ":" literal
-                | range
-                | literal ;
-range           = literal ".." literal ;
+enumDecl = [ "export" ] "enum" identifier "{" caseSlot { caseSlot } "}" ;
+caseSlot = "case" identifier [ "=" literal ] newline ;
 ~~~
 
-## Ausdrücke
+Comma-separated bare enum cases are legacy-readable compatibility syntax only.
+
+### Alias
 
 ~~~ebnf
-expression      = orExpression ;
-orExpression    = andExpression { "or" andExpression } ;
-andExpression   = equalityExpression { "and" equalityExpression } ;
-equalityExpression
-                = relationalExpression
-                  { ( "==" | "!=" | "in" | "not" "in" )
-                    relationalExpression } ;
-relationalExpression
-                = additiveExpression
-                  { ( "<" | "<=" | ">" | ">=" )
-                    additiveExpression } ;
-additiveExpression
-                = multiplicativeExpression
-                  { ( "+" | "-" ) multiplicativeExpression } ;
-multiplicativeExpression
-                = unaryExpression { ( "*" | "/" | "%" ) unaryExpression } ;
-unaryExpression = [ "not" | "-" ] postfixExpression ;
-postfixExpression
-                = primaryExpression { memberAccess | callSuffix | indexSuffix } ;
-memberAccess    = "." identifier ;
-callSuffix      = "(" [ arguments ] ")" ;
-indexSuffix     = "[" expression "]" ;
-
-primaryExpression
-                = literal
-                | qualifiedName
-                | capabilityLiteral
-                | listLiteral
-                | objectLiteral
-                | "(" expression ")" ;
-
-arguments       = argument { "," argument } ;
-argument        = [ identifier ":" ] expression | spread ;
-spread          = "..." expression ;
-listLiteral     = "[" [ expression { "," expression } ] "]" ;
-objectLiteral   = "{" [ objectMember { "," objectMember } ] "}" ;
-objectMember    = identifier ":" expression | spread ;
-capabilityLiteral
-                = identifier ":" qualifiedName ;
-
-literal         = string | integer | decimalLiteral | percentage
-                | durationLiteral | byteLiteral | cpuLiteral
-                | "true" | "false" | "null" ;
+aliasDecl = [ "export" ] "alias" identifier "=" typeRef newline ;
 ~~~
 
-## Typdeklarationen
+`opaque Name = Type` is a legacy alias spelling, not a canonical declaration kind.
+
+### Entity
+
+Canonical entity members use explicit semantic slots:
 
 ~~~ebnf
-enumDecl        = { annotation } "enum" typeName
-                  "{" enumCase { "," enumCase } "}" ;
-enumCase        = identifier [ "=" string ] ;
-
-aliasDecl       = { annotation } ( "alias" | "opaque" )
-                  typeName [ typeParameters ] "=" type newline ;
-
-valueDecl       = { annotation } "value" typeName [ typeParameters ]
-                  "{" { fieldDecl | invariantDecl } "}" ;
-
-unionDecl       = { annotation } "union" typeName [ typeParameters ]
-                  "{" { unionVariant } "}" ;
-unionVariant    = identifier [ "(" [ parameters ] ")" ] newline ;
-
-errorDecl       = { annotation } "error" typeName
-                  "{" { errorClause | fieldDecl } "}" ;
-errorClause     = "code" string newline
-                | "httpStatus" integer newline
-                | "retry" retryClass newline
-                | "safeMessage" string newline
-                | "localizationKey" string newline ;
-retryClass      = "never" | "immediate" | "backoff"
-                | "after" durationLiteral ;
-
-entityDecl      = { annotation } "entity" typeName
-                  "{" { fieldDecl | indexDecl | invariantDecl } "}" ;
-fieldDecl       = { annotation } identifier ":" type
-                  { fieldModifier } newline ;
-fieldModifier   = "required" | "primary" | "generated"
-                | "clientGenerated" | "immutable" | "mutable"
-                | "sensitive" | "unique" | "concurrencyToken"
-                | "default" expression
-                | "onDelete" deleteAction
-                | "via" identifier ;
-deleteAction    = "restrict" | "cascade" | "nullify" ;
-
-indexDecl       = "index" identifier "(" indexField
-                  { "," indexField } ")" newline ;
-indexField      = identifier [ "asc" | "desc" ] ;
-invariantDecl   = "invariant" identifier ":" expression newline ;
-
-viewDecl        = { annotation } "view" typeName [ typeParameters ]
-                  [ "from" type ] "{" { viewMember } "}" ;
-viewMember      = identifier [ "{" viewSelection "}" ] [ "," ] newline
-                | identifier ":" expression newline ;
-viewSelection   = viewInlineMember { "," viewInlineMember }
-                | { viewMember } ;
-viewInlineMember
-                = identifier [ "{" viewSelection "}" ] ;
-
-parameters      = parameter { "," parameter } ;
-parameter       = identifier ":" type [ "default" expression ] ;
+entityDecl = [ "export" ] "entity" identifier "{" { fieldSlot | indexSlot } "}" ;
+fieldSlot  = "field" identifier ":" typeRef { fieldModifier } newline ;
+indexSlot  = "index" identifier slotValue newline ;
 ~~~
 
-## Operationen
+Unprefixed `name: Type` entity members are compatibility input only.
+
+### Query and mutation
 
 ~~~ebnf
-apiDecl         = { annotation } "api" typeName
-                  "{" { apiClause } "}" ;
-apiClause       = "transport" ( "rest" | "rpc" | "graphql" ) newline
-                | "version" integer newline
-                | "basePath" string newline
-                | "operations" "[" exposedItem
-                  { "," exposedItem } "]" newline
-                | "auth" identifier newline
-                | "errors" identifier newline
-                | "compatibility" compatibilityMode newline
-                | "rateLimit" profilePropertyValue
-                  { profilePropertyValue } newline ;
-
-operationSignature
-                = identifier [ typeParameters ]
-                  "(" [ parameters ] ")" "->" type ;
-
-policyDecl      = { annotation } "policy" operationSignature
-                  "{" { policyStatement } "}" ;
-queryDecl       = { annotation } "query" operationSignature
-                  "{" { queryClause } "}" ;
-mutationDecl    = { annotation } "mutation" operationSignature
-                  "{" { mutationClause } "}" ;
-
-policyStatement = requireStatement | bindingStatement | returnStatement ;
-
-queryClause     = authClause
-                | allowClause
-                | "read" ":" expression newline
-                | "consistency" ":" consistency newline
-                | cacheClause
-                | errorsClause
-                | timeoutClause ;
-
-mutationClause  = authClause
-                | allowClause
-                | errorsClause
-                | authorizeClause
-                | idempotencyClause
-                | transactionBlock
-                | callClause
-                | auditClause
-                | timeoutClause ;
-
-authClause      = "auth" ":" authMode newline ;
-authMode        = "public" | "authenticated" | "service"
-                | qualifiedName ;
-allowClause     = "allow" ":" expression newline ;
-authorizeClause = "authorize" ":" "remote" "query" expression
-                  [ "else" typeName ] newline ;
-errorsClause    = "errors" ":" "[" type { "," type } "]" newline ;
-timeoutClause   = "timeout" ":" durationLiteral newline ;
-auditClause     = "audit" ":" ( "required" | "none" ) newline ;
-callClause      = "call" ":" expression newline ;
-
-consistency     = "strong" | "session" | "eventual"
-                | "boundedStaleness" "(" "max" ":" durationLiteral ")" ;
-
-cacheClause     = "cache" ":" cacheVisibility "ttl" durationLiteral
-                  [ "vary" "[" identifier { "," identifier } "]" ] newline ;
-cacheVisibility = "none" | "private" | "public" ;
-
-idempotencyClause
-                = "idempotency" ":" idempotencyInline newline
-                | "idempotency" ":" newline
-                  "{" { idempotencyProperty } "}" ;
-idempotencyInline
-                = expression "retain" durationLiteral ;
-idempotencyProperty
-                = "key" expression newline
-                | "scope" expression newline
-                | "retain" durationLiteral newline ;
-
-transactionBlock
-                = "transaction" "on" typeName
-                  "isolation" isolation
-                  "{" { transactionStatement } "}" ;
-isolation       = "readCommitted" | "repeatableRead" | "serializable" ;
-
-transactionStatement
-                = bindingStatement
-                | requireStatement
-                | writeStatement
-                | emitStatement
-                | whenStatement
-                | returnStatement ;
-
-bindingStatement
-                = identifier "=" expression
-                  [ "else" typeName ]
-                  [ "lock" "update" "timeout" durationLiteral ] newline ;
-requireStatement
-                = "require" expression [ "else" typeName ] newline ;
-writeStatement  = "write" ":" expression
-                  [ "expect" "revision" expression ]
-                  [ "else" typeName ] newline ;
-emitStatement   = "emit" ":" expression "to" typeName
-                  [ "via" "outbox" ] newline ;
-whenStatement   = "when" expression
-                  "{" { transactionStatement } "}"
-                  [ "else" "{" { transactionStatement } "}" ] ;
-returnStatement = "return" expression newline ;
+queryDecl    = [ "export" ] "query" identifier [ parameterList ] "->" typeRef
+               "{" { querySlot } "}" ;
+mutationDecl = [ "export" ] "mutation" identifier [ parameterList ] "->" typeRef
+               "{" { mutationSlot } "}" ;
+parameterList = "(" [ parameter { "," parameter } ] ")" ;
+parameter     = identifier ":" typeRef [ "default" value ] ;
+querySlot     = "read" value newline
+              | "allow" value newline
+              | "errors" typeRefList newline
+              | "timeout" duration newline ;
+mutationSlot  = "allow" value newline
+              | "errors" typeRefList newline
+              | "call" value newline
+              | "audit" value newline
+              | "timeout" duration newline ;
 ~~~
 
-## Events, Messaging und Verarbeitung
+Legacy operation source may contain additional readable clauses. Clauses not represented by revision-4 BodySlots remain explicit fail-closed compatibility facts; they are not normative target slots merely because the parser can read them.
+
+### Consumer, projection, client, migration
+
+These families use named canonical header arguments rather than positional special-case headers:
 
 ~~~ebnf
-eventDecl       = { annotation } "event" typeName
-                  "version" integer
-                  [ "evolves" typeName "version" integer ]
-                  "{" { fieldDecl } "}" ;
-
-topicDecl       = { annotation } "topic" typeName
-                  "{" { topicClause } "}" ;
-topicClause     = "events" "[" typeName { "," typeName } "]" newline
-                | "delivery" delivery newline
-                | "partition" "by" expression newline
-                | "ordering" ordering newline
-                | "retention" durationLiteral newline
-                | "compatibility" compatibilityMode newline
-                | "deadLetter" "after" integer "attempts" newline ;
-
-queueDecl       = { annotation } "queue" typeName
-                  "{" { queueClause } "}" ;
-queueClause     = "messages" "[" typeName { "," typeName } "]" newline
-                | "delivery" delivery newline
-                | "visibilityTimeout" durationLiteral newline
-                | "deadLetter" "after" integer "attempts" newline ;
-
-delivery        = "atLeastOnce" | "atMostOnce" ;
-ordering        = "none" | "perPartition" | "global" ;
-compatibilityMode
-                = "none" | "backward" | "forward" | "full" ;
-
-consumerDecl    = { annotation } "consumer" typeName
-                  "on" typeName "from" typeName
-                  "{" { consumerClause } "}" ;
-consumerClause  = "service" typeName newline
-                | idempotencyClause
-                | "retry" ":" retryPolicy newline
-                | "start" ":" invocationKind expression newline
-                | "call" ":" invocationKind expression newline
-                | "transaction" "on" typeName
-                  "{" { transactionStatement } "}" ;
-invocationKind  = "workflow" | "task" | "mutation" ;
-
-retryPolicy     = "none"
-                | "immediate" "(" "max" ":" integer ")"
-                | "exponential" "(" [ namedRetryArgs ] ")" ;
-namedRetryArgs  = namedRetryArg { "," namedRetryArg } ;
-namedRetryArg   = identifier ":" literal ;
-
-projectionDecl  = { annotation } "projection" typeName
-                  "from" "[" typeName { "," typeName } "]"
-                  "into" typeName
-                  "{" { projectionClause } "}" ;
-projectionClause
-                = "key" expression newline
-                | "map" expression newline
-                | "checkpoint" identifier newline
-                | "rebuild"
-                  ( "replay" | "snapshot" | "from" typeName ) newline
-                | "maxLag" durationLiteral newline ;
+consumerDecl   = [ "export" ] "consumer" identifier
+                 "(" "topic" ":" declarationRef "," "messageType" ":" typeRef ")"
+                 "{" { bodySlot } "}" ;
+projectionDecl = [ "export" ] "projection" identifier
+                 "(" "sources" ":" typeRef "," "target" ":" declarationRef ")"
+                 "{" { bodySlot } "}" ;
+clientDecl     = [ "export" ] "client" identifier
+                 "(" "service" ":" declarationRef ")" "{" { bodySlot } "}" ;
+migrationDecl  = [ "export" ] "migration" identifier
+                 "(" "fromVersion" ":" string "," "toVersion" ":" string ")"
+                 "{" { bodySlot } "}" ;
 ~~~
 
-## Workflows, Sagas, Tasks und Scheduler
+Historical `on/from`, `from/into`, `for`, and `from "a" to "b"` headers are compatibility spellings only.
 
-~~~ebnf
-workflowDecl    = { annotation } "workflow" operationSignature
-                  "{" { workflowStatement } "}" ;
-workflowStatement
-                = budgetClause
-                | idempotencyClause
-                | workflowStep
-                | approvalStep
-                | returnStatement ;
+## Type references, modifiers, annotations and cardinality
 
-budgetClause    = "budget" ":" profilePropertyValue
-                  { "," profilePropertyValue } newline ;
-workflowStep    = "step" identifier "retry" retryPolicy
-                  "{" { workflowInnerStatement } "}" ;
-workflowInnerStatement
-                = bindingStatement | requireStatement | returnStatement
-                | invocationStatement ;
-invocationStatement
-                = [ identifier "=" ]
-                  ( "query" | "mutation" | "task" | "workflow" )
-                  expression newline ;
+The canonical type-reference model is contract-owned. A TypeRef carries its base kind/name plus optionality and only the modifiers frozen by revision 4. M10.1 certification proves current production parity for the admitted TypeRef/reference-projection facts and fail-closed behavior for unsupported generic/non-range constraint shapes.
 
-approvalStep    = "approval" identifier
-                  "{" { approvalClause } "}" ;
-approvalClause  = "timeout" ":" durationLiteral newline
-                | "onTimeout" ":"
-                  ( "fail" typeName
-                  | invocationKind expression
-                  | "return" expression ) newline ;
+Annotations are source metadata only where the frozen contract permits them; an annotation does not create a new declaration or body-slot meaning. Occurrence/cardinality is defined per contract node through `min`/`max`, including required singleton slots, optional singletons and ordered repeated slots. Documentation must not replace those bounds with a looser parser-oriented rule.
 
-sagaDecl        = { annotation } "saga" operationSignature
-                  "{" { sagaStatement } "}" ;
-sagaStatement   = "step" identifier "=" invocationKind expression
-                  [ "compensate" invocationKind expression ] newline
-                | returnStatement
-                | budgetClause
-                | idempotencyClause ;
+## Compatibility grammar is non-normative
 
-taskDecl        = { annotation } "task" operationSignature
-                  "{" { taskClause } "}" ;
-taskClause      = "execution" identifier newline
-                | "queue" ":" typeName newline
-                | "retry" ":" retryPolicy newline
-                | idempotencyClause
-                | "resources" ":" profilePropertyValue
-                  { "," profilePropertyValue } newline
-                | "call" ":" expression newline
-                | errorsClause
-                | timeoutClause ;
+The Python parser intentionally remains able to read historical source forms required for compatibility and migration evidence. Those forms include, among others, bare enum cases, `opaque` aliases, unprefixed entity fields, positional operation/consumer/projection/client/migration headers, and legacy clauses whose facts are rejected by current Production Normalization.
 
-scheduleDecl    = { annotation } "schedule" typeName
-                  "{" { scheduleClause } "}" ;
-scheduleClause  = "cron" string newline
-                | "timezone" string newline
-                | "singleton" "lease" durationLiteral newline
-                | "catchUp" ( "none" | "latest"
-                  | "all" "(" "max" ":" integer ")" ) newline
-                | "start" ":" invocationKind expression newline ;
-~~~
+Compatibility readability is not production admission and not a permanent parallel grammar. Existing reference applications and compatibility fixtures remain in that source form during M10.2 and are classified explicitly. M10.3 owns their intended migration/disposition.
 
-## Systeme und Services
+## Validation and drift
 
-~~~ebnf
-systemDecl      = { annotation } "system" typeName
-                  "{" { systemClause } "}" ;
-systemClause    = "services" "[" typeName { "," typeName } "]" newline
-                | "resources" "[" typeName { "," typeName } "]" newline
-                | "apis" "[" typeName { "," typeName } "]" newline
-                | "channels" "[" typeName { "," typeName } "]" newline ;
-
-serviceDecl     = { annotation } "service" typeName
-                  "{" { serviceClause } "}" ;
-serviceClause   = "owns" "[" typeName { "," typeName } "]" newline
-                | "uses" "[" typeName { "," typeName } "]" newline
-                | "exposes" "[" exposedItem { "," exposedItem } "]" newline
-                | "runs" "[" runnableItem { "," runnableItem } "]" newline
-                | "dependsOn" "[" typeName { "," typeName } "]" newline
-                | "reliability" "{" { profileProperty } "}"
-                | "telemetry" identifier newline ;
-exposedItem     = ( "query" | "mutation" | "channel" | "sync" )
-                  qualifiedName ;
-runnableItem    = ( "consumer" | "workflow" | "task" | "schedule"
-                  | "projection" | "sync" | "channel" )
-                  qualifiedName ;
-
-clientDecl      = { annotation } "client" typeName "for" typeName
-                  "{" { clientCall } "}" ;
-clientCall      = "call" identifier
-                  "{" { profileProperty } "}" ;
-
-tenantDecl      = { annotation } "tenant" "model" typeName
-                  "{" { profileProperty } "}" ;
-
-channelDecl     = { annotation } "channel" typeName [ typeParameters ]
-                  "{" { profileProperty } "}" ;
-~~~
-
-## Ressourcen und Medien
-
-~~~ebnf
-resourceDecl    = { annotation } "resource" typeName resourceKind
-                  [ typeArguments ] "{" { profileProperty } "}" ;
-resourceKind    = "sql" | "document" | "keyValue" | "timeSeries"
-                | "blob" | "cdn" | "cache" | "stream" | "search"
-                | "counter" | "secretRef" | "configRef" | "localStore" ;
-
-mediaDecl       = { annotation } "media" typeName
-                  "{" { profileProperty } "}" ;
-renditionDecl   = { annotation } "rendition" typeName "from" typeName
-                  "{" { profileProperty } "}" ;
-
-profileProperty = propertyPath [ ":" ] profilePropertyValue newline
-                | propertyPath "{" { profileProperty } "}" ;
-propertyPath    = identifier { identifier } ;
-profilePropertyValue
-                = expression
-                | expression ".." expression
-                | qualifiedName { profilePropertyValue } ;
-~~~
-
-Die zulässigen profileProperty-Pfade und Werttypen sind je Deklarationsart im
-Profil-Schema geschlossen definiert. Diese generische Produktion ist kein
-offenes Key/Value-Erweiterungssystem.
-
-## Offline-Synchronisation
-
-~~~ebnf
-syncDecl        = { annotation } "sync" typeName "for" type
-                  "{" { syncClause } "}" ;
-syncClause      = "mode" syncMode newline
-                | "authority" syncAuthority newline
-                | "scope" ":" expression newline
-                | "localStore" typeName newline
-                | "serverStore" typeName newline
-                | operationLogBlock
-                | "push" profilePropertyValue
-                  { profilePropertyValue } newline
-                | "pull" profilePropertyValue
-                  { profilePropertyValue } newline
-                | "changes" "to" typeName "via" "outbox" newline
-                | "delete" "tombstone" "retain" durationLiteral newline
-                | conflictBlock
-                | "rejected" profilePropertyValue
-                  { profilePropertyValue } newline
-                | "schemaMigration" "required" newline ;
-syncMode        = "serverAuthoritative" | "queuedCommands" | "replicated" ;
-syncAuthority   = "server" | "serverValidated" | "merge" ;
-
-operationLogBlock
-                = "operationLog" "{" { profileProperty } "}" ;
-conflictBlock   = "conflict" "{" { conflictRule } "}" ;
-conflictRule    = "field" identifier "merge" mergeStrategy newline
-                | "group" identifier "fields"
-                  "[" identifier { "," identifier } "]"
-                  "merge" mergeStrategy newline ;
-mergeStrategy   = "reject" | "serverWins"
-                | "lww" "(" "clock" ":" identifier ")"
-                | "max" | "min" | "addWinsSet" | "removeWinsSet"
-                | "counter" | "manual"
-                | "custom" qualifiedName ;
-~~~
-
-## Migration und Deployment
-
-~~~ebnf
-migrationDecl   = { annotation } "migration" typeName
-                  "from" string "to" string
-                  "{" { migrationStep } "}" ;
-migrationStep   = migrationPhase profilePropertyValue
-                  { profilePropertyValue } newline ;
-migrationPhase  = "expand" | "backfill" | "deployReaders"
-                | "switchWrites" | "verify" | "contract" | "rollback" ;
-
-deploymentDecl  = { annotation } "deployment" identifier "for" typeName
-                  "{" { deploymentClause } "}" ;
-deploymentClause
-                = "service" typeName "{" { profileProperty } "}"
-                | "resource" typeName "{" { profileProperty } "}"
-                | "bind" typeName profilePropertyValue
-                  { profilePropertyValue } newline
-                | "colocate" "services"
-                  ( "all" | "[" typeName { "," typeName } "]" ) newline
-                | "slo" identifier profilePropertyValue
-                  { profilePropertyValue } newline
-                | profileProperty ;
-~~~
-
-## Frontend
-
-~~~ebnf
-frontendDecl    = { annotation } "frontend" typeName
-                  "{" { frontendClause } "}" ;
-frontendClause  = "target" identifier newline
-                | "rendering" identifier newline
-                | "theme" typeName newline
-                | "locale" profilePropertyValue
-                  { profilePropertyValue } newline
-                | routeDecl
-                | "fallback" "->" typeName newline
-                | "navigation" identifier
-                  "{" { uiStatement } "}"
-                | "seo" "defaults"
-                  "{" { profileProperty } "}" ;
-
-routeDecl       = "route" string "->" typeName
-                  [ "auth" authMode ] newline ;
-
-themeDecl       = { annotation } "theme" typeName
-                  "{" { profileProperty } "}" ;
-
-componentDecl   = { annotation } "component" typeName [ typeParameters ]
-                  "(" [ parameters ] ")"
-                  "{" { uiStatement } "}" ;
-
-pageDecl        = { annotation } "page" typeName
-                  [ "(" [ parameters ] ")" ]
-                  "{" { pageClause | uiStatement } "}" ;
-
-pageClause      = "title" expression newline
-                | stateDecl
-                | dataDecl
-                | asyncStateClause
-                | "main" "{" { uiStatement } "}"
-                | "auth" authMode
-                  [ "onFailure" uiStatement ] newline ;
-
-stateDecl       = stateKind identifier ":" type
-                  [ "default" expression ]
-                  [ "retain" profilePropertyValue
-                    { profilePropertyValue } ] newline ;
-stateKind       = "urlState" | "state" | "sessionState"
-                | "localState" | "replicatedState" ;
-
-dataDecl        = "data" identifier "=" dataSource
-                  { dataModifier } newline ;
-dataSource      = "query" expression | "subscribe" expression ;
-dataModifier    = "consistency" consistency
-                | "refresh" "on" listLiteral
-                | "staleAfter" durationLiteral
-                | "offline" typeName
-                | "resume" profilePropertyValue
-                | "reconnect" profilePropertyValue
-                | "fallback" "query" expression ;
-
-asyncStateClause
-                = ( "loading" | "empty" | "stale" | "refreshing" )
-                  ":" expression newline
-                | "error" [ "retry" ] ":" expression newline ;
-
-formDecl        = { annotation } "form" typeName
-                  [ "(" [ parameters ] ")" ]
-                  "for" type
-                  "{" { formClause | stateDecl | uiStatement } "}" ;
-formClause      = "field" identifier { profilePropertyValue } newline
-                | "validate" profilePropertyValue
-                  { profilePropertyValue } newline
-                | "submit" "call" expression
-                  "{" { submitOutcome } "}" ;
-submitOutcome   = "pending" uiStatement
-                | "success" uiStatement
-                | "failure" [ typeName ] uiStatement ;
-
-actionDecl      = { annotation } "action" identifier
-                  "(" [ parameters ] ")"
-                  "{" { actionStatement } "}" ;
-actionStatement = "call" expression newline
-                | "enqueue" expression newline
-                | "optimistic" uiStatement
-                | "rollback" uiStatement
-                | "pending" uiStatement
-                | "conflict" uiStatement
-                | "rejected" uiStatement
-                | uiStatement ;
-
-syncStatusDecl  = "syncStatus" typeName
-                  "{" { profileProperty } "}" ;
-seoDecl         = "seo" typeName "{" { profileProperty } "}" ;
-
-uiStatement     = identifier { uiAtom } [ "{" { uiStatement } "}" ] newline ;
-uiAtom          = expression | propertyPath | ":" ;
-~~~
-
-UI-Schlüsselwörter wie heading, grid, semantic und button sind im
-web-Profil-Schema geschlossen. uiStatement erlaubt deren kompakte
-domänenspezifische Schreibweise, ohne unbekannte Wörter semantisch zuzulassen.
-
-## Native Deklarationen
-
-~~~ebnf
-nativeFunctionDecl
-                = { annotation } "native" "function" qualifiedName
-                  [ typeParameters ]
-                  "{" { profileProperty } "}" ;
-nativeComponentDecl
-                = { annotation } "native" "component" typeName
-                  [ typeParameters ]
-                  "{" { profileProperty } "}" ;
-~~~
-
-## Tests und Fixtures
-
-~~~ebnf
-fixtureDecl     = "fixture" typeName [ "(" [ parameters ] ")" ]
-                  "{" { testStatement } "}" ;
-scenarioDecl    = "scenario" typeName "{" { testStatement } "}" ;
-
-testDecl        = { annotation } "test" string "target" identifier
-                  "{" { testStatement } "}" ;
-testStatement   = testLeaf
-                | testBlock ;
-testLeaf        = identifier { expression | qualifiedName
-                  | profilePropertyValue } newline ;
-testBlock       = identifier { expression | qualifiedName }
-                  "{" { testStatement } "}" ;
-~~~
-
-Testwörter wie arrange, act, assert, parallel, clients, disconnect, connect,
-crashpoint, restart, deliver, duplicate und sync werden durch das Testprofil
-typisiert. Unbekannte Testverben sind Fehler.
-
-## Kanonische Reihenfolge
-
-Innerhalb von Operationen gilt:
-
-1. auth
-2. allow
-3. errors
-4. authorize
-5. consistency oder idempotency
-6. read, transaction oder call
-7. cache
-8. audit
-9. timeout
-
-Formatter dürfen Kommentare erhalten, ändern aber niemals die semantische
-Reihenfolge von Writes, Emits, Workflow- oder Saga-Schritten.
+`python3 -m tools.m10_2_language_surface_classification` deterministically inventories every committed `.aidl` file and validates the required documentation classification against frozen revision 4. New unclassified source files, duplicate source-rule matches, document-index drift, classification-vocabulary drift, or frozen-contract identity drift fail closed. Focused negative regressions live in `tools/test_m10_2_language_surface_classification.py`.
