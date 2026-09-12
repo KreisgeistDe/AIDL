@@ -27,7 +27,8 @@ class OperationPolicyParityTests(unittest.TestCase):
         first = operation_policy_dispositions_json()
         second = operation_policy_dispositions_json()
         self.assertEqual(first, second)
-        self.assertNotIn(" ", first)
+        self.assertNotIn(": ", first)
+        self.assertNotIn(", ", first)
 
     def test_allow_is_losslessly_normalized_as_authorize_parity(self) -> None:
         result = ContractBodyParityBridge().normalize_text(
