@@ -14,7 +14,7 @@ M10.1 remains the frozen semantic authority until an explicitly versioned contra
 
 M10.2 consumes the completed M10.1 revision-4 Production Semantic Envelope and makes the repository's source and documentation surface auditable against it before any final cross-language parity baseline is frozen.
 
-- [ ] **M10.2-01 — Classify and migrate the canonical language documentation and committed source surface.** **P1**
+- [x] **M10.2-01 — Classify and migrate the canonical language documentation and committed source surface.** **P1**
 
 ### Required scope
 
@@ -34,7 +34,7 @@ M10.2 is not a semantic-widening milestone. If the inventory exposes a desired f
 
 ### M10.2 completion gate
 
-M10.2 completes only when every committed AIDL source and documented syntax surface is classified, the normative documentation is internally consistent with the frozen target model, support tiers are explicit, and deterministic drift checks reject newly unclassified surfaces.
+M10.2 is complete through `spec/m10-2-language-surface-classification.json`, `tools/m10_2_language_surface_classification.py`, focused negative regressions, the revision-4-aligned `docs/06-grammar.md`, explicit support-tier updates in core/diagnostics/overview/reference material and all three reference-app READMEs, and the M10.3 mismatch handoff in `docs/m10-2-language-surface-classification.md`. Every committed `.aidl` file must match exactly one source rule, every discovered AIDL/EBNF documentation surface must be classified, and contract/classification drift fails closed. No reference-app `.aidl`, parser/compiler/runtime/Canonical-IR behavior, or frozen M10.1 semantic contract was changed.
 
 ## M10.3 — Reference Example & Production Semantic Closure Gate
 
