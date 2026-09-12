@@ -8,7 +8,6 @@ ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = Path("spec/m10-3-shared-disposition.json")
 CONTRACT = Path("spec/language-surface-v1.json")
 SCHEMA_VERSION = "aidl.m10.3-shared-disposition/v1"
-ALLOWED_DISPOSITIONS = {"non-production-fail-closed", "requires-versioned-admission"}
 EXPECTED_CANONICAL_SUPPORT = {
     "app.profile-block",
     "entity.field-slot",
@@ -16,6 +15,9 @@ EXPECTED_CANONICAL_SUPPORT = {
 }
 REQUIRED_SHARED_MISMATCHES = {
     "app.links",
+    "auth",
+    "a11y",
+    "privacy",
     "value",
     "union",
     "view",
@@ -46,6 +48,14 @@ REQUIRED_SHARED_MISMATCHES = {
     "syncStatus",
     "seo",
     "test",
+}
+EXPECTED_SHARED_DISPOSITIONS = {
+    mismatch_id: (
+        "requires-versioned-admission"
+        if mismatch_id == "app.links"
+        else "non-production-fail-closed"
+    )
+    for mismatch_id in REQUIRED_SHARED_MISMATCHES
 }
 CONTRACT_DECLARATION_IDS = {
     item
@@ -102,10 +112,15 @@ def validate(root: Path = ROOT, manifest: dict[str, Any] | None = None) -> dict[
         extra = sorted(set(ids) - REQUIRED_SHARED_MISMATCHES)
         raise ValueError(f"shared mismatch disposition coverage drift: missing={missing}, extra={extra}")
     for item in dispositions:
-        if item.get("disposition") not in ALLOWED_DISPOSITIONS:
-            raise ValueError(f"invalid disposition for {item.get('id')}")
+        mismatch_id = item.get("id")
+        expected = EXPECTED_SHARED_DISPOSITIONS.get(mismatch_id)
+        if item.get("disposition") != expected:
+            raise ValueError(
+                f"shared mismatch disposition mapping drift for {mismatch_id}: "
+                f"expected {expected}, got {item.get('disposition')}"
+            )
         if not item.get("detail"):
-            raise ValueError(f"missing disposition detail for {item.get('id')}")
+            raise ValueError(f"missing disposition detail for {mismatch_id}")
 
     contract_kinds = {
         item.get("kind")
