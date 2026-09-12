@@ -13,25 +13,43 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .compiler_declaration_family_parity import declaration_family_dispositions
+    from .compiler_declaration_family_parity import (
+        DECLARATION_FAMILY_PARITY_VERSION,
+        declaration_family_dispositions,
+    )
     from .compiler_language_surface import LanguageSurfaceBridge, NORMALIZATION_VERSION
     from .compiler_language_surface_coverage import (
         LANGUAGE_SURFACE_COVERAGE_VERSION,
         language_surface_coverage,
     )
     from .compiler_language_surface_integration import PRODUCTION_NORMALIZATION_VERSION
-    from .compiler_operation_execution_parity import operation_execution_dispositions
-    from .compiler_operation_policy_parity import operation_policy_dispositions
+    from .compiler_operation_execution_parity import (
+        EXECUTION_PARITY_VERSION,
+        operation_execution_dispositions,
+    )
+    from .compiler_operation_policy_parity import (
+        POLICY_PARITY_VERSION,
+        operation_policy_dispositions,
+    )
 except ImportError:  # pragma: no cover - direct tools/ execution/import path
-    from compiler_declaration_family_parity import declaration_family_dispositions
+    from compiler_declaration_family_parity import (
+        DECLARATION_FAMILY_PARITY_VERSION,
+        declaration_family_dispositions,
+    )
     from compiler_language_surface import LanguageSurfaceBridge, NORMALIZATION_VERSION
     from compiler_language_surface_coverage import (
         LANGUAGE_SURFACE_COVERAGE_VERSION,
         language_surface_coverage,
     )
     from compiler_language_surface_integration import PRODUCTION_NORMALIZATION_VERSION
-    from compiler_operation_execution_parity import operation_execution_dispositions
-    from compiler_operation_policy_parity import operation_policy_dispositions
+    from compiler_operation_execution_parity import (
+        EXECUTION_PARITY_VERSION,
+        operation_execution_dispositions,
+    )
+    from compiler_operation_policy_parity import (
+        POLICY_PARITY_VERSION,
+        operation_policy_dispositions,
+    )
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -98,13 +116,13 @@ def closure_certification() -> dict[str, Any]:
     policy = operation_policy_dispositions()
     execution = operation_execution_dispositions()
 
-    _require(coverage.get("schema_version") == LANGUAGE_SURFACE_COVERAGE_VERSION, "coverage audit version drift detected")
-    for name, data in (
-        ("coverage", coverage),
-        ("declaration-family", declarations),
-        ("operation-policy", policy),
-        ("operation-execution", execution),
+    for name, data, version in (
+        ("coverage", coverage, LANGUAGE_SURFACE_COVERAGE_VERSION),
+        ("declaration-family", declarations, DECLARATION_FAMILY_PARITY_VERSION),
+        ("operation-policy", policy, POLICY_PARITY_VERSION),
+        ("operation-execution", execution, EXECUTION_PARITY_VERSION),
     ):
+        _require(data.get("schema_version") == version, f"{name} audit version drift detected")
         _require(int(data.get("contract_revision", -1)) == revision, f"{name} contract revision drift detected")
 
     facts = coverage.get("contract_facts")
@@ -140,6 +158,11 @@ def closure_certification() -> dict[str, Any]:
     policy_items = _policy_items(policy)
     for item in policy_items:
         _require(item.get("disposition") in {"production_parity", "excluded"}, "unresolved operation-policy disposition")
+        if item.get("disposition") == "excluded":
+            _require(
+                bool(item.get("diagnostic_boundary")),
+                f"excluded operation-policy concept {item.get('operation_kind')}.{item.get('concept')} lacks fail-closed diagnostic boundary",
+            )
     for kind in ("query", "mutation"):
         by_concept = {
             item["concept"]: item
