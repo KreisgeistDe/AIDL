@@ -1,9 +1,6 @@
 module calendar.domain
 
-export enum CalendarVisibility {
-  case private
-  case shared
-}
+export enum CalendarVisibility { private, shared }
 
 export value NewCalendarEvent {
   id: uuid required
@@ -29,18 +26,18 @@ export union CalendarEventChange {
 }
 
 export entity CalendarEvent {
-  field id: uuid primary clientGenerated immutable
-  field revision: revision generated concurrencyToken
-  field ownerId: SubjectId required immutable
-  field title: string(1..200) required mutable
-  field description: string(0..4000) default "" mutable sensitive
-  field startsAt: datetime required mutable
-  field endsAt: datetime required mutable
-  field attendees: set<email> default [] mutable sensitive
-  field visibility: CalendarVisibility default private mutable
-  field deletedAt: datetime? generated mutable
-  field createdAt: datetime generated immutable
-  field updatedAt: datetime generated mutable
+  id: uuid primary clientGenerated immutable
+  revision: revision generated concurrencyToken
+  ownerId: SubjectId required immutable
+  title: string(1..200) required mutable
+  description: string(0..4000) default "" mutable sensitive
+  startsAt: datetime required mutable
+  endsAt: datetime required mutable
+  attendees: set<email> default [] mutable sensitive
+  visibility: CalendarVisibility default private mutable
+  deletedAt: datetime? generated mutable
+  createdAt: datetime generated immutable
+  updatedAt: datetime generated mutable
 
   index byOwner(ownerId, startsAt)
   invariant validRange: endsAt > startsAt
