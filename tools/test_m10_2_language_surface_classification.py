@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +20,29 @@ class LanguageSurfaceClassificationTest(unittest.TestCase):
         self.assertEqual(first["contract_revision"], 4)
         self.assertGreater(first["source_classes"]["legacy-readable-compatibility"], 0)
         self.assertGreater(first["source_classes"]["negative-rejection-fixture"], 0)
+
+    def test_canonical_operation_header_tracks_frozen_parameters_header_arg(self) -> None:
+        contract = json.loads(
+            (classification.ROOT / "spec/language-surface-v1.json").read_text(encoding="utf-8")
+        )
+        grammar = (classification.ROOT / "docs/06-grammar.md").read_text(encoding="utf-8")
+        operation_section = grammar.split("### Query and mutation", 1)[1].split(
+            "### Consumer, projection, client, migration", 1
+        )[0]
+
+        declarations = {item["kind"]: item for item in contract["declaration_kinds"]}
+        for kind in ("query", "mutation"):
+            self.assertEqual(
+                [item["name"] for item in declarations[kind]["header_args"]],
+                ["parameters"],
+            )
+            self.assertEqual(declarations[kind]["header_args"][0]["value_mode"], "parameter_list")
+            self.assertIn(f'{kind} name(params) -> Type', declarations[kind]["legacy_forms"])
+
+        self.assertIn('operationHeaderArguments = "(" "parameters" ":" parameterList ")" ;', operation_section)
+        self.assertIn('parameterList = "[" [ parameter { "," parameter } ] "]" ;', operation_section)
+        self.assertNotIn('identifier [ parameterList ] "->" typeRef', operation_section)
+        self.assertIn("contract-declared legacy operation-signature form", operation_section)
 
     def test_new_unclassified_aidl_file_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
