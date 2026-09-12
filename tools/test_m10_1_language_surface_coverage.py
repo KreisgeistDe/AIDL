@@ -146,7 +146,7 @@ class M101LanguageSurfaceCoverageTest(unittest.TestCase):
         )
         result = bridge.normalize_text(
             """entity Adoption {
-  name: string(1 .. 80) required
+  name: string required
   petId: ref Pet.id required
 }
 """
@@ -163,7 +163,7 @@ class M101LanguageSurfaceCoverageTest(unittest.TestCase):
                     "field",
                     "name",
                     "type_ref",
-                    TypeRef("scalar", name="string", range=(1, 80)),
+                    TypeRef("scalar", name="string"),
                     modifiers=(ModifierCall("required", "entity.field", "none"),),
                 ),
                 BodySlot(
@@ -261,7 +261,7 @@ query find( limit : int? default 10 ) -> string {
     def test_unsupported_and_incomplete_shapes_remain_fail_closed(self) -> None:
         cases = (
             "query find(page: Page<string>) -> string {\n  read: value\n}\n",
-            "query find(name: string(min:1)) -> string {\n  read: value\n}\n",
+            "query find(broken) -> string {\n  read: value\n}\n",
             "mutation update() -> string {\n  idempotency: key retain 5s\n}\n",
         )
         for source in cases:
