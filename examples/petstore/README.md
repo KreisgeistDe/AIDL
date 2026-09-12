@@ -1,5 +1,7 @@
 # Petstore
 
+> **M10.2 Support-Tier:** Die committed `.aidl`-Dateien dieses Referenzbeispiels sind bis zur M10.3-Migration als `legacy-readable-compatibility` klassifiziert. Parser-Lesbarkeit, vorhandene Tooling-/Runtime-Slices und die Produktgeschichte sind keine pauschale Production-Admission-Aussage für jede darin verwendete Deklaration oder Schreibweise. Die maschinenlesbare Klassifikation steht in `spec/m10-2-language-surface-classification.json`; M10.3 migriert bzw. disponiert die beabsichtigte Referenzoberfläche.
+
 Das Beispiel ist ein modularer, horizontal replizierbarer Petstore mit einer
 lokalen SQL-Transaktionsgrenze.
 

@@ -29,7 +29,7 @@ M10.1 acceptance is certified by `docs/m10-1-closure-certification.md`: all froz
 
 [M10.2 — Canonical Language Documentation & Source Migration Gate](backlog/m10-2-m10-3-language-example-migration.md) consumes completed M10.1 before any final Kotlin parity baseline is frozen. It is a documentation/source inventory and migration gate, not a semantic-widening implementation.
 
-- [ ] **M10.2-01 — Classify and migrate the canonical language documentation and committed source surface.** **P1** Exhaustively classify every committed AIDL source and documented syntax surface, including all three reference applications and fixtures, as production-admitted canonical, canonical-but-not-yet-admitted, legacy-readable compatibility, negative/rejection, or illustrative/aspirational; align normative documentation to the frozen unified target design and make newly unclassified surfaces fail closed in deterministic CI.
+- [x] **M10.2-01 — Classify and migrate the canonical language documentation and committed source surface.** **P1** `spec/m10-2-language-surface-classification.json` and `tools/m10_2_language_surface_classification.py` exhaustively classify committed `.aidl` source plus discovered AIDL/EBNF documentation surfaces, fail closed on classification/contract drift, align the normative grammar to frozen revision 4, and leave executable reference-source migration to M10.3 without semantic widening.
 
 ## M10.3 reference-example and production semantic closure gate
 

@@ -11,7 +11,7 @@
       "title": "Classify and migrate the canonical language documentation and committed source surface.",
       "order": 1,
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["M10.1-10"],
       "acceptance_criteria": [
         "Exhaustively account for every committed AIDL source and documented syntax surface, including all three reference applications and all committed fixtures, against the frozen M10.1 language authority.",
@@ -21,12 +21,17 @@
         "Do not widen the frozen Production Semantic Envelope implicitly; any semantic or admission change is deferred to an explicit versioned contract decision."
       ],
       "evidence": [
+        {"kind": "path", "ref": "spec/m10-2-language-surface-classification.json"},
+        {"kind": "test", "ref": "tools/test_m10_2_language_surface_classification.py"},
+        {"kind": "path", "ref": "tools/m10_2_language_surface_classification.py"},
+        {"kind": "path", "ref": "docs/m10-2-language-surface-classification.md"},
+        {"kind": "path", "ref": "docs/06-grammar.md"},
         {"kind": "path", "ref": "backlog/m10-2-m10-3-language-example-migration.md"},
         {"kind": "path", "ref": "TODO.md"}
       ],
       "references": [
-        {"kind": "path", "ref": "docs/06-grammar.md"},
-        {"kind": "path", "ref": "spec/language-surface-v1.json"}
+        {"kind": "path", "ref": "spec/language-surface-v1.json"},
+        {"kind": "path", "ref": "docs/m10-1-closure-certification.md"}
       ]
     }
   ]
