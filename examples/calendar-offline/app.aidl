@@ -5,21 +5,11 @@ import calendar.system.api.CalendarApi
 import calendar.ui.app.CalendarWeb
 
 app OfflineCalendar {
-  profile core {
-    version 1
-  }
-  profile web {
-    version 1
-  }
-  profile distributed {
-    version 1
-  }
-  profile offline {
-    version 1
-  }
-  profile cloud {
-    version 1
-  }
+  profile core version 1
+  profile web version 1
+  profile distributed version 1
+  profile offline version 1
+  profile cloud version 1
   system CalendarSystem
   frontend CalendarWeb
   api CalendarApi
