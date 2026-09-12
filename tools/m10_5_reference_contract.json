@@ -1,0 +1,56 @@
+{
+  "schema_version": "aidl.m10.5-reference-contract/v1",
+  "authority": "M10.5-01",
+  "normative_language_source": false,
+  "reference_implementation": "python",
+  "frozen_language_contract": {
+    "path": "spec/language-surface-v1.json",
+    "authority": "M10.1",
+    "status": "frozen",
+    "contract_revision": 4
+  },
+  "observable_surfaces": [
+    {
+      "id": "source_projection",
+      "evidence": ["tools/aidl_parser.py", "tools/compiler_project.py", "tools/compiler_typecheck.py"]
+    },
+    {
+      "id": "diagnostics",
+      "evidence": ["tools/compiler_diagnostics.py", "tools/compiler_typecheck.py"]
+    },
+    {
+      "id": "production_semantics",
+      "evidence": ["tools/compiler_language_surface_integration.py", "tools/compiler_language_surface_certification.py"]
+    },
+    {
+      "id": "canonical_ir",
+      "evidence": ["tools/compiler_ir.py", "tools/ir_canonical_json.py", "tools/ir_compatibility.py", "tools/test_ir_compatibility.py"]
+    },
+    {
+      "id": "cli_and_semantic_queries",
+      "evidence": ["aidl", "tools/aidl_cli.py", "tools/compiler_resolution.py", "tools/compiler_completion.py", "tools/compiler_documentation.py", "tools/compiler_refactoring.py", "tools/compiler_inspection.py", "tools/compiler_dependencies.py", "tools/compiler_explanation.py", "tools/compiler_change_impact.py"]
+    },
+    {
+      "id": "fixtures_and_reference_apps",
+      "evidence": ["tools/test_m5_fixture_corpus.py", "tools/test_m4_petstore.py", "examples/petstore/app.aidl", "examples/petstore/m4-app/app.aidl"]
+    },
+    {
+      "id": "ci_gates",
+      "evidence": ["tools/ci_required_regressions.py", "tools/ci_test_selection.py", ".github/python-test-selection.json"]
+    }
+  ],
+  "differential_contract": {
+    "comparison": "exact_canonical_json",
+    "semantic_dimensions": ["accepted_rejected", "diagnostics", "canonical_ir", "stable_identities", "ordering", "source_locations", "exit_behavior"],
+    "transport_only_differences": [],
+    "runner_inputs": ["source", "config", "profile"],
+    "runner_implementations": ["python", "kotlin"],
+    "kotlin_required_for_m10_5_01": false
+  },
+  "fingerprint_inputs": [
+    "inventory_schema_version",
+    "frozen_language_contract_sha256",
+    "evidence_file_sha256",
+    "comparison_contract"
+  ]
+}
