@@ -18,7 +18,7 @@ V1, G1 and later semantics-dependent Kotlin migration remain blocked until separ
 
 `spec/core.domain.aidl` is an ordinary AIDL module importing Core. It defines the I2 meta-combinator behavior declarations used by semantic validation, the `primary`/`unique` modifier definitions, and the `entity` declaration contract with `field` and `invariant` BodySlots. Domain rules are therefore data loaded from AIDL rather than parser branches or a host declaration catalog.
 
-`tools/core_semantics.py` interprets those Core-owned contracts. It enforces declaration and slot NamePolicy, Cardinality independently from TypeRef optionality, named argument occurrence, slot occurrence/order/uniqueByName, modifier allowlists/targets/arguments/cardinality, recursive generic TypeRefs, `ref<K>` resolution, and `expression<T>` inference/assignability. Violations produce deterministic `CORE-Sxxx` diagnostics with line/column spans and expected-contract text.
+`tools/core_semantics.py` interprets those Core-owned contracts. It enforces declaration and slot NamePolicy, Cardinality independently from TypeRef optionality, named argument occurrence, slot occurrence/order/uniqueByName, modifier allowlists/targets/arguments/cardinality, recursive generic TypeRefs, `ref<K>` resolution, and `expression<T>` inference/assignability. Ordered BodySlots follow their normative declaration sequence when `ordered: true`; there is no host-only numeric `order` property, and undeclared BodySlot metadata fails closed. Violations produce deterministic `CORE-Sxxx` diagnostics with line/column spans and expected-contract text.
 
 `tools/core_compat.py` is a migration adapter, not a grammar authority. It normalizes representable revision-4 spellings into the Core compatibility representation and emits deterministic semantic hashes. Legacy `[T]` becomes `list<T>`; legacy `T(min..max)` keeps its Core TypeRef plus an explicit lossless range-constraint fact in the compatibility envelope. Representative positional `client ... for ...` and `migration ... from ... to ...` headers normalize to named semantic arguments.
 
@@ -57,7 +57,7 @@ The three BodyEntry forms remain:
 
 ## I2 domain model
 
-The Core-owned `entity` contract requires a declaration identifier. Its repeated `field` slot requires a unique field identifier and accepts either an ordinary `TypeRef` or `ref<entity>`; `@primary` and `@unique` are optional singleton modifiers on fields. Its repeated `invariant` slot has an optional identifier and requires an `expression<bool>` value. Slot ordering metadata keeps fields before invariants in this I2 module.
+The Core-owned `entity` contract requires a declaration identifier. Its repeated `field` slot requires a unique field identifier and accepts either an ordinary `TypeRef` or `ref<entity>`; `@primary` and `@unique` are optional singleton modifiers on fields. Its repeated `invariant` slot has an optional identifier and requires an `expression<bool>` value. Both slots are marked `ordered: true`, so their order is derived from the normative `slots` sequence in the AIDL-authored declaration contract: fields precede invariants.
 
 The `choice`, `ref`, and `expression` semantics used by that contract are declared as AIDL meta-combinators in `core.domain`, and the host semantic engine dispatches by their declared behavior metadata rather than by domain declaration names.
 
