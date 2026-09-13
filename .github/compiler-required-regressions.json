@@ -55,7 +55,8 @@
       "source": "tools/compiler_resolution.py",
       "compilerTests": [
         "tools/test_compiler_resolution.py",
-        "tools/test_m10_5_kotlin_name_resolution.py"
+        "tools/test_m10_5_kotlin_name_resolution.py",
+        "tools/test_m10_5_kotlin_type_construction.py"
       ],
       "cliCommands": [
         "resolve"
