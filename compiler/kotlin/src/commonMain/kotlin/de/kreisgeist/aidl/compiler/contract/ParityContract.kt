@@ -4,6 +4,8 @@ object ParityContract {
     const val schemaVersion = "aidl.m10.5-python-parity-baseline/v1"
     const val referenceImplementation = "python"
 
+    private val sha256Identity = Regex("^sha256:[0-9a-f]{64}$")
+
     val runnerInputs: List<String> = listOf("source", "config", "profile")
 
     val normativeBindings: List<String> = listOf(
@@ -22,8 +24,8 @@ object ParityContract {
             "runner input identity must contain exactly source, config, profile"
         }
         return runnerInputs.associateWith { key ->
-            val value = requireNotNull(identity[key])
-            require(isSha256Identity(value)) { "invalid sha256 identity for runner input $key" }
+            val value = identity.getValue(key)
+            require(sha256Identity.matches(value)) { "invalid sha256 identity for runner input $key" }
             value
         }
     }
@@ -34,9 +36,4 @@ object ParityContract {
         "semantic_allowlists" to semanticAllowlists.size.toString(),
         "normative_bindings" to normativeBindings.joinToString(","),
     )
-
-    private fun isSha256Identity(value: String): Boolean =
-        value.length == 71 &&
-            value.startsWith("sha256:") &&
-            value.drop(7).all { it in '0'..'9' || it in 'a'..'f' }
 }
