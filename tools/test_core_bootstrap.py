@@ -56,19 +56,24 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertFalse(contract["authorityFirewall"]["concreteProducerKindCatalogOwnedByHost"])
         self.assertIn("concrete-declaration-kind-catalog", contract["excludes"])
 
-    def test_p3_transition_reconciles_integrated_p2_and_freezes_p4_kotlin(self) -> None:
+    def test_p3_transition_records_integrated_state_and_freezes_p4_kotlin(self) -> None:
         transition = json.loads((ROOT / "spec" / "core-authority-transition-v1.json").read_text(encoding="utf-8"))
         correction = transition["authorityCorrection"]
         self.assertEqual(correction["p2"]["status"], "integrated")
         self.assertEqual(correction["p2"]["mainCommit"], "7280f01a2c97b004c79cd0a2e598513bfa183ac0")
-        self.assertEqual(correction["p3"]["status"], "implemented")
+        self.assertEqual(correction["p3"]["status"], "integrated")
+        self.assertEqual(correction["p3"]["implementationPr"], 102)
+        self.assertEqual(correction["p3"]["implementationHead"], "4992c896cf9818ab51c6ade60fd2a58c657461fe")
+        self.assertEqual(correction["p3"]["mainCommit"], "ca87cdc2ef0ce6e00808512897144ea99ef59293")
+        self.assertTrue(correction["p3"]["independentlyValidated"])
         self.assertFalse(correction["p3"]["legacyDefinitionObjectRuntimeAuthority"])
         self.assertEqual(correction["p4"]["status"], "pending")
         self.assertTrue(correction["semanticsDependentKotlinFrozen"])
         self.assertIn("PR-99", correction["frozenKotlinWorkIncludes"])
         self.assertFalse(transition["coreMetaIr"]["authorityInput"])
-        self.assertEqual(transition["nextAction"]["id"], "CORE-SELF-DESCRIPTION-P3-VALIDATION")
-        self.assertEqual(transition["nextAction"]["status"], "pending-independent-validation")
+        self.assertEqual(transition["coreDomain"]["migrationToDirectSelfDescription"], "p3-integrated")
+        self.assertEqual(transition["nextAction"]["id"], "CORE-SELF-DESCRIPTION-P4")
+        self.assertEqual(transition["nextAction"]["status"], "frozen-pending-explicit-dispatch")
 
 
 if __name__ == "__main__":
