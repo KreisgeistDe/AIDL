@@ -26,10 +26,12 @@ SEMANTIC_AUTHORITY = {
     "compatibility_binding": "spec/core.compatibility.aidl",
     "revision4_role": "core-authorized-compatibility-evidence",
 }
-REQUIRED_BINDINGS = {
+CORE_AUTHORITY_BINDINGS = {
     "spec/core.aidl",
     "spec/core.authority.aidl",
     "spec/core.compatibility.aidl",
+}
+REQUIRED_BINDINGS = {
     "spec/language-surface-v1.json",
     "spec/ir.schema.json",
     "spec/profile-registry.json",
@@ -97,6 +99,14 @@ def validate_manifest(
     if source.get("semantic_authority") != SEMANTIC_AUTHORITY:
         raise ValueError("Core semantic authority boundary drift detected")
 
+    core_bindings = source.get("core_authority_bindings")
+    if (
+        not isinstance(core_bindings, list)
+        or set(core_bindings) != CORE_AUTHORITY_BINDINGS
+        or len(core_bindings) != len(CORE_AUTHORITY_BINDINGS)
+    ):
+        raise ValueError("Core authority binding inventory drift detected")
+
     runner_inputs = source.get("runner_inputs")
     if runner_inputs != list(RUNNER_INPUTS):
         raise ValueError("runner_inputs must be exactly [source, config, profile]")
@@ -141,7 +151,7 @@ def validate_manifest(
     if not isinstance(corpus, Mapping):
         raise ValueError("parity corpus is missing")
 
-    paths: set[str] = set(bindings)
+    paths: set[str] = set(bindings) | set(core_bindings)
     for surface in surfaces:
         evidence = surface.get("evidence")
         if not isinstance(evidence, list) or not evidence:
@@ -202,6 +212,10 @@ def build_parity_evidence(
     root = (repo_root or _root()).resolve()
     source = validate_manifest(repo_root=root, manifest=manifest)
 
+    core_authority = [
+        {"path": raw, "sha256": _sha256_file(root / raw)}
+        for raw in sorted(source["core_authority_bindings"])
+    ]
     normative = [
         {"path": raw, "sha256": _sha256_file(root / raw)}
         for raw in sorted(source["normative_bindings"])
@@ -228,6 +242,7 @@ def build_parity_evidence(
         "status": source["status"],
         "baseline_base_commit": source["baseline_base_commit"],
         "semantic_authority": source["semantic_authority"],
+        "core_authority_bindings": core_authority,
         "runner_inputs": list(RUNNER_INPUTS),
         "input_identity_contract": source["input_identity"],
         "comparison_contract": source["comparison_contract"],
