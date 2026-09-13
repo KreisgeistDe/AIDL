@@ -40,7 +40,6 @@ declaration entity(kind: "language") {
       namePolicy: "required",
       valueType: choice<TypeRef, ref<entity>>,
       cardinality: {min: 0, max: null},
-      order: 0,
       ordered: true,
       uniqueByName: true,
       modifiers: ["primary", "unique"]
@@ -50,7 +49,6 @@ declaration entity(kind: "language") {
       namePolicy: "optional",
       valueType: expression<bool>,
       cardinality: {min: 0, max: null},
-      order: 1,
       ordered: true,
       uniqueByName: true,
       modifiers: []
