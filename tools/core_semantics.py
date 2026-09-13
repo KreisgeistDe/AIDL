@@ -1,116 +1,47 @@
 from __future__ import annotations
 
-import hashlib
-import json
-import re
 from dataclasses import dataclass
-from typing import Any, Iterable
+from pathlib import Path
+from typing import Any
 
-from tools.core_bootstrap import BodyEntry, Declaration, TypeRef, Value, parse_source
+from tools import _core_semantics_runtime as _runtime
+from tools.core_bootstrap import BodyEntry, Declaration, TypeRef, Value, parse_source, projection_text
 
 
-BUILTIN_TYPES = {
-    "bool",
-    "bytes",
-    "date",
-    "datetime",
-    "decimal",
-    "duration",
-    "email",
-    "float",
-    "int",
-    "json",
-    "long",
-    "revision",
-    "string",
-    "time",
-    "url",
-    "uuid",
-}
+Cardinality = _runtime.Cardinality
+ArgumentContract = _runtime.ArgumentContract
+ModifierContract = _runtime.ModifierContract
+BodySlotContract = _runtime.BodySlotContract
+DeclarationContract = _runtime.DeclarationContract
+MetaCombinator = _runtime.MetaCombinator
+SemanticRegistry = _runtime.SemanticRegistry
+SemanticDiagnostic = _runtime.SemanticDiagnostic
+CoreContractError = _runtime.CoreContractError
+registry_digest = _runtime.registry_digest
+validate_source = _runtime.validate_source
+infer_expression_type = _runtime.infer_expression_type
 
 
 @dataclass(frozen=True)
-class Cardinality:
-    minimum: int
-    maximum: int | None
-
-    def accepts(self, count: int) -> bool:
-        return count >= self.minimum and (self.maximum is None or count <= self.maximum)
-
-    def describe(self) -> str:
-        maximum = "unbounded" if self.maximum is None else str(self.maximum)
-        return f"occurrence {self.minimum}..{maximum}"
-
-
-@dataclass(frozen=True)
-class ArgumentContract:
+class _MetaField:
     name: str
     type_ref: TypeRef
-    cardinality: Cardinality
+    required: bool
 
 
 @dataclass(frozen=True)
-class ModifierContract:
+class _MetaDefinition:
     name: str
-    targets: tuple[str, ...]
-    arguments: tuple[ArgumentContract, ...]
-    cardinality: Cardinality
+    fields: tuple[_MetaField, ...]
 
 
 @dataclass(frozen=True)
-class BodySlotContract:
-    body_type: str
-    name_policy: str
-    value_type: TypeRef | None
-    cardinality: Cardinality
-    ordered: bool
-    unique_by_name: bool
-    modifiers: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class DeclarationContract:
-    kind: str
-    name_policy: str
-    arguments: tuple[ArgumentContract, ...]
-    result: TypeRef | None
-    slots: tuple[BodySlotContract, ...]
-    modifiers: tuple[str, ...]
-
-
-@dataclass(frozen=True)
-class MetaCombinator:
-    name: str
-    behavior: str
-    arguments: Cardinality
-
-
-@dataclass(frozen=True)
-class SemanticRegistry:
-    declarations: dict[str, DeclarationContract]
-    modifiers: dict[str, ModifierContract]
-    combinators: dict[str, MetaCombinator]
-
-
-@dataclass(frozen=True)
-class SemanticDiagnostic:
-    code: str
-    line: int
-    column: int
-    message: str
-    expected: str
-
-    def to_json(self) -> dict[str, Any]:
-        return {
-            "code": self.code,
-            "span": {"line": self.line, "column": self.column},
-            "message": self.message,
-            "expected": self.expected,
-        }
-
-
-class CoreContractError(ValueError):
-    pass
+class _CoreMetaModel:
+    definitions: dict[str, _MetaDefinition]
+    category_argument: str
+    categories: dict[str, str]
+    ignored_categories: frozenset[str]
+    name_policy_values: frozenset[str]
 
 
 def _argument_value(declaration: Declaration, name: str) -> Value | None:
@@ -128,11 +59,11 @@ def _body_value(declaration: Declaration, name: str) -> Value | None:
 
 
 def _plain(value: Value | None) -> Any:
-    if value is None:
-        return None
-    if value.kind == "typeRef":
-        return value.value
-    return value.value
+    return None if value is None else value.value
+
+
+def _required(entry: BodyEntry) -> bool:
+    return any(modifier.name == "required" for modifier in entry.modifiers)
 
 
 def _type_from_json(value: Any) -> TypeRef:
@@ -141,6 +72,11 @@ def _type_from_json(value: Any) -> TypeRef:
     if not isinstance(value, dict) or "$typeRef" not in value:
         raise CoreContractError(f"expected TypeRef value, found {value!r}")
     payload = value["$typeRef"]
+    unknown = sorted(set(payload) - {"name", "arguments", "optional"})
+    if unknown:
+        raise CoreContractError("TypeRef contains undeclared metadata: " + ", ".join(unknown))
+    if "name" not in payload:
+        raise CoreContractError("TypeRef missing required metadata: name")
     return TypeRef(
         str(payload["name"]),
         tuple(_type_from_json({"$typeRef": child}) for child in payload.get("arguments", [])),
@@ -149,42 +85,218 @@ def _type_from_json(value: Any) -> TypeRef:
 
 
 def _cardinality(value: Any) -> Cardinality:
-    if not isinstance(value, dict) or "min" not in value or "max" not in value:
+    if not isinstance(value, dict):
         raise CoreContractError(f"expected Cardinality object, found {value!r}")
     minimum = int(value["min"])
-    maximum = None if value["max"] is None else int(value["max"])
+    maximum = None if value.get("max") is None else int(value["max"])
     if minimum < 0 or (maximum is not None and maximum < minimum):
         raise CoreContractError(f"invalid Cardinality {value!r}")
     return Cardinality(minimum, maximum)
 
 
-def _argument_contract(value: Any) -> ArgumentContract:
-    if not isinstance(value, dict):
-        raise CoreContractError(f"expected ArgumentDefinition object, found {value!r}")
-    return ArgumentContract(
-        name=str(value["name"]),
-        type_ref=_type_from_json(value["type"]),
-        cardinality=_cardinality(value["cardinality"]),
+def _core_meta_model(core_source: str, core_projection: str) -> _CoreMetaModel:
+    if core_projection != projection_text(core_source):
+        raise CoreContractError(
+            "Core projection drift: spec/core-registry-v1.json does not match normative spec/core.aidl"
+        )
+
+    program = parse_source(core_source)
+    by_name = {item.name: item for item in program.declarations if item.name is not None}
+    definitions: dict[str, _MetaDefinition] = {}
+    for declaration in program.declarations:
+        if declaration.kind != "declaration" or declaration.name is None:
+            raise CoreContractError(
+                "normative Core may contain only named declaration meta-definitions"
+            )
+        if _plain(_argument_value(declaration, "kind")) != "meta":
+            continue
+        fields = tuple(
+            _MetaField(entry.name, entry.value.value, _required(entry))
+            for entry in declaration.body
+            if entry.name is not None
+            and entry.value is not None
+            and entry.value.kind == "typeRef"
+        )
+        definitions[declaration.name] = _MetaDefinition(declaration.name, fields)
+
+    required = {
+        "NamePolicy",
+        "Cardinality",
+        "TypeRef",
+        "ArgumentDefinition",
+        "ModifierDefinition",
+        "BodySlotDefinition",
+        "DeclarationDefinition",
+        "MetaCombinatorDefinition",
+    }
+    missing = sorted(required - set(definitions))
+    if missing:
+        raise CoreContractError(
+            "normative Core missing semantic meta-definitions: " + ", ".join(missing)
+        )
+
+    name_policy = by_name.get("NamePolicy")
+    values = _plain(_body_value(name_policy, "values")) if name_policy else None
+    if not isinstance(values, list) or not values or not all(isinstance(item, str) for item in values):
+        raise CoreContractError("NamePolicy must declare string values")
+
+    root = by_name.get("SemanticMetaModel")
+    if root is None:
+        raise CoreContractError("normative Core missing SemanticMetaModel")
+    category_argument = _plain(_body_value(root, "categoryArgument"))
+    raw_categories = _plain(_body_value(root, "categories"))
+    raw_ignored = _plain(_body_value(root, "ignoredCategories"))
+    if not isinstance(category_argument, str) or not category_argument:
+        raise CoreContractError("SemanticMetaModel.categoryArgument must be a non-empty string")
+    if not isinstance(raw_categories, dict) or not raw_categories:
+        raise CoreContractError("SemanticMetaModel.categories must be a non-empty object")
+    if not isinstance(raw_ignored, list) or not all(isinstance(item, str) for item in raw_ignored):
+        raise CoreContractError("SemanticMetaModel.ignoredCategories must be a string list")
+
+    categories: dict[str, str] = {}
+    for category, target in raw_categories.items():
+        target_type = _type_from_json(target)
+        if target_type.arguments or target_type.optional or target_type.name not in definitions:
+            raise CoreContractError(
+                f"SemanticMetaModel category {category!r} must reference one declared meta-definition"
+            )
+        categories[str(category)] = target_type.name
+    overlap = sorted(set(categories) & set(raw_ignored))
+    if overlap:
+        raise CoreContractError(
+            "SemanticMetaModel categories cannot be both interpreted and ignored: "
+            + ", ".join(overlap)
+        )
+    return _CoreMetaModel(
+        definitions,
+        category_argument,
+        categories,
+        frozenset(raw_ignored),
+        frozenset(values),
     )
 
 
-def _body_slot_contract(value: Any) -> BodySlotContract:
+def _validate_meta_value(
+    value: Any,
+    expected: TypeRef,
+    meta: _CoreMetaModel,
+    subject: str,
+) -> None:
+    if value is None:
+        if expected.optional:
+            return
+        raise CoreContractError(f"{subject} must be {_runtime._fmt_type(expected)}, found null")
+    if expected.name == "string":
+        if not isinstance(value, str):
+            raise CoreContractError(f"{subject} must be string")
+        return
+    if expected.name == "bool":
+        if not isinstance(value, bool):
+            raise CoreContractError(f"{subject} must be bool")
+        return
+    if expected.name == "int":
+        if not isinstance(value, int) or isinstance(value, bool):
+            raise CoreContractError(f"{subject} must be int")
+        return
+    if expected.name == "float":
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise CoreContractError(f"{subject} must be float")
+        return
+    if expected.name == "json":
+        return
+    if expected.name == "list" and expected.arguments:
+        if not isinstance(value, list):
+            raise CoreContractError(f"{subject} must be {_runtime._fmt_type(expected)}")
+        for index, item in enumerate(value):
+            _validate_meta_value(item, expected.arguments[0], meta, f"{subject}[{index}]")
+        return
+    if expected.name == "TypeRef":
+        _type_from_json(value)
+        return
+    if expected.name == "Cardinality":
+        _validate_meta_object(value, "Cardinality", meta, subject)
+        _cardinality(value)
+        return
+    if expected.name == "NamePolicy":
+        if value not in meta.name_policy_values:
+            raise CoreContractError(
+                f"{subject} must be one of {sorted(meta.name_policy_values)!r}"
+            )
+        return
+    if expected.name == "ModifierDefinition" and isinstance(value, str):
+        # Slots/declarations carry references to named modifier definitions.
+        return
+    if expected.name in meta.definitions:
+        _validate_meta_object(value, expected.name, meta, subject)
+        return
+    raise CoreContractError(
+        f"{subject} uses unsupported Core meta type {_runtime._fmt_type(expected)}"
+    )
+
+
+def _validate_meta_object(
+    value: Any,
+    definition_name: str,
+    meta: _CoreMetaModel,
+    subject: str,
+) -> None:
     if not isinstance(value, dict):
-        raise CoreContractError(f"expected BodySlotDefinition object, found {value!r}")
-    allowed = {
-        "bodyType",
-        "namePolicy",
-        "valueType",
-        "cardinality",
-        "ordered",
-        "uniqueByName",
-        "modifiers",
-    }
-    unknown = sorted(set(value) - allowed)
+        raise CoreContractError(
+            f"expected {definition_name} object for {subject}, found {value!r}"
+        )
+    definition = meta.definitions[definition_name]
+    by_name = {field.name: field for field in definition.fields}
+    unknown = sorted(set(value) - set(by_name))
     if unknown:
         raise CoreContractError(
-            "BodySlotDefinition contains undeclared metadata: " + ", ".join(unknown)
+            f"{definition_name} contains undeclared metadata: " + ", ".join(unknown)
         )
+    missing = sorted(
+        field.name
+        for field in definition.fields
+        if field.required and field.name not in value
+    )
+    if missing:
+        raise CoreContractError(
+            f"{definition_name} missing required metadata: " + ", ".join(missing)
+        )
+    for name, item in value.items():
+        _validate_meta_value(item, by_name[name].type_ref, meta, f"{subject}.{name}")
+
+
+def _declaration_metadata(
+    declaration: Declaration,
+    definition_name: str,
+) -> dict[str, Any]:
+    metadata: dict[str, Any] = {}
+    for entry in declaration.body:
+        if entry.body_type != "body" or entry.name is None:
+            raise CoreContractError(
+                f"{declaration.name}: meta-definition bodies must use named body entries"
+            )
+        if entry.name in metadata:
+            raise CoreContractError(
+                f"{declaration.name}: duplicate metadata {entry.name!r}"
+            )
+        metadata[entry.name] = None if entry.value is None else entry.value.to_json()
+    if definition_name == "ModifierDefinition":
+        metadata["name"] = declaration.name
+    elif definition_name == "DeclarationDefinition":
+        metadata["kind"] = declaration.name
+    return metadata
+
+
+def _argument_contract(value: Any, meta: _CoreMetaModel) -> ArgumentContract:
+    _validate_meta_object(value, "ArgumentDefinition", meta, "ArgumentDefinition")
+    return ArgumentContract(
+        str(value["name"]),
+        _type_from_json(value["type"]),
+        _cardinality(value["cardinality"]),
+    )
+
+
+def _body_slot_contract(value: Any, meta: _CoreMetaModel) -> BodySlotContract:
+    _validate_meta_object(value, "BodySlotDefinition", meta, "BodySlotDefinition")
     raw_type = value.get("valueType")
     return BodySlotContract(
         body_type=str(value["bodyType"]),
@@ -197,538 +309,103 @@ def _body_slot_contract(value: Any) -> BodySlotContract:
     )
 
 
-def load_semantic_registry(*module_sources: str) -> SemanticRegistry:
+def load_semantic_registry(
+    *module_sources: str,
+    core_source: str | None = None,
+    core_projection: str | None = None,
+) -> SemanticRegistry:
+    root = Path(__file__).resolve().parents[1]
+    if core_source is None:
+        core_source = (root / "spec" / "core.aidl").read_text(encoding="utf-8")
+    if core_projection is None:
+        core_projection = (root / "spec" / "core-registry-v1.json").read_text(
+            encoding="utf-8"
+        )
+    meta = _core_meta_model(core_source, core_projection)
+
     declarations: dict[str, DeclarationContract] = {}
     modifiers: dict[str, ModifierContract] = {}
     combinators: dict[str, MetaCombinator] = {}
-
     for source in module_sources:
         program = parse_source(source)
         for declaration in program.declarations:
             if declaration.kind != "declaration" or declaration.name is None:
-                raise CoreContractError("semantic modules may contain only named declaration meta-definitions")
-            kind_value = _argument_value(declaration, "kind")
-            meta_kind = _plain(kind_value)
+                raise CoreContractError(
+                    "semantic modules may contain only named declaration meta-definitions"
+                )
+            header_names = [name for name, _ in declaration.arguments]
+            unknown_headers = sorted(set(header_names) - {meta.category_argument})
+            if unknown_headers:
+                raise CoreContractError(
+                    f"{declaration.name}: undeclared meta header arguments: "
+                    + ", ".join(unknown_headers)
+                )
+            meta_kind = _plain(_argument_value(declaration, meta.category_argument))
             if not isinstance(meta_kind, str):
-                raise CoreContractError(f"{declaration.name}: declaration kind metadata must be a string")
+                raise CoreContractError(
+                    f"{declaration.name}: {meta.category_argument} metadata must be a string"
+                )
+            if meta_kind in meta.ignored_categories:
+                continue
+            definition_name = meta.categories.get(meta_kind)
+            if definition_name is None:
+                raise CoreContractError(
+                    f"{declaration.name}: unsupported Core semantic category {meta_kind!r}"
+                )
+            metadata = _declaration_metadata(declaration, definition_name)
+            _validate_meta_object(metadata, definition_name, meta, declaration.name)
 
-            if meta_kind == "meta-combinator":
-                behavior = _plain(_body_value(declaration, "behavior"))
-                arguments = _plain(_body_value(declaration, "arguments"))
-                if not isinstance(behavior, str):
-                    raise CoreContractError(f"{declaration.name}: combinator behavior must be a string")
+            if definition_name == "MetaCombinatorDefinition":
                 combinators[declaration.name] = MetaCombinator(
                     declaration.name,
-                    behavior,
-                    _cardinality(arguments),
+                    str(metadata["behavior"]),
+                    _cardinality(metadata["arguments"]),
                 )
-                continue
-
-            if meta_kind == "modifier":
-                targets = _plain(_body_value(declaration, "targets")) or []
-                arguments = _plain(_body_value(declaration, "arguments")) or []
-                cardinality = _plain(_body_value(declaration, "cardinality"))
+            elif definition_name == "ModifierDefinition":
                 modifiers[declaration.name] = ModifierContract(
                     declaration.name,
-                    tuple(str(item) for item in targets),
-                    tuple(_argument_contract(item) for item in arguments),
-                    _cardinality(cardinality),
+                    tuple(str(item) for item in metadata["targets"]),
+                    tuple(
+                        _argument_contract(item, meta)
+                        for item in metadata.get("arguments", [])
+                    ),
+                    _cardinality(metadata["cardinality"]),
                 )
-                continue
-
-            if meta_kind == "language":
-                name_policy = _plain(_body_value(declaration, "namePolicy"))
-                arguments = _plain(_body_value(declaration, "arguments")) or []
-                result = _plain(_body_value(declaration, "result"))
-                slots = _plain(_body_value(declaration, "slots")) or []
-                allowed_modifiers = _plain(_body_value(declaration, "modifiers")) or []
-                if name_policy not in {"required", "optional", "forbidden"}:
-                    raise CoreContractError(f"{declaration.name}: invalid NamePolicy {name_policy!r}")
+            elif definition_name == "DeclarationDefinition":
+                raw_result = metadata.get("result")
                 declarations[declaration.name] = DeclarationContract(
                     declaration.name,
-                    str(name_policy),
-                    tuple(_argument_contract(item) for item in arguments),
-                    None if result is None else _type_from_json(result),
-                    tuple(_body_slot_contract(item) for item in slots),
-                    tuple(str(item) for item in allowed_modifiers),
+                    str(metadata["namePolicy"]),
+                    tuple(
+                        _argument_contract(item, meta)
+                        for item in metadata.get("arguments", [])
+                    ),
+                    None if raw_result is None else _type_from_json(raw_result),
+                    tuple(
+                        _body_slot_contract(item, meta)
+                        for item in metadata.get("slots", [])
+                    ),
+                    tuple(str(item) for item in metadata.get("modifiers", [])),
                 )
-                continue
-
-            if meta_kind in {"meta", "bootstrap"}:
-                continue
-            raise CoreContractError(f"{declaration.name}: unsupported semantic declaration category {meta_kind!r}")
-
+            else:
+                raise CoreContractError(
+                    f"{declaration.name}: Core category maps to uninterpretable definition {definition_name!r}"
+                )
     return SemanticRegistry(declarations, modifiers, combinators)
 
 
-def registry_digest(registry: SemanticRegistry) -> str:
-    payload = {
-        "declarations": {
-            key: _contract_json(value) for key, value in sorted(registry.declarations.items())
-        },
-        "modifiers": {
-            key: _modifier_json(value) for key, value in sorted(registry.modifiers.items())
-        },
-        "combinators": {
-            key: {
-                "behavior": value.behavior,
-                "arguments": [value.arguments.minimum, value.arguments.maximum],
-            }
-            for key, value in sorted(registry.combinators.items())
-        },
-    }
-    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
-
-
-def _type_json(type_ref: TypeRef | None) -> Any:
-    if type_ref is None:
-        return None
-    return type_ref.to_json()
-
-
-def _argument_json(argument: ArgumentContract) -> dict[str, Any]:
-    return {
-        "name": argument.name,
-        "type": _type_json(argument.type_ref),
-        "cardinality": [argument.cardinality.minimum, argument.cardinality.maximum],
-    }
-
-
-def _modifier_json(modifier: ModifierContract) -> dict[str, Any]:
-    return {
-        "targets": list(modifier.targets),
-        "arguments": [_argument_json(item) for item in modifier.arguments],
-        "cardinality": [modifier.cardinality.minimum, modifier.cardinality.maximum],
-    }
-
-
-def _contract_json(contract: DeclarationContract) -> dict[str, Any]:
-    return {
-        "namePolicy": contract.name_policy,
-        "arguments": [_argument_json(item) for item in contract.arguments],
-        "result": _type_json(contract.result),
-        "slots": [
-            {
-                "bodyType": slot.body_type,
-                "namePolicy": slot.name_policy,
-                "valueType": _type_json(slot.value_type),
-                "cardinality": [slot.cardinality.minimum, slot.cardinality.maximum],
-                "ordered": slot.ordered,
-                "uniqueByName": slot.unique_by_name,
-                "modifiers": list(slot.modifiers),
-            }
-            for slot in contract.slots
-        ],
-        "modifiers": list(contract.modifiers),
-    }
-
-
-class _SourceSpans:
-    def __init__(self, source: str) -> None:
-        self.lines = source.splitlines()
-
-    def declaration(self, declaration: Declaration, start: int = 0) -> tuple[int, int]:
-        pattern = re.compile(r"^\s*(?:export\s+)?" + re.escape(declaration.kind) + r"\b")
-        for index in range(start, len(self.lines)):
-            if pattern.search(self.lines[index]):
-                column = len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
-                return index + 1, column
-        return 1, 1
-
-    def body(self, entry: BodyEntry, start_line: int) -> tuple[int, int]:
-        head = entry.body_type
-        if entry.name is not None:
-            head += " " + entry.name
-        pattern = re.compile(r"^\s*" + re.escape(head) + r"\s*:")
-        for index in range(max(0, start_line - 1), len(self.lines)):
-            if pattern.search(self.lines[index]):
-                column = len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
-                return index + 1, column
-        return start_line, 1
-
-
-def _fmt_type(type_ref: TypeRef) -> str:
-    suffix = "?" if type_ref.optional else ""
-    if not type_ref.arguments:
-        return type_ref.name + suffix
-    return f"{type_ref.name}<" + ", ".join(_fmt_type(item) for item in type_ref.arguments) + ">" + suffix
-
-
-def _check_name_policy(
-    diagnostics: list[SemanticDiagnostic],
-    policy: str,
-    name: str | None,
-    line: int,
-    column: int,
-    subject: str,
-) -> None:
-    if policy == "required" and name is None:
-        diagnostics.append(SemanticDiagnostic("CORE-S001", line, column, f"{subject} requires an identifier", "NamePolicy required"))
-    elif policy == "forbidden" and name is not None:
-        diagnostics.append(SemanticDiagnostic("CORE-S002", line, column, f"{subject} forbids identifier {name!r}", "NamePolicy forbidden"))
-
-
-def _count_named(items: Iterable[tuple[str, Value]]) -> dict[str, list[Value]]:
-    result: dict[str, list[Value]] = {}
-    for name, value in items:
-        result.setdefault(name, []).append(value)
-    return result
-
-
-def _validate_arguments(
-    diagnostics: list[SemanticDiagnostic],
-    actual: tuple[tuple[str, Value], ...],
-    contracts: tuple[ArgumentContract, ...],
-    registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
-    env: dict[str, TypeRef],
-    line: int,
-    column: int,
-    subject: str,
-) -> None:
-    grouped = _count_named(actual)
-    by_name = {item.name: item for item in contracts}
-    for name in grouped:
-        if name not in by_name:
-            diagnostics.append(SemanticDiagnostic("CORE-S003", line, column, f"unknown named argument {name!r} on {subject}", "declared named arguments only"))
-    for contract in contracts:
-        values = grouped.get(contract.name, [])
-        if not contract.cardinality.accepts(len(values)):
-            diagnostics.append(SemanticDiagnostic("CORE-S004", line, column, f"argument {contract.name!r} occurs {len(values)} time(s) on {subject}", contract.cardinality.describe()))
-        for value in values:
-            _validate_value(diagnostics, value, contract.type_ref, registry, symbols, env, line, column, f"argument {contract.name}")
-
-
-def _actual_type_ref(value: Value) -> TypeRef | None:
-    return value.value if value.kind == "typeRef" else None
-
-
-def _validate_actual_type_ref(
-    diagnostics: list[SemanticDiagnostic],
-    actual: TypeRef,
-    registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
-    line: int,
-    column: int,
-    subject: str,
-) -> None:
-    if actual.name in registry.combinators:
-        combinator = registry.combinators[actual.name]
-        if not combinator.arguments.accepts(len(actual.arguments)):
-            diagnostics.append(SemanticDiagnostic("CORE-S020", line, column, f"{subject} uses {actual.name} with {len(actual.arguments)} type argument(s)", combinator.arguments.describe()))
-        if combinator.behavior == "declaration-ref-kind" and actual.arguments:
-            target = actual.arguments[-1].name
-            if target not in symbols and target not in registry.declarations:
-                diagnostics.append(SemanticDiagnostic("CORE-S021", line, column, f"unresolved declaration reference {target!r}", "resolvable declaration reference"))
-    elif actual.name not in BUILTIN_TYPES and actual.name not in {"list", "TypeRef"} and actual.name not in symbols and actual.name not in registry.declarations:
-        diagnostics.append(SemanticDiagnostic("CORE-S022", line, column, f"unknown TypeRef base {actual.name!r}", "builtin, declared type, declaration kind, or Core combinator"))
-    for argument in actual.arguments:
-        _validate_actual_type_ref(diagnostics, argument, registry, symbols, line, column, subject)
-
-
-def _validate_value(
-    diagnostics: list[SemanticDiagnostic],
-    value: Value,
-    expected: TypeRef,
-    registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
-    env: dict[str, TypeRef],
-    line: int,
-    column: int,
-    subject: str,
-) -> None:
-    combinator = registry.combinators.get(expected.name)
-    if combinator and combinator.behavior == "choice":
-        alternatives = expected.arguments
-        actual = _actual_type_ref(value)
-        if actual is not None and actual.name in registry.combinators:
-            specific = tuple(item for item in alternatives if item.name == actual.name)
-            if specific:
-                alternatives = specific
-        snapshots: list[list[SemanticDiagnostic]] = []
-        for alternative in alternatives:
-            trial: list[SemanticDiagnostic] = []
-            _validate_value(trial, value, alternative, registry, symbols, env, line, column, subject)
-            if not trial:
-                return
-            snapshots.append(trial)
-        diagnostics.append(SemanticDiagnostic("CORE-S010", line, column, f"{subject} does not match any Core choice alternative", _fmt_type(expected)))
-        if snapshots:
-            diagnostics.extend(snapshots[0][:1])
-        return
-
-    if combinator and combinator.behavior == "declaration-ref-kind":
-        actual = _actual_type_ref(value)
-        if actual is None or actual.name != expected.name or len(actual.arguments) != 1:
-            diagnostics.append(SemanticDiagnostic("CORE-S011", line, column, f"{subject} is not a declaration reference", _fmt_type(expected)))
-            return
-        target_name = actual.arguments[0].name
-        target = symbols.get(target_name)
-        if target is None:
-            diagnostics.append(SemanticDiagnostic("CORE-S012", line, column, f"unresolved reference {target_name!r}", f"ref<{expected.arguments[0].name}>"))
-            return
-        expected_kind = expected.arguments[0].name
-        if target.kind != expected_kind:
-            diagnostics.append(SemanticDiagnostic("CORE-S013", line, column, f"reference {target_name!r} resolves to kind {target.kind!r}", f"declaration kind {expected_kind}"))
-        return
-
-    if combinator and combinator.behavior == "expression":
-        expression_text = value.raw if value.kind != "string" else str(value.value)
-        inferred, error = infer_expression_type(expression_text, env)
-        if error is not None:
-            diagnostics.append(SemanticDiagnostic("CORE-S014", line, column, f"invalid expression for {subject}: {error}", _fmt_type(expected)))
-            return
-        target = expected.arguments[0].name if expected.arguments else "json"
-        if inferred != target:
-            diagnostics.append(SemanticDiagnostic("CORE-S015", line, column, f"expression for {subject} has inferred type {inferred!r}", f"expression<{target}>"))
-        return
-
-    if expected.name == "TypeRef":
-        actual = _actual_type_ref(value)
-        if actual is None:
-            diagnostics.append(SemanticDiagnostic("CORE-S016", line, column, f"{subject} is not a TypeRef", "TypeRef"))
-            return
-        _validate_actual_type_ref(diagnostics, actual, registry, symbols, line, column, subject)
-        return
-
-    if expected.name == "list" and expected.arguments:
-        if value.kind != "list":
-            diagnostics.append(SemanticDiagnostic("CORE-S017", line, column, f"{subject} is not a list", _fmt_type(expected)))
-        return
-
-    primitive_ok = {
-        "string": value.kind == "string",
-        "bool": value.kind == "literal" and isinstance(value.value, bool),
-        "int": value.kind == "number" and isinstance(value.value, int) and not isinstance(value.value, bool),
-        "float": value.kind == "number",
-        "json": True,
-    }
-    if expected.name in primitive_ok:
-        if not primitive_ok[expected.name]:
-            diagnostics.append(SemanticDiagnostic("CORE-S018", line, column, f"{subject} has incompatible value kind {value.kind!r}", _fmt_type(expected)))
-        return
-
-    actual = _actual_type_ref(value)
-    if actual is not None:
-        _validate_actual_type_ref(diagnostics, actual, registry, symbols, line, column, subject)
-        if actual.name != expected.name:
-            diagnostics.append(SemanticDiagnostic("CORE-S019", line, column, f"{subject} has TypeRef {_fmt_type(actual)!r}", _fmt_type(expected)))
-        return
-
-    diagnostics.append(SemanticDiagnostic("CORE-S019", line, column, f"{subject} does not match expected type", _fmt_type(expected)))
-
-
-def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDiagnostic, ...]:
-    program = parse_source(source)
-    spans = _SourceSpans(source)
-    symbols = {item.name: item for item in program.declarations if item.name is not None}
-    diagnostics: list[SemanticDiagnostic] = []
-    declaration_cursor = 0
-
-    for declaration in program.declarations:
-        decl_line, decl_column = spans.declaration(declaration, declaration_cursor)
-        declaration_cursor = decl_line
-        contract = registry.declarations.get(declaration.kind)
-        if contract is None:
-            diagnostics.append(SemanticDiagnostic("CORE-S000", decl_line, decl_column, f"unknown declaration kind {declaration.kind!r}", "Core-declared language kind"))
-            continue
-
-        _check_name_policy(diagnostics, contract.name_policy, declaration.name, decl_line, decl_column, f"declaration {declaration.kind}")
-        _validate_arguments(diagnostics, declaration.arguments, contract.arguments, registry, symbols, {}, decl_line, decl_column, f"declaration {declaration.kind}")
-        if declaration.result is not None and contract.result is None:
-            diagnostics.append(SemanticDiagnostic("CORE-S005", decl_line, decl_column, f"declaration {declaration.kind} does not permit a result type", "no result type"))
-
-        slot_by_type = {slot.body_type: slot for slot in contract.slots}
-        ordered_positions = {
-            slot.body_type: index
-            for index, slot in enumerate(contract.slots)
-            if slot.ordered
-        }
-        ordered_sequence = [slot.body_type for slot in contract.slots if slot.ordered]
-        counts: dict[str, int] = {}
-        names: dict[str, set[str]] = {}
-        env: dict[str, TypeRef] = {}
-        last_ordered_position: int | None = None
-        body_cursor = decl_line
-
-        for entry in declaration.body:
-            line, column = spans.body(entry, body_cursor)
-            body_cursor = line + 1
-            slot = slot_by_type.get(entry.body_type)
-            if slot is None:
-                diagnostics.append(SemanticDiagnostic("CORE-S006", line, column, f"unknown body slot {entry.body_type!r} for {declaration.kind}", "Core-declared body slot"))
-                continue
-            counts[entry.body_type] = counts.get(entry.body_type, 0) + 1
-            _check_name_policy(diagnostics, slot.name_policy, entry.name, line, column, f"body slot {entry.body_type}")
-            if slot.ordered:
-                position = ordered_positions[entry.body_type]
-                if last_ordered_position is not None and position < last_ordered_position:
-                    diagnostics.append(
-                        SemanticDiagnostic(
-                            "CORE-S007",
-                            line,
-                            column,
-                            f"body slot {entry.body_type!r} appears out of Core-declared slot sequence",
-                            "ordered BodySlot sequence: " + " before ".join(ordered_sequence),
-                        )
-                    )
-                last_ordered_position = max(last_ordered_position or position, position)
-            if slot.unique_by_name and entry.name is not None:
-                seen = names.setdefault(entry.body_type, set())
-                if entry.name in seen:
-                    diagnostics.append(SemanticDiagnostic("CORE-S008", line, column, f"duplicate {entry.body_type} name {entry.name!r}", "uniqueByName"))
-                seen.add(entry.name)
-            if entry.value is None and slot.value_type is not None:
-                diagnostics.append(SemanticDiagnostic("CORE-S009", line, column, f"body slot {entry.body_type!r} requires a value", _fmt_type(slot.value_type)))
-            elif entry.value is not None and slot.value_type is None:
-                diagnostics.append(SemanticDiagnostic("CORE-S009", line, column, f"body slot {entry.body_type!r} forbids a value", "no value"))
-            elif entry.value is not None and slot.value_type is not None:
-                _validate_value(diagnostics, entry.value, slot.value_type, registry, symbols, env, line, column, f"body slot {entry.body_type}")
-                actual_type = _actual_type_ref(entry.value)
-                if entry.name is not None and actual_type is not None:
-                    env[entry.name] = actual_type
-
-            allowed = set(slot.modifiers)
-            modifier_counts: dict[str, int] = {}
-            for modifier in entry.modifiers:
-                modifier_counts[modifier.name] = modifier_counts.get(modifier.name, 0) + 1
-                if modifier.name not in allowed:
-                    diagnostics.append(SemanticDiagnostic("CORE-S030", line, column, f"modifier @{modifier.name} is not allowed on {entry.body_type}", "allowed modifiers: " + ", ".join(sorted(allowed))))
-                    continue
-                modifier_contract = registry.modifiers.get(modifier.name)
-                if modifier_contract is None:
-                    diagnostics.append(SemanticDiagnostic("CORE-S031", line, column, f"modifier @{modifier.name} has no Core definition", "Core-defined ModifierDefinition"))
-                    continue
-                if entry.body_type not in modifier_contract.targets:
-                    diagnostics.append(SemanticDiagnostic("CORE-S032", line, column, f"modifier @{modifier.name} cannot target {entry.body_type}", "targets: " + ", ".join(modifier_contract.targets)))
-                _validate_arguments(diagnostics, modifier.arguments, modifier_contract.arguments, registry, symbols, env, line, column, f"modifier @{modifier.name}")
-            for modifier_name in allowed:
-                modifier_contract = registry.modifiers.get(modifier_name)
-                if modifier_contract is None:
-                    continue
-                count = modifier_counts.get(modifier_name, 0)
-                if not modifier_contract.cardinality.accepts(count):
-                    diagnostics.append(SemanticDiagnostic("CORE-S033", line, column, f"modifier @{modifier_name} occurs {count} time(s)", modifier_contract.cardinality.describe()))
-
-        for slot in contract.slots:
-            count = counts.get(slot.body_type, 0)
-            if not slot.cardinality.accepts(count):
-                diagnostics.append(SemanticDiagnostic("CORE-S034", decl_line, decl_column, f"body slot {slot.body_type!r} occurs {count} time(s)", slot.cardinality.describe()))
-
-    diagnostics.sort(key=lambda item: (item.line, item.column, item.code, item.message))
-    return tuple(diagnostics)
-
-
-_EXPR_TOKEN = re.compile(
-    r"\s*(?:(true|false)|(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(\&\&|\|\||==|!=|!|\(|\)))"
-)
-
-
-def _expression_tokens(text: str) -> list[str]:
-    tokens: list[str] = []
-    position = 0
-    while position < len(text):
-        match = _EXPR_TOKEN.match(text, position)
-        if match is None:
-            raise ValueError(f"unsupported token near {text[position:position + 12]!r}")
-        token = next(group for group in match.groups() if group is not None)
-        tokens.append(token)
-        position = match.end()
-    return tokens
-
-
-class _ExpressionParser:
-    def __init__(self, tokens: list[str], env: dict[str, TypeRef]) -> None:
-        self.tokens = tokens
-        self.env = env
-        self.index = 0
-
-    def current(self) -> str | None:
-        return None if self.index >= len(self.tokens) else self.tokens[self.index]
-
-    def take(self) -> str:
-        token = self.current()
-        if token is None:
-            raise ValueError("unexpected end of expression")
-        self.index += 1
-        return token
-
-    def parse(self) -> str:
-        result = self.or_expr()
-        if self.current() is not None:
-            raise ValueError(f"unexpected token {self.current()!r}")
-        return result
-
-    def or_expr(self) -> str:
-        left = self.and_expr()
-        while self.current() == "||":
-            self.take()
-            right = self.and_expr()
-            self.require_bool(left, "||")
-            self.require_bool(right, "||")
-            left = "bool"
-        return left
-
-    def and_expr(self) -> str:
-        left = self.eq_expr()
-        while self.current() == "&&":
-            self.take()
-            right = self.eq_expr()
-            self.require_bool(left, "&&")
-            self.require_bool(right, "&&")
-            left = "bool"
-        return left
-
-    def eq_expr(self) -> str:
-        left = self.unary()
-        while self.current() in {"==", "!="}:
-            op = self.take()
-            right = self.unary()
-            if left != right:
-                raise ValueError(f"{op} compares incompatible types {left} and {right}")
-            left = "bool"
-        return left
-
-    def unary(self) -> str:
-        if self.current() == "!":
-            self.take()
-            result = self.unary()
-            self.require_bool(result, "!")
-            return "bool"
-        return self.primary()
-
-    def primary(self) -> str:
-        token = self.take()
-        if token == "(":
-            result = self.or_expr()
-            if self.take() != ")":
-                raise ValueError("expected closing parenthesis")
-            return result
-        if token in {"true", "false"}:
-            return "bool"
-        if re.fullmatch(r"\d+", token):
-            return "int"
-        if re.fullmatch(r"\d+\.\d+", token):
-            return "float"
-        if token not in self.env:
-            raise ValueError(f"unresolved expression name {token!r}")
-        type_ref = self.env[token]
-        if type_ref.name == "ref":
-            raise ValueError(f"expression name {token!r} is a declaration reference, not a scalar")
-        return type_ref.name
-
-    @staticmethod
-    def require_bool(value: str, operator: str) -> None:
-        if value != "bool":
-            raise ValueError(f"operator {operator} requires bool, found {value}")
-
-
-def infer_expression_type(text: str, env: dict[str, TypeRef]) -> tuple[str | None, str | None]:
-    try:
-        tokens = _expression_tokens(text)
-        if not tokens:
-            raise ValueError("empty expression")
-        return _ExpressionParser(tokens, env).parse(), None
-    except ValueError as exc:
-        return None, str(exc)
+__all__ = [
+    "Cardinality",
+    "ArgumentContract",
+    "ModifierContract",
+    "BodySlotContract",
+    "DeclarationContract",
+    "MetaCombinator",
+    "SemanticRegistry",
+    "SemanticDiagnostic",
+    "CoreContractError",
+    "load_semantic_registry",
+    "registry_digest",
+    "validate_source",
+    "infer_expression_type",
+]
