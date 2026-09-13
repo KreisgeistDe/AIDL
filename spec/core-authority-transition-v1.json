@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "complete",
+  "phase": "self-description-correction-in-progress",
   "completedPhases": [
     "D0",
     "I1",
@@ -11,7 +11,8 @@
   "coreSource": {
     "path": "spec/core.aidl",
     "role": "normative-project-wide-semantic-authority",
-    "projectWideAuthorityFlipComplete": true
+    "projectWideAuthorityFlipComplete": true,
+    "directDeclarationKindContractsTarget": true
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
@@ -29,11 +30,22 @@
   },
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
-    "role": "irreducible-host-defined-syntax"
+    "role": "finite-versioned-irreducible-host-bootstrap-contract",
+    "concreteDeclarationKindsOwnedByHost": false,
+    "finiteStructuralMetaCombinators": [
+      "name",
+      "args",
+      "body",
+      "cardinal",
+      "modifier",
+      "type-position",
+      "produces"
+    ]
   },
   "generatedProjection": {
     "path": "spec/core-registry-v1.json",
-    "role": "derived-non-normative",
+    "role": "derived-non-normative-output-only",
+    "authorityInput": false,
     "driftCheck": "tools/test_core_bootstrap.py"
   },
   "compatibilityBridge": {
@@ -52,6 +64,33 @@
   "integrationState": {
     "g1IntegratedOnMain": true,
     "mainCommit": "b90c44912d7f82450c2190473035bce14bef828d"
+  },
+  "authorityCorrection": {
+    "supersedesPermanentDefinitionObjectAuthorityDesign": true,
+    "status": "p1-implemented-pending-independent-validation-and-integration",
+    "p1": {
+      "id": "bootstrap-boundary-architecture-contract",
+      "status": "implemented",
+      "changesPermanentSemantics": false,
+      "legacyDefinitionObjectLayerRole": "temporary-migration-and-conformance-evidence"
+    },
+    "p2": {
+      "id": "core-self-description-and-type-carriers",
+      "status": "pending"
+    },
+    "p3": {
+      "id": "semantic-loader-meta-ir-compat-migration",
+      "status": "pending"
+    },
+    "p4": {
+      "id": "downstream-surfaces-and-kotlin-parity-rebase",
+      "status": "pending"
+    },
+    "semanticsDependentKotlinFrozen": true,
+    "frozenKotlinWorkIncludes": [
+      "M10.5-03+",
+      "PR-99"
+    ]
   },
   "nextGate": {
     "id": "M10.5-01",
@@ -82,8 +121,8 @@
     "laterSemanticKotlinBlockedUntilComplete": false
   },
   "nextAction": {
-    "id": "M10.5-02",
-    "status": "dependency-ready",
-    "reason": "M10.5-01 and its post-integration durable-state reconciliation are independently validated and integrated; M10.5-02 is the next roadmap action."
+    "id": "CORE-SELF-DESCRIPTION-P1-VALIDATION",
+    "status": "pending-independent-validation",
+    "reason": "The finite bootstrap-boundary P1 contract is implemented, but P2/P3/P4 remain pending and semantics-dependent Kotlin work including PR #99 stays frozen until the corrected Core semantics are integrated."
   }
 }

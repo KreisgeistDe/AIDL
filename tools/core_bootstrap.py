@@ -7,6 +7,15 @@ from pathlib import Path
 from typing import Any
 
 KERNEL_VERSION = 1
+KERNEL_META_COMBINATORS = (
+    "name",
+    "args",
+    "body",
+    "cardinal",
+    "modifier",
+    "type-position",
+    "produces",
+)
 
 
 class BootstrapSyntaxError(ValueError):
@@ -97,6 +106,21 @@ class Program:
 
 
 @dataclass(frozen=True)
+class KernelTerm:
+    name: str
+    arguments: tuple["KernelTerm | str | int | float | bool | None", ...] = ()
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "arguments": [
+                item.to_json() if isinstance(item, KernelTerm) else item
+                for item in self.arguments
+            ],
+        }
+
+
+@dataclass(frozen=True)
 class Token:
     kind: str
     value: str
@@ -134,6 +158,13 @@ def _tokenize(source: str) -> list[Token]:
             index += 2
             column += 2
             continue
+        if source.startswith("type-position", index):
+            end = index + len("type-position")
+            if end == len(source) or not (source[end].isalnum() or source[end] in "_-"):
+                tokens.append(Token("IDENT", "type-position", line, column))
+                index = end
+                column += len("type-position")
+                continue
         if char == '"':
             start_line = line
             start_column = column
@@ -287,9 +318,7 @@ class _Parser:
         }:
             candidate_name = self.advance().value
         arguments = self.named_arguments() if self.match("(") else ()
-        result = None
-        if self.match("->"):
-            result = self.type_ref()
+        result = self.type_ref() if self.match("->") else None
         self.require("{")
         if self.current.kind == "NEWLINE":
             self.advance()
@@ -346,15 +375,56 @@ class _Parser:
         optional = self.match("?")
         return TypeRef(name, tuple(arguments), optional)
 
+    def kernel_term(self) -> KernelTerm:
+        name = self.name()
+        if name not in KERNEL_META_COMBINATORS:
+            self.fail(f"unknown bootstrap meta-combinator {name!r}")
+        if name == "type-position":
+            if self.current.value == "(":
+                self.fail("type-position is a marker and accepts no arguments")
+            return KernelTerm(name)
+        self.require("(")
+        arguments: list[KernelTerm | str | int | float | bool | None] = []
+        self.skip_newlines()
+        if self.match(")"):
+            return KernelTerm(name)
+        while True:
+            arguments.append(self.kernel_atom())
+            self.skip_newlines()
+            if self.match(")"):
+                break
+            self.require(",")
+            self.skip_newlines()
+        return KernelTerm(name, tuple(arguments))
+
+    def kernel_atom(self) -> KernelTerm | str | int | float | bool | None:
+        token = self.current
+        if token.kind == "STRING":
+            self.advance()
+            return json.loads(token.value)
+        if token.kind == "NUMBER":
+            self.advance()
+            try:
+                return float(token.value) if "." in token.value else int(token.value)
+            except ValueError as exc:
+                raise BootstrapSyntaxError(
+                    f"malformed bootstrap number {token.value!r} at {token.line}:{token.column}"
+                ) from exc
+        if token.value in {"true", "false", "null"}:
+            self.advance()
+            return {"true": True, "false": False, "null": None}[token.value]
+        if token.kind == "IDENT":
+            if token.value in KERNEL_META_COMBINATORS:
+                return self.kernel_term()
+            return self.qualified_name()
+        self.fail("expected bootstrap meta-combinator argument")
+
     def body_entry(self) -> BodyEntry:
         body_type = self.name()
         candidate_name: str | None = None
         if self.current.kind == "IDENT" and self.tokens[self.index + 1].value == ":":
             candidate_name = self.advance().value
         self.require(":")
-
-        # V1 is specifically colon + opening brace + newline. A same-line object
-        # literal therefore remains an ordinary value and is not a modifier block.
         if self.current.value == "{" and self.tokens[self.index + 1].kind == "NEWLINE":
             self.advance()
             self.advance()
@@ -364,13 +434,7 @@ class _Parser:
                 value = self.value(stop={"\n", "@", "}"})
                 self.line_end()
             modifiers = self.modifier_block_tail()
-            return BodyEntry(
-                body_type,
-                candidate_name,
-                value,
-                modifiers,
-                "multiline-v1",
-            )
+            return BodyEntry(body_type, candidate_name, value, modifiers, "multiline-v1")
 
         value = None
         if self.current.kind != "NEWLINE" and self.current.value not in {"@", "}"}:
@@ -379,13 +443,7 @@ class _Parser:
             self.advance()
             self.advance()
             modifiers = self.modifier_block_tail()
-            return BodyEntry(
-                body_type,
-                candidate_name,
-                value,
-                modifiers,
-                "multiline-v2",
-            )
+            return BodyEntry(body_type, candidate_name, value, modifiers, "multiline-v2")
 
         modifiers: list[ModifierCall] = []
         while self.current.value == "@":
@@ -394,13 +452,7 @@ class _Parser:
             self.advance()
         elif self.current.value != "}":
             self.fail("expected newline or declaration close after body entry")
-        return BodyEntry(
-            body_type,
-            candidate_name,
-            value,
-            tuple(modifiers),
-            "inline",
-        )
+        return BodyEntry(body_type, candidate_name, value, tuple(modifiers), "inline")
 
     def modifier_block_tail(self) -> tuple[ModifierCall, ...]:
         modifiers: list[ModifierCall] = []
@@ -432,9 +484,14 @@ class _Parser:
             return Value("string", json.loads(token.value), token.value)
         if token.kind == "NUMBER":
             self.advance()
-            number: int | float = (
-                float(token.value) if "." in token.value else int(token.value)
-            )
+            try:
+                number: int | float = (
+                    float(token.value) if "." in token.value else int(token.value)
+                )
+            except ValueError as exc:
+                raise BootstrapSyntaxError(
+                    f"malformed number {token.value!r} at {token.line}:{token.column}"
+                ) from exc
             return Value("number", number, token.value)
         if token.value in {"true", "false", "null"}:
             self.advance()
@@ -452,18 +509,11 @@ class _Parser:
             try:
                 type_ref = self.type_ref()
                 if self._at_stop(stop):
-                    return Value(
-                        "typeRef",
-                        type_ref,
-                        self.raw(start, self.index),
-                    )
+                    return Value("typeRef", type_ref, self.raw(start, self.index))
             except BootstrapSyntaxError:
                 pass
             self.index = saved
 
-        # I1 deliberately frames but does not semantically interpret expressions or
-        # declaration references. Balanced nested delimiters/newlines remain one
-        # opaque value until later Core-semantic phases.
         depth: list[str] = []
         pairs = {"(": ")", "[": "]", "{": "}", "<": ">"}
         while self.current.kind != "EOF":
@@ -564,10 +614,34 @@ class _Parser:
         return output
 
 
+def _validate_bindings(program: Program) -> None:
+    if len(program.imports) != len(set(program.imports)):
+        raise BootstrapSyntaxError("duplicate or ambiguous bootstrap import binding")
+    seen: dict[str, str] = {}
+    for declaration in program.declarations:
+        if declaration.name is None:
+            continue
+        previous = seen.get(declaration.name)
+        if previous is not None:
+            raise BootstrapSyntaxError(
+                f"duplicate or ambiguous bootstrap binding {declaration.name!r}: "
+                f"{previous!r} and {declaration.kind!r}"
+            )
+        seen[declaration.name] = declaration.kind
+
+
 def parse_source(source: str) -> Program:
-    """Parse source using only the irreducible Bootstrap Kernel v1 grammar."""
+    """Parse framing plus the generic declaration envelope without domain knowledge."""
 
     return _Parser(source).program()
+
+
+def parse_bootstrap_source(source: str) -> Program:
+    """Parse a bootstrap source unit and apply only bootstrap-level binding checks."""
+
+    program = parse_source(source)
+    _validate_bindings(program)
+    return program
 
 
 def parse_type_ref(source: str) -> TypeRef:
@@ -579,32 +653,31 @@ def parse_type_ref(source: str) -> TypeRef:
     return result
 
 
+def parse_meta_combinator(source: str) -> KernelTerm:
+    """Parse one member of the finite structural Bootstrap Kernel vocabulary."""
+
+    parser = _Parser(source)
+    result = parser.kernel_term()
+    parser.skip_newlines()
+    if parser.current.kind != "EOF":
+        parser.fail("unexpected trailing bootstrap meta-combinator input")
+    return result
+
+
 def source_digest(source: str) -> str:
     return hashlib.sha256(source.replace("\r\n", "\n").encode("utf-8")).hexdigest()
 
 
 def generate_projection(source: str) -> dict[str, Any]:
-    """Derive the deterministic I1 Core registry projection from core.aidl."""
+    """Derive deterministic transition evidence; it is output, never an authority input."""
 
-    program = parse_source(source)
-    declarations: list[dict[str, Any]] = []
-    for declaration in program.declarations:
-        if declaration.kind != "declaration":
-            raise BootstrapSyntaxError(
-                "core source may only contain declaration meta-definitions, "
-                f"found {declaration.kind!r}"
-            )
-        if declaration.name is None:
-            raise BootstrapSyntaxError(
-                "core declaration meta-definition requires a candidate name"
-            )
-        declarations.append(declaration.to_json())
+    program = parse_bootstrap_source(source)
     return {
         "schemaVersion": 1,
         "kernelVersion": KERNEL_VERSION,
         "sourceModule": program.module,
         "sourceSha256": source_digest(source),
-        "declarations": declarations,
+        "declarations": [declaration.to_json() for declaration in program.declarations],
     }
 
 
