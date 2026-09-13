@@ -5,6 +5,7 @@ from pathlib import Path
 
 from tools.core_bootstrap import TypeRef
 from tools.core_semantics import (
+    CoreContractError,
     infer_expression_type,
     load_semantic_registry,
     registry_digest,
@@ -41,7 +42,6 @@ declaration sample(kind: "language") {
       namePolicy: "forbidden",
       valueType: int,
       cardinality: {min: 1, max: 1},
-      order: 0,
       ordered: true,
       uniqueByName: false,
       modifiers: []
@@ -107,10 +107,36 @@ entity E {
   nope x: int
 }
 """
-        codes = self.codes(source)
+        diagnostics = validate_source(source, self.registry())
+        codes = [item.code for item in diagnostics]
         self.assertIn("CORE-S007", codes)
         self.assertIn("CORE-S008", codes)
         self.assertIn("CORE-S006", codes)
+        ordering = next(item for item in diagnostics if item.code == "CORE-S007")
+        self.assertEqual(ordering.line, 4)
+        self.assertGreaterEqual(ordering.column, 1)
+        self.assertEqual(
+            ordering.expected,
+            "ordered BodySlot sequence: field before invariant",
+        )
+
+    def test_body_slot_order_comes_from_normative_sequence_not_host_order_key(self) -> None:
+        self.assertNotIn("order:", DOMAIN)
+        reversed_source = """
+entity E {
+  invariant first: true
+  field id: uuid
+}
+"""
+        self.assertIn("CORE-S007", self.codes(reversed_source))
+
+        undeclared = DOMAIN.replace(
+            '      ordered: true,\n      uniqueByName: true,',
+            '      order: 0,\n      ordered: true,\n      uniqueByName: true,',
+            1,
+        )
+        with self.assertRaisesRegex(CoreContractError, "undeclared metadata: order"):
+            load_semantic_registry(undeclared)
 
     def test_modifier_allowlist_targets_and_cardinality(self) -> None:
         source = """
