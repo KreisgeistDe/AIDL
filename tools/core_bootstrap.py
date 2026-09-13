@@ -431,16 +431,22 @@ class _Parser:
         return ModifierCall(name, tuple(args))
 
     def value(self, stop: set[str], allow_newline_stop: bool = True) -> Value:
-        start = self.index; self.expression(stop, allow_newline_stop)
+        start = self.index
+        if self.current.kind == "IDENT":
+            saved = self.index
+            try:
+                typ = self.type_ref()
+                if self.current.value in stop or (allow_newline_stop and self.current.kind == "NEWLINE") or self.current.kind == "EOF":
+                    return Value("typeRef", typ, self.raw(start, self.index))
+            except BootstrapSyntaxError:
+                pass
+            self.index = saved
+        self.expression(stop, allow_newline_stop)
         if self.index == start: self.fail("expected value")
         raw = self.raw(start, self.index); first = self.tokens[start]
         if self.index == start + 1 and first.kind == "STRING": return Value("string", _decode_string(first.value), first.value)
         if self.index == start + 1 and first.kind in {"INTEGER", "DECIMAL"}: return Value("number", int(first.value) if first.kind == "INTEGER" else float(first.value), first.value)
         if self.index == start + 1 and first.value in {"true", "false", "null"}: return Value("literal", {"true": True, "false": False, "null": None}[first.value], first.value)
-        try:
-            parser = _Parser(raw); typ = parser.type_ref(); parser.skip_newlines()
-            if parser.current.kind == "EOF": return Value("typeRef", typ, raw)
-        except BootstrapSyntaxError: pass
         if first.value == "[" and self.tokens[self.index - 1].value == "]": return Value("list", self.list_json(raw), raw)
         return Value("raw", raw, raw)
 
