@@ -325,9 +325,7 @@ def validate_source(
 
     program = parse_source(source)
     spans = _runtime._SourceSpans(source)
-    symbols = {
-        item.name: item for item in program.declarations if item.name is not None
-    }
+    symbols = _runtime._symbol_table(program.declarations)
     cursor = 0
     for declaration in program.declarations:
         line, column = spans.declaration(declaration, cursor)
