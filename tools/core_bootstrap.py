@@ -13,8 +13,6 @@ KERNEL_META_COMBINATORS = (
     "body",
     "cardinal",
     "modifier",
-    "type-position",
-    "produces",
 )
 
 
@@ -84,6 +82,7 @@ class Declaration:
     name: str | None
     exported: bool
     arguments: tuple[tuple[str, Value], ...]
+    arguments_present: bool
     result: TypeRef | None
     body: tuple[BodyEntry, ...]
 
@@ -92,7 +91,11 @@ class Declaration:
             "kind": self.kind,
             "name": self.name,
             "exported": self.exported,
-            "arguments": {name: value.to_json() for name, value in self.arguments},
+            "arguments": (
+                {name: value.to_json() for name, value in self.arguments}
+                if self.arguments_present
+                else None
+            ),
             "result": None if self.result is None else self.result.to_json(),
             "body": [item.to_json() for item in self.body],
         }
@@ -158,13 +161,6 @@ def _tokenize(source: str) -> list[Token]:
             index += 2
             column += 2
             continue
-        if source.startswith("type-position", index):
-            end = index + len("type-position")
-            if end == len(source) or not (source[end].isalnum() or source[end] in "_-"):
-                tokens.append(Token("IDENT", "type-position", line, column))
-                index = end
-                column += len("type-position")
-                continue
         if char == '"':
             start_line = line
             start_column = column
@@ -317,7 +313,8 @@ class _Parser:
             "null",
         }:
             candidate_name = self.advance().value
-        arguments = self.named_arguments() if self.match("(") else ()
+        arguments_present = self.match("(")
+        arguments = self.named_arguments() if arguments_present else ()
         result = self.type_ref() if self.match("->") else None
         self.require("{")
         if self.current.kind == "NEWLINE":
@@ -337,6 +334,7 @@ class _Parser:
             candidate_name,
             exported,
             arguments,
+            arguments_present,
             result,
             tuple(body),
         )
@@ -379,10 +377,6 @@ class _Parser:
         name = self.name()
         if name not in KERNEL_META_COMBINATORS:
             self.fail(f"unknown bootstrap meta-combinator {name!r}")
-        if name == "type-position":
-            if self.current.value == "(":
-                self.fail("type-position is a marker and accepts no arguments")
-            return KernelTerm(name)
         self.require("(")
         arguments: list[KernelTerm | str | int | float | bool | None] = []
         self.skip_newlines()
@@ -632,13 +626,11 @@ def _validate_bindings(program: Program) -> None:
 
 def parse_source(source: str) -> Program:
     """Parse framing plus the generic declaration envelope without domain knowledge."""
-
     return _Parser(source).program()
 
 
 def parse_bootstrap_source(source: str) -> Program:
     """Parse a bootstrap source unit and apply only bootstrap-level binding checks."""
-
     program = parse_source(source)
     _validate_bindings(program)
     return program
@@ -655,7 +647,6 @@ def parse_type_ref(source: str) -> TypeRef:
 
 def parse_meta_combinator(source: str) -> KernelTerm:
     """Parse one member of the finite structural Bootstrap Kernel vocabulary."""
-
     parser = _Parser(source)
     result = parser.kernel_term()
     parser.skip_newlines()
@@ -670,7 +661,6 @@ def source_digest(source: str) -> str:
 
 def generate_projection(source: str) -> dict[str, Any]:
     """Derive deterministic transition evidence; it is output, never an authority input."""
-
     program = parse_bootstrap_source(source)
     return {
         "schemaVersion": 1,
