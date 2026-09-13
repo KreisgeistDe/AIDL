@@ -55,7 +55,7 @@
   },
   "nextGate": {
     "id": "M10.5-01",
-    "status": "implementation-candidate",
+    "status": "complete",
     "historicalMergedEvidence": {
       "pr": 77,
       "mergeCommit": "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
@@ -65,10 +65,18 @@
     "postG1CurrentMainRefresh": {
       "baselineBaseCommit": "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
       "manifest": "spec/m10-5-parity-manifest.json",
-      "independentValidationRequired": true,
-      "integratedOnMain": false
+      "implementationPr": 94,
+      "implementationHead": "9228f94302c1fbbc6cd5fc0b5fc7af9231071d76",
+      "independentlyValidated": true,
+      "integratedOnMain": true,
+      "mainCommit": "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9"
     },
-    "requiresPostG1CurrentMainRefreshRevalidation": true,
-    "laterSemanticKotlinBlockedUntilComplete": true
+    "requiresPostG1CurrentMainRefreshRevalidation": false,
+    "laterSemanticKotlinBlockedUntilComplete": false
+  },
+  "nextAction": {
+    "id": "M10.5-02",
+    "status": "blocked-pending-gate01-status-reconciliation-integration",
+    "reason": "M10.5-01 is complete, but this durable status correction requires fresh independent validation and integration before later Kotlin semantic work may begin."
   }
 }
