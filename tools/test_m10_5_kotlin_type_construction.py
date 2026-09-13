@@ -43,16 +43,6 @@ def _identity(candidate) -> str:
     return f"{candidate.fully_qualified_name}@{document.source_path.stem}#{index}"
 
 
-def _shape(type_ref) -> str:
-    if type_ref.kind == "nullable":
-        return f"nullable({_shape(type_ref.args[0])})"
-    if type_ref.kind == "list":
-        return f"list({_shape(type_ref.args[0])})"
-    if type_ref.kind in {"scalar", "named"}:
-        return f"{type_ref.kind}:{type_ref.name}"
-    return type_ref.kind
-
-
 def _nominal_name(type_ref) -> str | None:
     while type_ref.kind in {"nullable", "list"} and type_ref.args:
         type_ref = type_ref.args[0]
@@ -67,7 +57,7 @@ def oracle_signature() -> str:
         try:
             type_ref = parse_type(source)
         except TypeSyntaxError:
-            lines.append(f"{label}|REJECT|||")
+            lines.append(f"{label}|REJECT||")
             continue
         status = "RESOLVED"
         symbols = []
@@ -76,7 +66,7 @@ def oracle_signature() -> str:
             candidates = _reference_candidates(project, consumer, name)
             status = "UNRESOLVED" if not candidates else "RESOLVED" if len(candidates) == 1 else "AMBIGUOUS"
             symbols = [_identity(candidate) for candidate in candidates]
-        lines.append(f"{label}|ACCEPT|{_shape(type_ref)}|{status}|{','.join(symbols)}")
+        lines.append(f"{label}|ACCEPT|{status}|{','.join(symbols)}")
     return "\n".join(lines)
 
 
