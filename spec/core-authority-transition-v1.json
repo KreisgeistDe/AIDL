@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
-  "phase": "G1",
+  "phase": "complete",
   "completedPhases": [
     "D0",
     "I1",
     "I2",
-    "V1"
+    "V1",
+    "G1"
   ],
   "coreSource": {
     "path": "spec/core.aidl",
@@ -48,11 +49,13 @@
     "productionUseRequiresCoreAuthorization": true,
     "authorityBinding": "spec/core.compatibility.aidl"
   },
-  "candidateState": {
-    "g1ImplementedOnCandidate": true,
-    "integratedOnMain": false
+  "integrationState": {
+    "g1IntegratedOnMain": true,
+    "mainCommit": "b90c44912d7f82450c2190473035bce14bef828d"
   },
-  "blockedUntilSeparatePhases": [
-    "semantics-dependent-future-M10.5"
-  ]
+  "nextGate": {
+    "id": "M10.5-01",
+    "status": "dependency-ready",
+    "laterSemanticKotlinBlockedUntilComplete": true
+  }
 }
