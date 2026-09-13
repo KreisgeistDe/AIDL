@@ -38,7 +38,7 @@ declaration entity(kind: "language") {
     {
       bodyType: "field",
       namePolicy: "required",
-      valueType: choice<ref<entity>, TypeRef>,
+      valueType: choice<TypeRef, ref<entity>>,
       cardinality: {min: 0, max: null},
       order: 0,
       ordered: true,
