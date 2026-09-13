@@ -20,6 +20,8 @@ I2, V1, G1 and later semantics-dependent Kotlin migration remain blocked until s
 
 `spec/language-surface-v1.json` revision 4 is reclassified for this transition as compatibility and migration evidence, not the future permanent semantic authority. Existing production paths may still use the revision-4 compatibility oracle until G1 because I1 intentionally does not migrate domain semantics or flip the production authority. Keeping that compatibility path during migration is not permission to create a second independently evolving normative grammar.
 
+This transition disposition supersedes older authority wording in `docs/06-grammar.md` and `docs/m10-1-language-surface-freeze.md` for phase sequencing and future authority. Those documents remain durable revision-4 grammar/design evidence until G1; they do not create a second permanent source of truth.
+
 The machine-readable transition disposition is `spec/core-authority-transition-v1.json`.
 
 ## Bootstrap syntax fixed by I1
