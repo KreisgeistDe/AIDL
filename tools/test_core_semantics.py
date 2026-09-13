@@ -89,15 +89,15 @@ enum V -> string {
 """
         self.assertIn("CORE-S005", self.codes(unexpected_result))
 
-    def test_ref_resolution_and_wrong_kind_remain_fail_closed(self) -> None:
+    def test_generic_declaration_refs_fail_closed_only_when_unresolved(self) -> None:
         unresolved = """
 entity E {
   field parent: ref<Missing>
 }
 """
-        self.assertIn("CORE-S012", self.codes(unresolved))
+        self.assertIn("CORE-S021", self.codes(unresolved))
 
-        wrong_kind = """
+        named_enum_target = """
 enum V {
   case A:
 }
@@ -105,7 +105,7 @@ entity E {
   field target: ref<V>
 }
 """
-        self.assertIn("CORE-S013", self.codes(wrong_kind))
+        self.assertEqual(validate_source(named_enum_target, self.registry()), ())
 
     def test_unknown_symbol_modifier_duplicate_name_and_order_fail(self) -> None:
         source = """
