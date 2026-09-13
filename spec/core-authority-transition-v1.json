@@ -17,10 +17,12 @@
     "usesOnlyFiniteBootstrapMetaCombinators": true,
     "concreteDeclarationKindCatalogInHost": false,
     "permanentDefinitionObjectAuthority": false,
-    "argumentAbsence": "void-not-present",
-    "returnAbsence": "void-not-present",
+    "centralMetaClass": "declaration",
+    "typeSurface": "direct-core-authored-alias-of-declaration",
+    "argumentAbsence": "closed-zero-parameter-model-equivalent-to-explicit-empty-signature",
+    "returnAbsence": "no-result-position-for-specialized-kind",
     "returnMechanism": "declaration-arrow-result-only",
-    "typeIdentity": "generic-visible-named-declaration-symbol"
+    "typeIdentity": "every-visible-named-declaration-symbol"
   },
   "coreMetaIr": {
     "path": "spec/core-meta-ir-v1.json",
@@ -28,8 +30,9 @@
     "authorityInput": false,
     "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
     "runtimeLoader": "tools/core_semantics.py",
-    "schemaVersion": 2,
-    "typeIdentityField": "predeclaredTypeSymbols"
+    "schemaVersion": 3,
+    "typeIdentityField": "predeclaredTypeSymbols",
+    "kindAliasField": "kindAliases"
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
@@ -53,6 +56,7 @@
     "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier"],
     "producesPresent": false,
     "typePositionPresent": false,
+    "separateHostTypeHierarchy": false,
     "typeIdentityRule": "visible named declaration symbol identity"
   },
   "generatedProjection": {
@@ -70,7 +74,7 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "semantic-correction-implementation-in-progress-p4-frozen",
+    "status": "semantic-correction-amended-by-central-declaration-meta-class-p4-frozen",
     "historicalP1": {
       "implementationPr": 100,
       "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
@@ -79,7 +83,7 @@
     "historicalP2": {
       "implementationPr": 101,
       "mainCommit": "7280f01a2c97b004c79cd0a2e598513bfa183ac0",
-      "obsoleteAssumptionsBeingRemoved": ["produces(type)-type-carrier-rule"]
+      "obsoleteAssumptionsBeingRemoved": ["produces(type)-type-carrier-rule", "separate-type-kind-semantics"]
     },
     "historicalP3": {
       "implementationPr": 102,
@@ -95,12 +99,16 @@
       "p4NextWordingSupersededByCorrectionGate": true
     },
     "semanticCorrection": {
-      "id": "args-return-symbol-identity-correction",
-      "status": "implementation-candidate",
+      "id": "central-declaration-meta-class-args-return-symbol-identity-correction",
+      "status": "amended-implementation-candidate",
       "producesRemoved": true,
       "typePositionRemoved": true,
-      "argsVoidDistinctFromPresentEmpty": true,
-      "returnVoidUsesAbsentArrowContract": true,
+      "typeIsAliasOfDeclaration": true,
+      "declarationIsTypeObject": true,
+      "allVisibleNamedDeclarationsTypeRefAddressable": true,
+      "argsAbsenceEqualsClosedZeroParameterSet": true,
+      "returnUsesArrowOnly": true,
+      "specializedDeclaredResultIsRequired": true,
       "typeRefCarrierIdentity": "generic-visible-named-declaration-symbol",
       "generatedMetaIrAuthority": false
     },
@@ -113,12 +121,12 @@
   },
   "nextGate": {
     "id": "CORE-SELF-DESCRIPTION-SEMANTIC-CORRECTION",
-    "status": "implementation-pending-independent-validation-and-integration",
+    "status": "amended-implementation-pending-independent-architecture-and-exact-head-validation",
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-CORRECTION-VALIDATION",
-    "status": "pending-independent-exact-head-validation",
-    "reason": "The P1-P3 produces/type-position interpretation is being corrected. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until the correction is independently validated and integrated."
+    "id": "CORE-SELF-DESCRIPTION-CORRECTION-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
+    "status": "pending-independent-validation",
+    "reason": "The amended correction makes declaration the central self-referential meta-class, type a direct alias/syntax view, removes Args=void as a semantic state, keeps arrow-only result semantics, and makes every visible named declaration TypeRef-addressable. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until independent validation and integration."
   }
 }
