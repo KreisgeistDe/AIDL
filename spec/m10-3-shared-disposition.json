@@ -8,6 +8,7 @@
     "status": "frozen",
     "contract_revision": 4
   },
+  "closure_certification": "spec/m10-3-closure-certification.json",
   "canonical_source_support": [
     {
       "id": "app.profile-block",
@@ -202,6 +203,6 @@
     "canonical_ir_meaning_changed": false,
     "frozen_contract_changed": false,
     "m10_5_deferred": true,
-    "m10_3_complete": false
+    "m10_3_complete": true
   }
 }

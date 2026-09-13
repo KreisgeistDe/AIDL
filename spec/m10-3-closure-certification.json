@@ -1,0 +1,108 @@
+{
+  "schema_version": "aidl.m10.3-closure-certification/v1",
+  "authority": "M10.3-01",
+  "status": "certified",
+  "frozen_language_contract": {
+    "path": "spec/language-surface-v1.json",
+    "authority": "M10.1",
+    "status": "frozen",
+    "contract_revision": 4
+  },
+  "classification_authority": {
+    "path": "spec/m10-2-language-surface-classification.json",
+    "authority": "M10.2-01"
+  },
+  "shared_disposition_authority": {
+    "path": "spec/m10-3-shared-disposition.json",
+    "authority": "M10.3-01-shared-foundation"
+  },
+  "allowed_dispositions": [
+    "supported-equivalent-source-form",
+    "non-production-fail-closed",
+    "requires-versioned-admission"
+  ],
+  "required_canonical_source_support": [
+    "app.profile-block",
+    "entity.field-slot",
+    "operation.parameters-header-arg"
+  ],
+  "required_shared_mismatch_dispositions": {
+    "app.links": "requires-versioned-admission",
+    "auth": "non-production-fail-closed",
+    "a11y": "non-production-fail-closed",
+    "privacy": "non-production-fail-closed",
+    "value": "non-production-fail-closed",
+    "union": "non-production-fail-closed",
+    "view": "non-production-fail-closed",
+    "entity.invariant": "non-production-fail-closed",
+    "operation.auth": "non-production-fail-closed",
+    "operation.cache": "non-production-fail-closed",
+    "operation.consistency": "non-production-fail-closed",
+    "operation.idempotency": "non-production-fail-closed",
+    "operation.transaction": "non-production-fail-closed",
+    "type-ref.generic-arguments": "non-production-fail-closed",
+    "error": "non-production-fail-closed",
+    "event": "non-production-fail-closed",
+    "topic": "non-production-fail-closed",
+    "policy": "non-production-fail-closed",
+    "workflow": "non-production-fail-closed",
+    "api": "non-production-fail-closed",
+    "resource": "non-production-fail-closed",
+    "service": "non-production-fail-closed",
+    "system": "non-production-fail-closed",
+    "deployment": "non-production-fail-closed",
+    "frontend": "non-production-fail-closed",
+    "theme": "non-production-fail-closed",
+    "component": "non-production-fail-closed",
+    "page": "non-production-fail-closed",
+    "form": "non-production-fail-closed",
+    "action": "non-production-fail-closed",
+    "sync": "non-production-fail-closed",
+    "syncStatus": "non-production-fail-closed",
+    "seo": "non-production-fail-closed",
+    "test": "non-production-fail-closed"
+  },
+  "reference_applications": [
+    {
+      "id": "calendar-offline",
+      "root": "examples/calendar-offline",
+      "inventory_document": "examples/calendar-offline/README.md",
+      "expected_source_count": 13
+    },
+    {
+      "id": "petstore",
+      "root": "examples/petstore",
+      "inventory_document": "examples/petstore/M10.3.md",
+      "expected_source_count": 19
+    },
+    {
+      "id": "videohub",
+      "root": "examples/videohub",
+      "inventory_document": "examples/videohub/README.md",
+      "expected_source_count": 25
+    }
+  ],
+  "fixture_classes": [
+    {
+      "root": "fixtures/valid",
+      "classification": "legacy-readable-compatibility"
+    },
+    {
+      "root": "fixtures/invalid",
+      "classification": "negative-rejection-fixture"
+    },
+    {
+      "root": "tools/m2_semantic_fixtures",
+      "classification": "negative-rejection-fixture"
+    }
+  ],
+  "constraints": {
+    "production_admission_changed": false,
+    "canonical_ir_meaning_changed": false,
+    "parser_compiler_runtime_semantics_changed": false,
+    "frozen_contract_changed": false,
+    "app_links_admitted": false,
+    "m10_5_started": false,
+    "m10_3_complete": true
+  }
+}
