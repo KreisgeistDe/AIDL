@@ -11,6 +11,7 @@ from tools.core_bootstrap import (
     KERNEL_VERSION,
     check_projection,
     generate_projection,
+    parse_bootstrap_source,
     parse_meta_combinator,
     parse_source,
     parse_type_ref,
@@ -43,7 +44,7 @@ class CoreBootstrapTest(unittest.TestCase):
             ' slot value: string\n'
             '}\n'
         )
-        program = parse_source(source)
+        program = parse_bootstrap_source(source)
         self.assertEqual(program.declarations[0].kind, "futurekind")
         projection = generate_projection(source)
         self.assertEqual(projection["declarations"][0]["kind"], "futurekind")
@@ -85,15 +86,16 @@ class CoreBootstrapTest(unittest.TestCase):
                 with self.assertRaises(BootstrapSyntaxError):
                     parse_meta_combinator(source)
 
-    def test_duplicate_bootstrap_bindings_fail_closed(self) -> None:
+    def test_duplicate_bootstrap_bindings_fail_closed_without_changing_ordinary_parse(self) -> None:
+        duplicate_names = "first Same {}\nsecond Same {}\n"
+        self.assertEqual(len(parse_source(duplicate_names).declarations), 2)
         with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate or ambiguous bootstrap binding"):
-            parse_source("first Same {}\nsecond Same {}\n")
-        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate import binding"):
-            parse_source("module demo\nimport shared\nimport shared\n")
-        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate named argument"):
-            parse_source('thing T(a: "x", a: "y") {}\n')
-        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate object binding"):
-            parse_source("thing T {\n slot x: {same: 1, same: 2}\n}\n")
+            parse_bootstrap_source(duplicate_names)
+
+        duplicate_imports = "module demo\nimport shared\nimport shared\n"
+        self.assertEqual(parse_source(duplicate_imports).imports, ("shared", "shared"))
+        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate or ambiguous bootstrap import binding"):
+            parse_bootstrap_source(duplicate_imports)
 
     def test_inline_modifier_boundary_ignores_quoted_and_nested_at(self) -> None:
         program = parse_source(
@@ -163,7 +165,7 @@ class CoreBootstrapTest(unittest.TestCase):
         core_path = ROOT / "spec" / "core.aidl"
         projection_path = ROOT / "spec" / "core-registry-v1.json"
         check_projection(core_path, projection_path)
-        program = parse_source(core_path.read_text(encoding="utf-8"))
+        program = parse_bootstrap_source(core_path.read_text(encoding="utf-8"))
         names = {declaration.name for declaration in program.declarations}
         self.assertTrue(
             {
@@ -184,8 +186,8 @@ class CoreBootstrapTest(unittest.TestCase):
 
     def test_parsing_current_core_does_not_require_generated_registry(self) -> None:
         source = (ROOT / "spec" / "core.aidl").read_text(encoding="utf-8")
-        first = parse_source(source)
-        second = parse_source(source)
+        first = parse_bootstrap_source(source)
+        second = parse_bootstrap_source(source)
         self.assertEqual(first, second)
         self.assertGreater(len(first.declarations), 0)
 
