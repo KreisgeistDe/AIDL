@@ -20,24 +20,30 @@ ROOT = Path(__file__).resolve().parents[1]
 class CoreBootstrapTest(unittest.TestCase):
     def test_generic_envelope_and_recursive_typeref_are_domain_free(self) -> None:
         program = parse_bootstrap_source("futurekind Example {\n slot value: string\n}\n")
-        self.assertEqual(program.declarations[0].kind, "futurekind")
+        declaration = program.declarations[0]
+        self.assertEqual(declaration.kind, "futurekind")
+        self.assertFalse(declaration.arguments_present)
+        present_empty = parse_source("futurekind Example() {}\n").declarations[0]
+        self.assertTrue(present_empty.arguments_present)
+        self.assertEqual(present_empty.arguments, ())
         type_ref = parse_type_ref("outer<left<int>, right<ref<sample>?>>?")
         self.assertEqual(type_ref.name, "outer")
         self.assertTrue(type_ref.optional)
 
-    def test_finite_structural_meta_combinators_parse_and_unknown_fails(self) -> None:
+    def test_finite_structural_meta_combinators_parse_and_obsolete_markers_fail(self) -> None:
         samples = {
             "name(required)": "name",
-            "args(cardinal(optional))": "args",
-            "body(type-position, cardinal(many))": "body",
+            "args(type, cardinal(optional))": "args",
+            "body(type, name(required), cardinal(many))": "body",
             "cardinal(optional)": "cardinal",
-            "modifier(cardinal(optional))": "modifier",
-            "type-position": "type-position",
-            "produces(type)": "produces",
+            "modifier(primary, cardinal(optional))": "modifier",
         }
         self.assertEqual(tuple(samples.values()), KERNEL_META_COMBINATORS)
         for source, expected in samples.items():
             self.assertEqual(parse_meta_combinator(source).name, expected)
+        for obsolete in ("produces(type)", "type-position"):
+            with self.assertRaises(BootstrapSyntaxError):
+                parse_meta_combinator(obsolete)
         with self.assertRaises(BootstrapSyntaxError):
             parse_meta_combinator("entity(required)")
 
@@ -47,33 +53,31 @@ class CoreBootstrapTest(unittest.TestCase):
         with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate or ambiguous bootstrap binding"):
             parse_bootstrap_source(duplicate)
 
-    def test_kernel_contract_remains_finite_and_has_no_concrete_kind_catalog(self) -> None:
+    def test_kernel_contract_is_finite_and_has_no_kind_or_producer_catalog(self) -> None:
         contract = json.loads((ROOT / "spec" / "bootstrap-kernel-v1.json").read_text(encoding="utf-8"))
         self.assertEqual(contract["kernelVersion"], KERNEL_VERSION)
         self.assertEqual(tuple(item["name"] for item in contract["metaCombinators"]), KERNEL_META_COMBINATORS)
         self.assertTrue(contract["authorityFirewall"]["directAidlDeclarationKindContractsAreNormative"])
         self.assertFalse(contract["authorityFirewall"]["generatedMetaIrOrRegistryIsAuthorityInput"])
-        self.assertFalse(contract["authorityFirewall"]["concreteProducerKindCatalogOwnedByHost"])
-        self.assertIn("concrete-declaration-kind-catalog", contract["excludes"])
+        self.assertFalse(contract["authorityFirewall"]["concreteDeclarationKindCatalogOwnedByHost"])
+        self.assertFalse(contract["authorityFirewall"]["producerCapabilitySystemOwnedByHost"])
+        self.assertEqual(contract["typeRef"]["carrierIdentity"], "generic-visible-named-declaration-symbol")
+        self.assertIn("producer-carrier-capability-system", contract["excludes"])
+        self.assertIn("type-position-marker", contract["excludes"])
 
-    def test_p3_transition_records_integrated_state_and_freezes_p4_kotlin(self) -> None:
+    def test_transition_freezes_p4_while_semantic_correction_is_validated(self) -> None:
         transition = json.loads((ROOT / "spec" / "core-authority-transition-v1.json").read_text(encoding="utf-8"))
         correction = transition["authorityCorrection"]
-        self.assertEqual(correction["p2"]["status"], "integrated")
-        self.assertEqual(correction["p2"]["mainCommit"], "7280f01a2c97b004c79cd0a2e598513bfa183ac0")
-        self.assertEqual(correction["p3"]["status"], "integrated")
-        self.assertEqual(correction["p3"]["implementationPr"], 102)
-        self.assertEqual(correction["p3"]["implementationHead"], "4992c896cf9818ab51c6ade60fd2a58c657461fe")
-        self.assertEqual(correction["p3"]["mainCommit"], "ca87cdc2ef0ce6e00808512897144ea99ef59293")
-        self.assertTrue(correction["p3"]["independentlyValidated"])
-        self.assertFalse(correction["p3"]["legacyDefinitionObjectRuntimeAuthority"])
-        self.assertEqual(correction["p4"]["status"], "pending")
+        self.assertEqual(correction["durableStateReconciliation"]["mainCommit"], "bb8fb6ff9eb18429c94e9982a9e8d3e03a7ef48d")
+        self.assertTrue(correction["semanticCorrection"]["producesRemoved"])
+        self.assertTrue(correction["semanticCorrection"]["typePositionRemoved"])
+        self.assertEqual(correction["semanticCorrection"]["typeRefCarrierIdentity"], "generic-visible-named-declaration-symbol")
+        self.assertEqual(correction["p4"]["status"], "frozen")
         self.assertTrue(correction["semanticsDependentKotlinFrozen"])
         self.assertIn("PR-99", correction["frozenKotlinWorkIncludes"])
         self.assertFalse(transition["coreMetaIr"]["authorityInput"])
-        self.assertEqual(transition["coreDomain"]["migrationToDirectSelfDescription"], "p3-integrated")
-        self.assertEqual(transition["nextAction"]["id"], "CORE-SELF-DESCRIPTION-P4")
-        self.assertEqual(transition["nextAction"]["status"], "frozen-pending-explicit-dispatch")
+        self.assertEqual(transition["nextAction"]["id"], "CORE-SELF-DESCRIPTION-CORRECTION-VALIDATION")
+        self.assertEqual(transition["nextAction"]["status"], "pending-independent-exact-head-validation")
 
 
 if __name__ == "__main__":
