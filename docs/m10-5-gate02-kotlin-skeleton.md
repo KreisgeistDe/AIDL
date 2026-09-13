@@ -2,7 +2,7 @@
 
 ## Status
 
-This package certifies the Gate-02 Kotlin Multiplatform skeleton without changing AIDL semantics or moving conformance authority away from Python. The package is an implementation candidate until independently validated and integrated.
+Gate 02 is complete. PR #97 exact independently validated head `dfb3af756f2c726f925ee16bddecebe004e5c781` was squash-integrated on main as `5ca01218246982e4b21701254bf3f1844b103014` with sole parent `11fd92d991cf2ff9f5354589dbfd0c0397908621` and the exact seven-path Gate-02 scope. Resulting-main push Validation #409 run `34760402346` and Kotlin Compiler Skeleton #66 run `34760402339` completed successfully. This completion does not change AIDL semantics or move conformance authority away from Python, and it does not complete Gate 03.
 
 ## Platform-neutral boundary
 
@@ -38,4 +38,4 @@ The Gate-02 validation command is:
 plugins/intellij/gradlew -p compiler/kotlin --no-daemon check koverVerify koverXmlReport linkReleaseExecutableLinuxX64
 ```
 
-Acceptance requires the JVM/common test suite and Kover verification to pass and the Native executable to link from the same common source set. Repository CI remains the authoritative exact-head execution gate.
+The accepted exact-head evidence passed the JVM/common test suite and configured Kover gates and linked the Native executable from the same common source set. The workflow did not publish raw numeric coverage percentages, so Gate-02 acceptance records only the configured-and-passed minimum thresholds rather than inventing figures.
