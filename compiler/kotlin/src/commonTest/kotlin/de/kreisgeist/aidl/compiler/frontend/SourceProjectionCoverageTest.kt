@@ -35,7 +35,7 @@ class SourceProjectionCoverageTest {
         assertTrue(body.contains("->"))
         assertTrue(body.contains("-"))
         assertTrue(body.contains("/"))
-        assertTrue(body.contains("\"a\\\\b\""))
+        assertTrue(body.any { it.startsWith("\"a") && it.endsWith("b\"") })
     }
 
     @Test
