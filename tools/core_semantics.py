@@ -63,7 +63,6 @@ class BodySlotContract:
     name_policy: str
     value_type: TypeRef | None
     cardinality: Cardinality
-    order: int | None
     ordered: bool
     unique_by_name: bool
     modifiers: tuple[str, ...]
@@ -172,13 +171,26 @@ def _argument_contract(value: Any) -> ArgumentContract:
 def _body_slot_contract(value: Any) -> BodySlotContract:
     if not isinstance(value, dict):
         raise CoreContractError(f"expected BodySlotDefinition object, found {value!r}")
+    allowed = {
+        "bodyType",
+        "namePolicy",
+        "valueType",
+        "cardinality",
+        "ordered",
+        "uniqueByName",
+        "modifiers",
+    }
+    unknown = sorted(set(value) - allowed)
+    if unknown:
+        raise CoreContractError(
+            "BodySlotDefinition contains undeclared metadata: " + ", ".join(unknown)
+        )
     raw_type = value.get("valueType")
     return BodySlotContract(
         body_type=str(value["bodyType"]),
         name_policy=str(value["namePolicy"]),
         value_type=None if raw_type is None else _type_from_json(raw_type),
         cardinality=_cardinality(value["cardinality"]),
-        order=None if value.get("order") is None else int(value["order"]),
         ordered=bool(value.get("ordered", False)),
         unique_by_name=bool(value.get("uniqueByName", False)),
         modifiers=tuple(str(item) for item in value.get("modifiers", [])),
@@ -302,7 +314,6 @@ def _contract_json(contract: DeclarationContract) -> dict[str, Any]:
                 "namePolicy": slot.name_policy,
                 "valueType": _type_json(slot.value_type),
                 "cardinality": [slot.cardinality.minimum, slot.cardinality.maximum],
-                "order": slot.order,
                 "ordered": slot.ordered,
                 "uniqueByName": slot.unique_by_name,
                 "modifiers": list(slot.modifiers),
@@ -529,10 +540,16 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
             diagnostics.append(SemanticDiagnostic("CORE-S005", decl_line, decl_column, f"declaration {declaration.kind} does not permit a result type", "no result type"))
 
         slot_by_type = {slot.body_type: slot for slot in contract.slots}
+        ordered_positions = {
+            slot.body_type: index
+            for index, slot in enumerate(contract.slots)
+            if slot.ordered
+        }
+        ordered_sequence = [slot.body_type for slot in contract.slots if slot.ordered]
         counts: dict[str, int] = {}
         names: dict[str, set[str]] = {}
         env: dict[str, TypeRef] = {}
-        last_order: int | None = None
+        last_ordered_position: int | None = None
         body_cursor = decl_line
 
         for entry in declaration.body:
@@ -544,10 +561,19 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
                 continue
             counts[entry.body_type] = counts.get(entry.body_type, 0) + 1
             _check_name_policy(diagnostics, slot.name_policy, entry.name, line, column, f"body slot {entry.body_type}")
-            if slot.order is not None:
-                if last_order is not None and slot.order < last_order:
-                    diagnostics.append(SemanticDiagnostic("CORE-S007", line, column, f"body slot {entry.body_type!r} appears out of contract order", f"order >= {last_order}"))
-                last_order = max(last_order or slot.order, slot.order)
+            if slot.ordered:
+                position = ordered_positions[entry.body_type]
+                if last_ordered_position is not None and position < last_ordered_position:
+                    diagnostics.append(
+                        SemanticDiagnostic(
+                            "CORE-S007",
+                            line,
+                            column,
+                            f"body slot {entry.body_type!r} appears out of Core-declared slot sequence",
+                            "ordered BodySlot sequence: " + " before ".join(ordered_sequence),
+                        )
+                    )
+                last_ordered_position = max(last_ordered_position or position, position)
             if slot.unique_by_name and entry.name is not None:
                 seen = names.setdefault(entry.body_type, set())
                 if entry.name in seen:
