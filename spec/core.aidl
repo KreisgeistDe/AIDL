@@ -53,6 +53,17 @@ declaration DeclarationDefinition(kind: "meta") {
   body modifiers: list<ModifierDefinition>
 }
 
+declaration MetaCombinatorDefinition(kind: "meta") {
+  body behavior: string @required
+  body arguments: Cardinality @required
+}
+
+declaration SemanticMetaModel(kind: "meta") {
+  body categoryArgument: "kind" @required
+  body categories: {"meta-combinator": MetaCombinatorDefinition, "modifier": ModifierDefinition, "language": DeclarationDefinition} @required
+  body ignoredCategories: ["meta", "bootstrap"] @required
+}
+
 declaration declaration(kind: "bootstrap") {
   body namePolicy: "required" @required
   body framing: "[export] <kind> [identifier] [(named-args)] [-> <typeRef>] { <body-entries>* }"
