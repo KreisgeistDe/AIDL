@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "self-description-semantic-correction-in-progress",
+  "phase": "binding-core-ebnf-implementation-in-progress",
   "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
   "coreSource": {
     "path": "spec/core.aidl",
@@ -19,7 +19,9 @@
     "permanentDefinitionObjectAuthority": false,
     "centralMetaClass": "declaration",
     "typeSurface": "direct-core-authored-alias-of-declaration",
-    "argumentAbsence": "closed-zero-parameter-model-equivalent-to-explicit-empty-signature",
+    "argumentAbsence": "closed-zero-parameter-contract",
+    "explicitEmptyDeclarationArguments": "invalid-syntax",
+    "openArgumentSyntax": "identifier?: ...",
     "returnAbsence": "no-result-position-for-specialized-kind",
     "returnMechanism": "declaration-arrow-result-only",
     "typeIdentity": "every-visible-named-declaration-symbol"
@@ -38,7 +40,7 @@
     "path": "spec/core.domain.aidl",
     "role": "compatibility-shell-no-definition-object-authority",
     "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-integrated-correction-active"
+    "migrationToDirectSelfDescription": "p3-integrated-binding-ebnf-correction-active"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
@@ -52,6 +54,7 @@
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
     "role": "finite-versioned-irreducible-host-bootstrap-contract",
+    "bindingCoreEbnf": true,
     "concreteDeclarationKindsOwnedByHost": false,
     "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier"],
     "producesPresent": false,
@@ -74,7 +77,7 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "semantic-correction-amended-by-central-declaration-meta-class-p4-frozen",
+    "status": "binding-core-ebnf-candidate-p4-frozen",
     "historicalP1": {
       "implementationPr": 100,
       "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
@@ -99,14 +102,22 @@
       "p4NextWordingSupersededByCorrectionGate": true
     },
     "semanticCorrection": {
-      "id": "central-declaration-meta-class-args-return-symbol-identity-correction",
-      "status": "amended-implementation-candidate",
+      "id": "binding-core-ebnf",
+      "status": "implementation-candidate",
       "producesRemoved": true,
       "typePositionRemoved": true,
       "typeIsAliasOfDeclaration": true,
       "declarationIsTypeObject": true,
       "allVisibleNamedDeclarationsTypeRefAddressable": true,
       "argsAbsenceEqualsClosedZeroParameterSet": true,
+      "explicitEmptyDeclarationArgumentsRejected": true,
+      "openArgsUseFreeBinder": true,
+      "nullableGenericTypeRefs": true,
+      "bodyValuesAreExpressions": true,
+      "indentationIsNonSemantic": true,
+      "grammarIncompleteNewlineContinuation": true,
+      "nestedComments": true,
+      "stringInterpolationAndRawMultiline": true,
       "returnUsesArrowOnly": true,
       "specializedDeclaredResultIsRequired": true,
       "typeRefCarrierIdentity": "generic-visible-named-declaration-symbol",
@@ -120,13 +131,13 @@
     "frozenKotlinWorkIncludes": ["M10.5-03+", "PR-99"]
   },
   "nextGate": {
-    "id": "CORE-SELF-DESCRIPTION-SEMANTIC-CORRECTION",
-    "status": "amended-implementation-pending-independent-architecture-and-exact-head-validation",
+    "id": "BINDING-CORE-EBNF",
+    "status": "implementation-pending-independent-architecture-and-exact-head-validation",
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-CORRECTION-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
+    "id": "BINDING-CORE-EBNF-INDEPENDENT-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
     "status": "pending-independent-validation",
-    "reason": "The amended correction makes declaration the central self-referential meta-class, type a direct alias/syntax view, removes Args=void as a semantic state, keeps arrow-only result semantics, and makes every visible named declaration TypeRef-addressable. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until independent validation and integration."
+    "reason": "Validate the exact binding EBNF implementation, including rejection of declaration (), generic and nullable TypeRefs, fixed/open args, expression/layout/string behavior, generic named-declaration TypeRef identity, deterministic derived meta-IR, and the continued P4/PR-99/M10.5-03+ freeze. Do not merge during review."
   }
 }
