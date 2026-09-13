@@ -8,6 +8,12 @@ object ParityContract {
 
     val runnerInputs: List<String> = listOf("source", "config", "profile")
 
+    val coreAuthorityBindings: List<String> = listOf(
+        "spec/core.aidl",
+        "spec/core.authority.aidl",
+        "spec/core.compatibility.aidl",
+    )
+
     val normativeBindings: List<String> = listOf(
         "spec/language-surface-v1.json",
         "spec/ir.schema.json",
@@ -34,6 +40,7 @@ object ParityContract {
         "reference_implementation" to referenceImplementation,
         "runner_inputs" to runnerInputs.joinToString(","),
         "semantic_allowlists" to semanticAllowlists.size.toString(),
+        "core_authority_bindings" to coreAuthorityBindings.joinToString(","),
         "normative_bindings" to normativeBindings.joinToString(","),
     )
 }
