@@ -1,0 +1,16 @@
+string|ACCEPT|string|RESOLVED|
+[uuid]?|ACCEPT|[uuid]?|RESOLVED|
+string(1..80)?|ACCEPT|string(1..80)?|RESOLVED|
+Public?|ACCEPT|Public?|RESOLVED|demo.shared.Public@resolution-provider-a#0
+demo.shared.Public|ACCEPT|demo.shared.Public|RESOLVED|demo.shared.Public@resolution-provider-a#0
+Local|ACCEPT|Local|RESOLVED|demo.consumer.Local@resolution-consumer#0
+Duplicate|ACCEPT|Duplicate|AMBIGUOUS|demo.shared.Duplicate@resolution-provider-a#2,demo.shared.Duplicate@resolution-provider-b#0
+Missing|ACCEPT|Missing|UNRESOLVED|
+<blank>|REJECT|||
+string??|REJECT|||
+[string|REJECT|||
+string]|REJECT|||
+List<string>|REJECT|||
+string(min:1)|REJECT|||
+string(1..x)|REJECT|||
+string(1..2..3)|REJECT|||
