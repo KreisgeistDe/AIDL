@@ -33,7 +33,7 @@ def oracle_signature(source: str) -> str:
 
 class KotlinParserProjectionParityTest(unittest.TestCase):
     def test_shared_fixtures_are_pinned_to_python_oracle(self) -> None:
-        cases = sorted(PARITY.glob("*.aidl"))
+        cases = sorted(PARITY.glob("*.source"))
         self.assertEqual([path.stem for path in cases], ["canonical-data", "legacy-data"])
         for source_path in cases:
             with self.subTest(case=source_path.stem):
@@ -43,7 +43,7 @@ class KotlinParserProjectionParityTest(unittest.TestCase):
                 self.assertEqual(expected, actual)
 
     def test_fixture_signatures_are_deterministic(self) -> None:
-        for source_path in sorted(PARITY.glob("*.aidl")):
+        for source_path in sorted(PARITY.glob("*.source")):
             source = source_path.read_text(encoding="utf-8")
             self.assertEqual(oracle_signature(source), oracle_signature(source))
 
