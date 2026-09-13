@@ -33,109 +33,59 @@
       "slots": [
         {
           "bodyType": "source",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         },
         {
           "bodyType": "gitBlobSha1",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         },
         {
           "bodyType": "role",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         }
       ]
     },
     "declaration": {
       "arguments": [
-        {
-          "cardinality": [
-            0,
-            null
-          ],
-          "name": "*",
-          "type": {
-            "arguments": [],
-            "name": "any",
-            "optional": false
-          }
-        }
+        {"cardinality": [0, null], "name": "*", "type": {"arguments": [], "name": "any", "optional": false}}
       ],
       "modifiers": [],
       "namePolicy": "required",
-      "result": {
-        "arguments": [],
-        "name": "any",
-        "optional": false
-      },
+      "result": {"arguments": [], "name": "any", "optional": false},
       "resultRequired": false,
       "slots": [
         {
           "bodyType": "body",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [],
-            "name": "any",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "any", "optional": false}
         },
         {
           "bodyType": "semantic",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [],
-            "name": "any",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "any", "optional": false}
         }
       ]
     },
@@ -148,44 +98,21 @@
       "slots": [
         {
           "bodyType": "field",
-          "cardinality": [
-            0,
-            null
-          ],
-          "modifiers": [
-            "unique",
-            "primary"
-          ],
+          "cardinality": [0, null],
+          "modifiers": ["unique", "primary"],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [],
-            "name": "TypeRef",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "TypeRef", "optional": false}
         },
         {
           "bodyType": "invariant",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "optional",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [
-              {
-                "arguments": [],
-                "name": "bool",
-                "optional": false
-              }
-            ],
-            "name": "expression",
-            "optional": false
-          }
+          "valueType": {"arguments": [{"arguments": [], "name": "bool", "optional": false}], "name": "expression", "optional": false}
         }
       ]
     },
@@ -198,10 +125,7 @@
       "slots": [
         {
           "bodyType": "case",
-          "cardinality": [
-            1,
-            null
-          ],
+          "cardinality": [1, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
@@ -212,71 +136,29 @@
     },
     "query": {
       "arguments": [
-        {
-          "cardinality": [
-            0,
-            null
-          ],
-          "name": "*",
-          "type": {
-            "arguments": [],
-            "name": "TypeRef",
-            "optional": false
-          }
-        }
+        {"cardinality": [0, null], "name": "*", "type": {"arguments": [], "name": "TypeRef", "optional": false}}
       ],
       "modifiers": [],
       "namePolicy": "required",
-      "result": {
-        "arguments": [],
-        "name": "TypeRef",
-        "optional": false
-      },
+      "result": {"arguments": [], "name": "TypeRef", "optional": false},
       "resultRequired": true,
       "slots": [
         {
           "bodyType": "field",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [],
-            "name": "TypeRef",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "TypeRef", "optional": false}
         }
       ]
     }
   },
-  "kindAliases": {
-    "type": "declaration"
-  },
+  "kindAliases": {"type": "declaration"},
   "modifiers": {
-    "primary": {
-      "arguments": [],
-      "cardinality": [
-        0,
-        1
-      ],
-      "targets": [
-        "field"
-      ]
-    },
-    "unique": {
-      "arguments": [],
-      "cardinality": [
-        0,
-        1
-      ],
-      "targets": [
-        "field"
-      ]
-    }
+    "primary": {"arguments": [], "cardinality": [0, 1], "targets": ["field"]},
+    "unique": {"arguments": [], "cardinality": [0, 1], "targets": ["field"]}
   },
   "predeclaredTypeSymbols": [
     "CardinalityLabel",
@@ -306,5 +188,5 @@
   "role": "derived-non-authoritative-runtime-meta-ir",
   "schemaVersion": 3,
   "source": "spec/core-self-description-v1.aidl",
-  "sourceSha256": "b31ea033fee78d9df80dc69645c52f32f0b5a5559dc39750f2eec524b3112e02"
+  "sourceSha256": "465f22f2a436f6948b4ecb5e01419c922bb0537065fd1d6f5556054ca3dedcbc"
 }
