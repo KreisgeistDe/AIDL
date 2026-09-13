@@ -142,6 +142,50 @@ entity E {
 """)
         self.assertEqual(validate_source(named_enum_target, self.registry()), ())
 
+    def test_ambiguous_typeref_bases_fail_closed_for_nullable_generic_and_ref_paths(self) -> None:
+        source = unit("""
+entity Duplicate {}
+enum Duplicate {
+  case A
+}
+entity Holder {
+  field direct: Duplicate?
+  field generic: list<Duplicate?>
+  field reference: ref<Duplicate>
+}
+""")
+        diagnostics = validate_source(source, self.registry())
+        ambiguous = [item for item in diagnostics if item.code == "CORE-S023"]
+        self.assertEqual(len(ambiguous), 3)
+        self.assertTrue(
+            all("ambiguous declaration symbol 'Duplicate'" in item.message for item in ambiguous)
+        )
+        self.assertNotIn("CORE-S021", [item.code for item in diagnostics])
+        self.assertNotIn("CORE-S022", [item.code for item in diagnostics])
+
+    def test_ambiguous_result_typeref_is_order_independent(self) -> None:
+        first = unit("""
+entity Duplicate {}
+enum Duplicate {
+  case A
+}
+query Q -> Duplicate? {}
+""")
+        second = unit("""
+enum Duplicate {
+  case A
+}
+entity Duplicate {}
+query Q -> Duplicate? {}
+""")
+        for source in (first, second):
+            ambiguity = [
+                item for item in validate_source(source, self.registry())
+                if item.code == "CORE-S023"
+            ]
+            self.assertEqual(len(ambiguity), 1)
+            self.assertIn("result of declaration query", ambiguity[0].message)
+
     def test_unknown_symbol_modifier_duplicate_name_and_order_fail(self) -> None:
         source = unit("""
 entity E {
