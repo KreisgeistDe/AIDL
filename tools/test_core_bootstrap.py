@@ -119,6 +119,8 @@ class CoreBootstrapTest(unittest.TestCase):
                 "ModifierDefinition",
                 "BodySlotDefinition",
                 "DeclarationDefinition",
+                "MetaCombinatorDefinition",
+                "SemanticMetaModel",
                 "declaration",
                 "body",
             }.issubset(names)
@@ -143,13 +145,21 @@ class CoreBootstrapTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(transition["phase"], "I2")
-        self.assertEqual(transition["completedPhases"], ["D0", "I1"])
+        self.assertEqual(transition["phase"], "V1")
+        self.assertEqual(transition["completedPhases"], ["D0", "I1", "I2"])
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
         self.assertTrue(
             transition["revision4"]["remainsProductionCompatibilityOracleUntilG1"]
         )
         self.assertFalse(transition["coreSource"]["projectWideAuthorityFlipComplete"])
+        self.assertNotIn(
+            "V1-independent-broad-validation",
+            transition["blockedUntilSeparatePhases"],
+        )
+        self.assertIn(
+            "G1-project-wide-authority-flip",
+            transition["blockedUntilSeparatePhases"],
+        )
 
     def test_projection_drift_fails_deterministically(self) -> None:
         source = (
