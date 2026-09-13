@@ -27,22 +27,71 @@ class CoreSelfDescriptionTest(unittest.TestCase):
         self.assertEqual(checked, semantic_meta_ir_text(CORE))
         check_semantic_meta_ir(CORE, checked)
         payload = json.loads(checked)
+        self.assertEqual(payload["schemaVersion"], 2)
         self.assertFalse(payload["authorityInput"])
         self.assertEqual(payload["role"], "derived-non-authoritative-runtime-meta-ir")
+        self.assertNotIn("typeCarriers", payload)
+        self.assertIn("predeclaredTypeSymbols", payload)
 
-    def test_direct_contracts_and_aidl_type_carriers_drive_semantics(self) -> None:
+    def test_corrected_direct_contracts_cover_args_return_and_symbol_identity(self) -> None:
         model = load_self_described_core()
-        for kind in ("declaration", "type", "enum", "entity", "compatibilityProjection"):
+        for kind in ("declaration", "type", "enum", "entity", "query", "compatibilityProjection"):
             self.assertIn(kind, model.contracts)
-        for carrier in ("string", "bool", "int", "NamePolicy", "CardinalityLabel"):
-            self.assertIn(carrier, model.type_carriers)
+        for symbol in ("string", "bool", "int", "NamePolicy", "CardinalityLabel", "myQuery"):
+            self.assertIn(symbol, model.symbols)
+        base = model.contracts["declaration"]
+        enum = model.contracts["enum"]
+        query = model.contracts["query"]
         entity = model.contracts["entity"]
+        self.assertIsNotNone(base.arguments)
+        self.assertEqual(base.result.name, "any")
+        self.assertIsNone(enum.arguments)
+        self.assertIsNone(enum.result)
+        self.assertEqual(query.arguments.value_type.name, "type")
+        self.assertEqual(query.result.name, "type")
         field = next(item for item in entity.body if item.body_type == "field")
-        invariant = next(item for item in entity.body if item.body_type == "invariant")
-        self.assertEqual(field.expected_type.name, "choice")
-        self.assertEqual(invariant.expected_type.name, "expression")
+        self.assertEqual(field.expected_type.name, "type")
 
-    def test_no_definition_object_meta_model_is_normative_in_direct_source(self) -> None:
+    def test_required_acceptance_examples_compile_without_kind_specific_host_rules(self) -> None:
+        self.assertNotIn("produces(", CORE)
+        self.assertNotIn("type-position", CORE)
+        self.assertIn("declaration declaration", CORE)
+        self.assertIn("-> any", CORE)
+        self.assertIn("declaration enum", CORE)
+        self.assertIn("declaration query", CORE)
+        self.assertIn("-> type", CORE)
+        self.assertIn("type string {}", CORE)
+        self.assertIn("type bool {}", CORE)
+        self.assertIn("type int {}", CORE)
+        self.assertIn("enum NamePolicy", CORE)
+        self.assertIn("field state: NamePolicy", CORE)
+        self.assertIn("query myQuery(id: Id) -> Page<myQuery>", CORE)
+        load_self_described_core()
+
+    def test_void_args_and_return_fail_closed(self) -> None:
+        with self.assertRaisesRegex(CoreSelfDescriptionError, "Args=void"):
+            compile_self_described_core(CORE.replace("enum NamePolicy {", "enum NamePolicy() {"))
+        with self.assertRaisesRegex(CoreSelfDescriptionError, "Return=void"):
+            compile_self_described_core(CORE.replace("enum NamePolicy {", "enum NamePolicy -> string {"))
+
+    def test_named_symbol_typeref_resolution_is_generic_and_fails_closed(self) -> None:
+        extended = CORE + """
+
+declaration widget(name: name(required)) {
+  body value: body(type, name(required), cardinal(1, 1))
+}
+widget Demo {
+  value item: NamePolicy
+}
+"""
+        model = compile_self_described_core(extended)
+        self.assertIn("widget", model.contracts)
+        self.assertIn("Demo", model.symbols)
+        broken = CORE.replace("field state: NamePolicy", "field state: MissingType")
+        with self.assertRaisesRegex(CoreSelfDescriptionError, "unresolved type symbol"):
+            compile_self_described_core(broken)
+
+    def test_no_definition_object_or_obsolete_carrier_meta_model_is_normative(self) -> None:
         for fragment in (
             "ArgumentDefinition",
             "ModifierDefinition",
@@ -50,24 +99,10 @@ class CoreSelfDescriptionTest(unittest.TestCase):
             "DeclarationDefinition",
             "MetaCombinatorDefinition",
             "SemanticMetaModel",
+            "produces(type)",
+            "type-position",
         ):
             self.assertNotIn(fragment, CORE)
-
-    def test_new_kind_needs_no_host_catalog_and_invalid_carrier_fails_closed(self) -> None:
-        extended = CORE + """
-
-declaration widget(name: name(required)) {
-  body value: body(type-position, name(required), cardinal(1, 1))
-}
-widget Demo {
-  value item: string
-}
-"""
-        model = compile_self_described_core(extended)
-        self.assertIn("widget", model.contracts)
-        broken = CORE.replace("field state: NamePolicy", "field state: MissingType")
-        with self.assertRaisesRegex(CoreSelfDescriptionError, "unresolved type carrier"):
-            compile_self_described_core(broken)
 
     def test_meta_ir_drift_fails_closed(self) -> None:
         drifted = META_IR_PATH.read_text(encoding="utf-8").replace(
