@@ -208,12 +208,43 @@ def _count_named(items: Iterable[tuple[str, Value]]) -> dict[str, list[Value]]:
     return result
 
 
+def _symbol_table(declarations: Iterable[Declaration]) -> dict[str, Declaration | None]:
+    symbols: dict[str, Declaration | None] = {}
+    for declaration in declarations:
+        name = declaration.name
+        if name is None:
+            continue
+        if name in symbols:
+            symbols[name] = None
+        else:
+            symbols[name] = declaration
+    return symbols
+
+
+def _ambiguous_symbol(
+    diagnostics: list[SemanticDiagnostic],
+    name: str,
+    line: int,
+    column: int,
+    subject: str,
+) -> None:
+    diagnostics.append(
+        SemanticDiagnostic(
+            "CORE-S023",
+            line,
+            column,
+            f"ambiguous declaration symbol {name!r} referenced by {subject}",
+            "exactly one visible named declaration",
+        )
+    )
+
+
 def _validate_arguments(
     diagnostics: list[SemanticDiagnostic],
     actual: tuple[tuple[str, Value], ...],
     contracts: tuple[ArgumentContract, ...],
     registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
+    symbols: dict[str, Declaration | None],
     env: dict[str, TypeRef],
     line: int,
     column: int,
@@ -240,7 +271,7 @@ def _validate_actual_type_ref(
     diagnostics: list[SemanticDiagnostic],
     actual: TypeRef,
     registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
+    symbols: dict[str, Declaration | None],
     line: int,
     column: int,
     subject: str,
@@ -251,8 +282,12 @@ def _validate_actual_type_ref(
             diagnostics.append(SemanticDiagnostic("CORE-S020", line, column, f"{subject} uses {actual.name} with {len(actual.arguments)} type argument(s)", combinator.arguments.describe()))
         if combinator.behavior == "declaration-ref-kind" and actual.arguments:
             target = actual.arguments[-1].name
-            if target not in symbols and target not in registry.declarations:
+            if target in symbols and symbols[target] is None:
+                _ambiguous_symbol(diagnostics, target, line, column, subject)
+            elif target not in symbols and target not in registry.declarations:
                 diagnostics.append(SemanticDiagnostic("CORE-S021", line, column, f"unresolved declaration reference {target!r}", "resolvable declaration reference"))
+    elif actual.name in symbols and symbols[actual.name] is None:
+        _ambiguous_symbol(diagnostics, actual.name, line, column, subject)
     elif actual.name not in BUILTIN_TYPES and actual.name not in {"list", "TypeRef"} and actual.name not in symbols and actual.name not in registry.declarations:
         diagnostics.append(SemanticDiagnostic("CORE-S022", line, column, f"unknown TypeRef base {actual.name!r}", "builtin, declared type, declaration kind, or Core combinator"))
     for argument in actual.arguments:
@@ -264,7 +299,7 @@ def _validate_value(
     value: Value,
     expected: TypeRef,
     registry: SemanticRegistry,
-    symbols: dict[str, Declaration],
+    symbols: dict[str, Declaration | None],
     env: dict[str, TypeRef],
     line: int,
     column: int,
@@ -295,6 +330,9 @@ def _validate_value(
             diagnostics.append(SemanticDiagnostic("CORE-S011", line, column, f"{subject} is not a declaration reference", _fmt_type(expected)))
             return
         target_name = actual.arguments[0].name
+        if target_name in symbols and symbols[target_name] is None:
+            _ambiguous_symbol(diagnostics, target_name, line, column, subject)
+            return
         target = symbols.get(target_name)
         if target is None:
             diagnostics.append(SemanticDiagnostic("CORE-S012", line, column, f"unresolved reference {target_name!r}", f"ref<{expected.arguments[0].name}>"))
@@ -347,7 +385,7 @@ def _validate_value(
 def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDiagnostic, ...]:
     program = parse_source(source)
     spans = _SourceSpans(source)
-    symbols = {item.name: item for item in program.declarations if item.name is not None}
+    symbols = _symbol_table(program.declarations)
     diagnostics: list[SemanticDiagnostic] = []
     declaration_cursor = 0
     for declaration in program.declarations:
