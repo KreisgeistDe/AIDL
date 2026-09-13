@@ -1,10 +1,16 @@
 {
   "schema_version": "aidl.m10.5-python-parity-baseline/v1",
   "authority": "M10.5-01",
-  "status": "refreshed-post-m10.3-candidate",
+  "status": "post-g1-current-main-candidate",
   "normative_language_source": false,
   "reference_implementation": "python",
-  "baseline_base_commit": "cbe34ce18dfa696c3bcbf30b6b37af53989112d6",
+  "baseline_base_commit": "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
+  "semantic_authority": {
+    "permanent_source": "spec/core.aidl",
+    "compatibility_contract": "spec/core.authority.aidl",
+    "compatibility_binding": "spec/core.compatibility.aidl",
+    "revision4_role": "core-authorized-compatibility-evidence"
+  },
   "runner_inputs": [
     "source",
     "config",
@@ -37,6 +43,9 @@
     "semantic_allowlists": []
   },
   "normative_bindings": [
+    "spec/core.aidl",
+    "spec/core.authority.aidl",
+    "spec/core.compatibility.aidl",
     "spec/language-surface-v1.json",
     "spec/ir.schema.json",
     "spec/profile-registry.json",
@@ -45,6 +54,19 @@
     "spec/m10-3-closure-certification.json"
   ],
   "parity_inventory": [
+    {
+      "id": "core_authority_and_conformance",
+      "evidence": [
+        "spec/core.domain.aidl",
+        "spec/core-registry-v1.json",
+        "spec/core-authority-transition-v1.json",
+        "tools/core_authority.py",
+        "tools/core_semantics.py",
+        "tools/test_core_authority.py",
+        "tools/test_core_bootstrap.py",
+        "tools/test_core_semantics.py"
+      ]
+    },
     {
       "id": "source_projection",
       "evidence": [
@@ -117,7 +139,10 @@
       "tools/test_m5_fixture_corpus.py"
     ],
     "core_conformance": [
-      "spec/conformance-manifest.json"
+      "spec/conformance-manifest.json",
+      "tools/test_core_authority.py",
+      "tools/test_core_bootstrap.py",
+      "tools/test_core_semantics.py"
     ],
     "negative_diagnostics": [
       "tools/test_compiler_diagnostics.py"
@@ -131,6 +156,7 @@
       "examples/videohub/README.md"
     ],
     "compatibility": [
+      "tools/core_authority.py",
       "tools/ir_compatibility.py",
       "tools/test_ir_compatibility.py"
     ],
