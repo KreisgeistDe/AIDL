@@ -9,6 +9,7 @@ from pathlib import Path
 
 from tools.m10_5_python_parity_baseline import (
     BASELINE_BASE_COMMIT,
+    CORE_AUTHORITY_BINDINGS,
     RUNNER_INPUTS,
     SEMANTIC_AUTHORITY,
     SEMANTIC_DIMENSIONS,
@@ -36,6 +37,7 @@ class M105PythonParityBaselineTest(unittest.TestCase):
         self.assertEqual(manifest["status"], "post-g1-current-main-candidate")
         self.assertEqual(manifest["baseline_base_commit"], BASELINE_BASE_COMMIT)
         self.assertEqual(manifest["semantic_authority"], SEMANTIC_AUTHORITY)
+        self.assertEqual(set(manifest["core_authority_bindings"]), CORE_AUTHORITY_BINDINGS)
         self.assertEqual(manifest["runner_inputs"], ["source", "config", "profile"])
         self.assertEqual(tuple(manifest["runner_inputs"]), RUNNER_INPUTS)
         self.assertEqual(manifest["comparison_contract"]["semantic_allowlists"], [])
@@ -46,10 +48,9 @@ class M105PythonParityBaselineTest(unittest.TestCase):
 
     def test_core_authority_schema_profile_and_closure_inputs_are_fingerprint_bound(self) -> None:
         evidence = build_parity_evidence()
+        core_bound = {row["path"] for row in evidence["core_authority_bindings"]}
+        self.assertEqual(core_bound, CORE_AUTHORITY_BINDINGS)
         bound = {row["path"] for row in evidence["normative_bindings"]}
-        self.assertIn("spec/core.aidl", bound)
-        self.assertIn("spec/core.authority.aidl", bound)
-        self.assertIn("spec/core.compatibility.aidl", bound)
         self.assertIn("spec/language-surface-v1.json", bound)
         self.assertIn("spec/ir.schema.json", bound)
         self.assertIn("spec/profile-registry.json", bound)
@@ -90,8 +91,17 @@ class M105PythonParityBaselineTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Core semantic authority boundary drift"):
             validate_manifest(manifest=manifest)
 
+        manifest = copy.deepcopy(self.manifest)
+        manifest["core_authority_bindings"].pop()
+        with self.assertRaisesRegex(ValueError, "Core authority binding inventory drift"):
+            validate_manifest(manifest=manifest)
+
     def _copy_bound_repository(self, root: Path) -> None:
-        paths = {"spec/m10-5-parity-manifest.json", *self.manifest["normative_bindings"]}
+        paths = {
+            "spec/m10-5-parity-manifest.json",
+            *self.manifest["core_authority_bindings"],
+            *self.manifest["normative_bindings"],
+        }
         for surface in self.manifest["parity_inventory"]:
             paths.update(surface["evidence"])
         for values in self.manifest["parity_corpus"].values():
