@@ -8,7 +8,9 @@ import unittest
 from pathlib import Path
 
 from tools.m10_5_python_parity_baseline import (
+    BASELINE_BASE_COMMIT,
     RUNNER_INPUTS,
+    SEMANTIC_AUTHORITY,
     SEMANTIC_DIMENSIONS,
     assert_fingerprint,
     build_input_identity,
@@ -27,10 +29,13 @@ class M105PythonParityBaselineTest(unittest.TestCase):
             (cls.root / "spec/m10-5-parity-manifest.json").read_text(encoding="utf-8")
         )
 
-    def test_manifest_is_post_m10_3_python_reference_and_exact_runner_inputs(self) -> None:
+    def test_manifest_is_post_g1_current_main_python_reference(self) -> None:
         manifest = validate_manifest()
         self.assertEqual(manifest["reference_implementation"], "python")
         self.assertFalse(manifest["normative_language_source"])
+        self.assertEqual(manifest["status"], "post-g1-current-main-candidate")
+        self.assertEqual(manifest["baseline_base_commit"], BASELINE_BASE_COMMIT)
+        self.assertEqual(manifest["semantic_authority"], SEMANTIC_AUTHORITY)
         self.assertEqual(manifest["runner_inputs"], ["source", "config", "profile"])
         self.assertEqual(tuple(manifest["runner_inputs"]), RUNNER_INPUTS)
         self.assertEqual(manifest["comparison_contract"]["semantic_allowlists"], [])
@@ -39,13 +44,18 @@ class M105PythonParityBaselineTest(unittest.TestCase):
             SEMANTIC_DIMENSIONS,
         )
 
-    def test_required_schema_profile_and_closure_authorities_are_fingerprint_bound(self) -> None:
+    def test_core_authority_schema_profile_and_closure_inputs_are_fingerprint_bound(self) -> None:
         evidence = build_parity_evidence()
         bound = {row["path"] for row in evidence["normative_bindings"]}
+        self.assertIn("spec/core.aidl", bound)
+        self.assertIn("spec/core.authority.aidl", bound)
+        self.assertIn("spec/core.compatibility.aidl", bound)
+        self.assertIn("spec/language-surface-v1.json", bound)
         self.assertIn("spec/ir.schema.json", bound)
         self.assertIn("spec/profile-registry.json", bound)
-        self.assertIn("spec/language-surface-v1.json", bound)
+        self.assertIn("spec/m10-2-language-surface-classification.json", bound)
         self.assertIn("spec/m10-3-closure-certification.json", bound)
+        self.assertEqual(evidence["semantic_authority"], SEMANTIC_AUTHORITY)
         self.assertTrue(evidence["fingerprint"].startswith("sha256:"))
         self.assertEqual(build_parity_evidence(), build_parity_evidence())
 
@@ -64,15 +74,20 @@ class M105PythonParityBaselineTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly source, config, profile"):
             validate_input_identity(extra)
 
-    def test_manifest_runner_input_drift_fails_closed(self) -> None:
+    def test_manifest_runner_input_and_authority_drift_fail_closed(self) -> None:
         manifest = copy.deepcopy(self.manifest)
         manifest["runner_inputs"] = ["source", "profile"]
         with self.assertRaisesRegex(ValueError, "runner_inputs must be exactly"):
             validate_manifest(manifest=manifest)
 
         manifest = copy.deepcopy(self.manifest)
-        manifest["runner_inputs"] = ["source", "config", "profile", "workspace"]
-        with self.assertRaisesRegex(ValueError, "runner_inputs must be exactly"):
+        manifest["baseline_base_commit"] = "cbe34ce18dfa696c3bcbf30b6b37af53989112d6"
+        with self.assertRaisesRegex(ValueError, "post-G1 baseline base commit drift"):
+            validate_manifest(manifest=manifest)
+
+        manifest = copy.deepcopy(self.manifest)
+        manifest["semantic_authority"]["revision4_role"] = "semantic-authority"
+        with self.assertRaisesRegex(ValueError, "Core semantic authority boundary drift"):
             validate_manifest(manifest=manifest)
 
     def _copy_bound_repository(self, root: Path) -> None:
@@ -87,27 +102,31 @@ class M105PythonParityBaselineTest(unittest.TestCase):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, target)
 
-    def test_fingerprint_drift_fails_closed_when_bound_ir_schema_changes(self) -> None:
+    def _assert_bound_file_drift_changes_fingerprint(self, relative: str) -> None:
         baseline = build_parity_evidence()
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._copy_bound_repository(root)
-            target = root / "spec/ir.schema.json"
-            target.write_text(target.read_text(encoding="utf-8") + "\n", encoding="utf-8")
+            target = root / relative
+            target.write_bytes(target.read_bytes() + b"\n")
             changed = build_parity_evidence(repo_root=root)
             self.assertNotEqual(changed["fingerprint"], baseline["fingerprint"])
             with self.assertRaisesRegex(ValueError, "parity fingerprint drift detected"):
                 assert_fingerprint(baseline["fingerprint"], changed["fingerprint"])
 
-    def test_profile_registry_drift_changes_fingerprint(self) -> None:
-        baseline = build_parity_evidence()
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            self._copy_bound_repository(root)
-            target = root / "spec/profile-registry.json"
-            target.write_text(target.read_text(encoding="utf-8") + "\n", encoding="utf-8")
-            changed = build_parity_evidence(repo_root=root)
-            self.assertNotEqual(changed["fingerprint"], baseline["fingerprint"])
+    def test_fingerprint_fails_closed_on_core_authority_compatibility_drift(self) -> None:
+        for relative in (
+            "spec/core.aidl",
+            "spec/core.authority.aidl",
+            "spec/core.compatibility.aidl",
+        ):
+            with self.subTest(relative=relative):
+                self._assert_bound_file_drift_changes_fingerprint(relative)
+
+    def test_fingerprint_drift_fails_closed_when_ir_or_profile_changes(self) -> None:
+        for relative in ("spec/ir.schema.json", "spec/profile-registry.json"):
+            with self.subTest(relative=relative):
+                self._assert_bound_file_drift_changes_fingerprint(relative)
 
     def test_structured_mismatch_reporting_has_no_semantic_allowlist(self) -> None:
         fingerprint = build_parity_evidence()["fingerprint"]
@@ -160,10 +179,11 @@ class M105PythonParityBaselineTest(unittest.TestCase):
                 actual_fingerprint="sha256:" + "0" * 64,
             )
 
-    def test_todo_projects_refreshed_candidate_without_starting_m10_5_02(self) -> None:
+    def test_todo_projects_new_post_g1_candidate_without_starting_m10_5_02(self) -> None:
         todo = (self.root / "TODO.md").read_text(encoding="utf-8")
-        self.assertIn("PR #77 is the focused candidate", todo)
-        self.assertIn("Completion requires fresh independent validation and integration", todo)
+        self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
+        self.assertIn("post-G1 current-main Gate-01 refresh candidate", todo)
+        self.assertIn("requires fresh independent validation and integration", todo)
         self.assertIn("M10.5-02 and later Kotlin work", todo)
         self.assertIn("Blocked until M10.5-01 is durably integrated", todo)
 
