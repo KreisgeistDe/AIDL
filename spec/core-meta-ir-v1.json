@@ -289,7 +289,6 @@
     "choice",
     "compatibilityProjection",
     "declaration",
-    "declarationAliasExample",
     "entity",
     "enum",
     "expression",
@@ -307,5 +306,5 @@
   "role": "derived-non-authoritative-runtime-meta-ir",
   "schemaVersion": 3,
   "source": "spec/core-self-description-v1.aidl",
-  "sourceSha256": "b6e13a892b08c0d04a6a624adffecbce05a3054199c8e80cc7f30b8786860caa"
+  "sourceSha256": "b31ea033fee78d9df80dc69645c52f32f0b5a5559dc39750f2eec524b3112e02"
 }
