@@ -1,9 +1,10 @@
 {
   "schemaVersion": 1,
-  "phase": "I2",
+  "phase": "V1",
   "completedPhases": [
     "D0",
-    "I1"
+    "I1",
+    "I2"
   ],
   "coreSource": {
     "path": "spec/core.aidl",
@@ -36,7 +37,6 @@
     "remainsProductionCompatibilityOracleUntilG1": true
   },
   "blockedUntilSeparatePhases": [
-    "V1-independent-broad-validation",
     "G1-project-wide-authority-flip",
     "semantics-dependent-future-M10.5"
   ]
