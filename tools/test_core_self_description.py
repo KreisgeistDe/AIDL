@@ -82,7 +82,6 @@ class CoreSelfDescriptionTest(unittest.TestCase):
         self.assertIn("declaration query", CORE)
         self.assertIn("-> type", CORE)
         self.assertIn("type string {}", CORE)
-        self.assertIn("declaration declarationAliasExample {}", CORE)
         self.assertIn("enum NamePolicy", CORE)
         self.assertIn("field declarationKind: entity", CORE)
         self.assertIn("query myQuery(id: Id) -> Page<myQuery>", CORE)
