@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "kernelVersion": 1,
+  "owns": [
+    "lexical-rules",
+    "module-import-directives",
+    "uniform-declaration-envelope",
+    "recursive-generic-type-ref-syntax",
+    "primitive-list-object-literals",
+    "body-entry-framing",
+    "modifier-call-tokenization"
+  ],
+  "declarationEnvelope": "[export] <kind> [<identifier>] [(<named-args>)] [-> <typeRef>] { <body-entries>* }",
+  "typeRef": {
+    "qualifiedNames": true,
+    "recursiveGenerics": true,
+    "trailingOptionality": true
+  },
+  "modifierCall": {
+    "prefix": "@",
+    "namedArgumentsOnly": true
+  },
+  "bodyForms": [
+    "inline",
+    "multiline-v1",
+    "multiline-v2"
+  ],
+  "excludes": [
+    "domain-declaration-catalog",
+    "name-policy-validation",
+    "body-slot-semantic-validation",
+    "modifier-target-validation",
+    "reference-kind-validation",
+    "expression-typechecking",
+    "production-admission"
+  ]
+}
