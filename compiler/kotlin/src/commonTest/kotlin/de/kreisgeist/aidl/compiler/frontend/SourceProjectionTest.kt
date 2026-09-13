@@ -11,12 +11,11 @@ class SourceProjectionTest {
         val source = """
             module parity.canonical
             import parity.shared.Types
-            import parity.shared.*
 
             export enum Status { active, archived }
             export value PetInput {
               name: string required
-              note: string default "pet\\"name"
+              note: string default "pet name"
             }
             export entity Pet {
               field id: uuid primary
@@ -28,13 +27,22 @@ class SourceProjectionTest {
         val second = AidlSourceProjector.project(source)
         assertEquals(first, second)
         assertEquals("parity.canonical", first.module)
-        assertEquals(listOf("parity.shared.Types", "parity.shared.*"), first.imports)
+        assertEquals(listOf("parity.shared.Types"), first.imports)
         assertEquals(
-            "module=parity.canonical\nimports=parity.shared.Types,parity.shared.*\n" +
+            "module=parity.canonical\nimports=parity.shared.Types\n" +
                 "declarations=enum:Status:true,value:PetInput:true,entity:Pet:true",
             first.stableSignature(),
         )
-        assertTrue(first.declarations[1].bodyTokens.contains("\"pet\\\"name\""))
+        assertTrue(first.declarations[1].bodyTokens.contains("\"pet name\""))
+    }
+
+    @Test
+    fun projectsWildcardImportAndEscapedString() {
+        val projection = AidlSourceProjector.project(
+            "module parity.extra\nimport parity.shared.*\nexport value V { note: string default \"pet\\\"name\" }\n",
+        )
+        assertEquals(listOf("parity.shared.*"), projection.imports)
+        assertTrue(projection.declarations.single().bodyTokens.contains("\"pet\\\"name\""))
     }
 
     @Test
@@ -123,6 +131,13 @@ class SourceProjectionTest {
         assertFailsWith<SourceProjectionException> {
             AidlSourceProjector.project("export value V { x: string # }")
         }
+    }
+
+    @Test
+    fun failsClosedForBadQualifiedNamesAndLineTails() {
+        assertFailsWith<SourceProjectionException> { AidlSourceProjector.project("module 123\n") }
+        assertFailsWith<SourceProjectionException> { AidlSourceProjector.project("module a.\n") }
+        assertFailsWith<SourceProjectionException> { AidlSourceProjector.project("module a trailing\n") }
     }
 
     @Test
