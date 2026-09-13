@@ -161,9 +161,9 @@ class CoreBootstrapTest(unittest.TestCase):
             "b90c44912d7f82450c2190473035bce14bef828d",
         )
         self.assertEqual(transition["nextGate"]["id"], "M10.5-01")
-        self.assertEqual(transition["nextGate"]["status"], "implementation-candidate")
-        self.assertTrue(transition["nextGate"]["requiresPostG1CurrentMainRefreshRevalidation"])
-        self.assertTrue(transition["nextGate"]["laterSemanticKotlinBlockedUntilComplete"])
+        self.assertEqual(transition["nextGate"]["status"], "complete")
+        self.assertFalse(transition["nextGate"]["requiresPostG1CurrentMainRefreshRevalidation"])
+        self.assertFalse(transition["nextGate"]["laterSemanticKotlinBlockedUntilComplete"])
         evidence = transition["nextGate"]["historicalMergedEvidence"]
         self.assertEqual(evidence["pr"], 77)
         self.assertEqual(
@@ -172,14 +172,28 @@ class CoreBootstrapTest(unittest.TestCase):
         )
         self.assertEqual(evidence["role"], "historical-provisional-parity-evidence")
         self.assertFalse(evidence["pendingIntegrationTarget"])
-        candidate = transition["nextGate"]["postG1CurrentMainRefresh"]
+        accepted = transition["nextGate"]["postG1CurrentMainRefresh"]
         self.assertEqual(
-            candidate["baselineBaseCommit"],
+            accepted["baselineBaseCommit"],
             "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
         )
-        self.assertEqual(candidate["manifest"], "spec/m10-5-parity-manifest.json")
-        self.assertTrue(candidate["independentValidationRequired"])
-        self.assertFalse(candidate["integratedOnMain"])
+        self.assertEqual(accepted["manifest"], "spec/m10-5-parity-manifest.json")
+        self.assertEqual(accepted["implementationPr"], 94)
+        self.assertEqual(
+            accepted["implementationHead"],
+            "9228f94302c1fbbc6cd5fc0b5fc7af9231071d76",
+        )
+        self.assertTrue(accepted["independentlyValidated"])
+        self.assertTrue(accepted["integratedOnMain"])
+        self.assertEqual(
+            accepted["mainCommit"],
+            "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9",
+        )
+        self.assertEqual(transition["nextAction"]["id"], "M10.5-02")
+        self.assertEqual(
+            transition["nextAction"]["status"],
+            "blocked-pending-gate01-status-reconciliation-integration",
+        )
 
     def test_post_g1_durable_status_is_consistent_across_authority_sources(self) -> None:
         transition = json.loads(
@@ -191,23 +205,31 @@ class CoreBootstrapTest(unittest.TestCase):
         authority_doc = (ROOT / "docs" / "core-language-authority-gate.md").read_text(
             encoding="utf-8"
         )
+        parity_doc = (ROOT / "docs" / "m10-5-parity-evidence.md").read_text(
+            encoding="utf-8"
+        )
 
         self.assertIn("G1", transition["completedPhases"])
         self.assertTrue(transition["integrationState"]["g1IntegratedOnMain"])
         self.assertNotIn("candidateState", transition)
         self.assertIn("- [x] **G1 — Core authority integration/flip.**", todo)
         self.assertNotIn("G1 remains unchecked", todo)
-        self.assertIn("M10.5-01 — Refresh the Python parity baseline", todo)
-        self.assertIn("**Current post-G1 candidate.**", todo)
+        self.assertIn("- [x] **M10.5-01 — Refresh the Python parity baseline", todo)
+        self.assertIn("PR #94", todo)
+        self.assertIn("9228f94302c1fbbc6cd5fc0b5fc7af9231071d76", todo)
+        self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", todo)
         self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
-        self.assertIn("post-G1 current-main Gate-01 refresh candidate", todo)
-        self.assertIn("requires fresh independent validation and integration", todo)
+        self.assertIn("M10.5-02 and later Kotlin work", todo)
+        self.assertIn("blocked until this durable-state correction", todo.lower())
         self.assertNotIn("PR #77 remains candidate compatibility evidence only and is not validated or integrated", authority_doc)
         self.assertIn("D0, I1, I2, V1 and G1 are complete and integrated.", authority_doc)
-        self.assertIn("M10.5-01 is the next dependency-ready gate", authority_doc)
-        self.assertIn("PR #77 is already-merged historical/provisional M10.5-01 parity evidence", authority_doc)
-        self.assertIn("it is not a pending integration target", authority_doc)
-        self.assertIn("separate current-main M10.5-01 refresh/revalidation package", authority_doc)
+        self.assertIn("PR #77 remains already-merged historical/provisional M10.5-01 parity evidence", authority_doc)
+        self.assertIn("not a pending integration target", authority_doc)
+        self.assertIn("M10.5-01 refresh is now complete", authority_doc)
+        self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", authority_doc)
+        self.assertIn("Gate 01 is complete through independently validated and integrated PR #94", parity_doc)
+        self.assertNotIn("requires fresh independent validation and later integration before Gate 01 is complete", authority_doc)
+        self.assertNotIn("M10.5-01 remains incomplete until this new candidate", parity_doc)
         self.assertNotIn("This branch implements G1", authority_doc)
 
     def test_projection_drift_fails_deterministically(self) -> None:
