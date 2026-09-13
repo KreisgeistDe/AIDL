@@ -139,25 +139,28 @@ class CoreBootstrapTest(unittest.TestCase):
             ["inline", "multiline-v1", "multiline-v2"],
         )
 
-    def test_revision4_is_transition_evidence_not_second_core_authority(self) -> None:
+    def test_revision4_is_core_authorized_compatibility_not_semantic_authority(self) -> None:
         transition = json.loads(
             (ROOT / "spec" / "core-authority-transition-v1.json").read_text(
                 encoding="utf-8"
             )
         )
-        self.assertEqual(transition["phase"], "V1")
-        self.assertEqual(transition["completedPhases"], ["D0", "I1", "I2"])
+        self.assertEqual(transition["phase"], "G1")
+        self.assertEqual(transition["completedPhases"], ["D0", "I1", "I2", "V1"])
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
-        self.assertTrue(
+        self.assertFalse(
             transition["revision4"]["remainsProductionCompatibilityOracleUntilG1"]
         )
-        self.assertFalse(transition["coreSource"]["projectWideAuthorityFlipComplete"])
+        self.assertTrue(transition["revision4"]["productionUseRequiresCoreAuthorization"])
+        self.assertTrue(transition["coreSource"]["projectWideAuthorityFlipComplete"])
+        self.assertTrue(transition["candidateState"]["g1ImplementedOnCandidate"])
+        self.assertFalse(transition["candidateState"]["integratedOnMain"])
         self.assertNotIn(
-            "V1-independent-broad-validation",
+            "G1-project-wide-authority-flip",
             transition["blockedUntilSeparatePhases"],
         )
         self.assertIn(
-            "G1-project-wide-authority-flip",
+            "semantics-dependent-future-M10.5",
             transition["blockedUntilSeparatePhases"],
         )
 

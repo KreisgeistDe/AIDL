@@ -17,9 +17,9 @@
   "source_rules": [
     {
       "id": "core-authority-transition-source",
-      "pattern": "^spec/core(?:\\.domain)?\\.aidl$",
+      "pattern": "^spec/core(?:\\.(?:domain|authority|compatibility))?\\.aidl$",
       "class": "canonical-but-not-yet-admitted",
-      "note": "Core transition sources are normative for the isolated Bootstrap/Core path through I2 but are not production-admitted and do not complete the G1 project-wide authority flip."
+      "note": "Core gate sources are normative or Core-authored authority/compatibility modules. They are not ordinary production application sources and do not widen parser/runtime admission by themselves."
     },
     {
       "id": "reference-app-sources",

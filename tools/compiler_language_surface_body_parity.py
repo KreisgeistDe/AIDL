@@ -1,19 +1,23 @@
-"""Contract-driven M10.1 operation-body parity for the production bridge.
+"""Core-authorized operation-body parity for the legacy production bridge.
 
-This adapter extends the existing ``LanguageSurfaceBridge`` only for body-slot
-shapes already declared by ``spec/language-surface-v1.json``. It intentionally
-owns no clause inventory of its own: the frozen contract remains the only table
-that decides which query/mutation body facts may enter canonical semantics.
+The legacy parser and revision-4 projection remain compatibility/migration
+infrastructure only. Before this production adapter may consume the frozen
+revision-4 table, ``Core`` must authorize the exact artifact through
+``spec/core.authority.aidl`` plus ``spec/core.compatibility.aidl``. This keeps
+legacy recognition and deterministic compatibility evidence without allowing
+revision 4 to evolve as an independent semantic authority after G1.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, Mapping
 
 try:
     from .aidl_parser import Node
     from .compiler_language_surface import (
+        CONTRACT_PATH,
         BodySlot,
         BridgeDiagnostic,
         Declaration,
@@ -27,9 +31,11 @@ try:
         _literal,
         _surface,
     )
+    from .core_authority import assert_revision4_compatibility_authorized
 except ImportError:  # pragma: no cover
     from aidl_parser import Node
     from compiler_language_surface import (
+        CONTRACT_PATH,
         BodySlot,
         BridgeDiagnostic,
         Declaration,
@@ -43,12 +49,15 @@ except ImportError:  # pragma: no cover
         _literal,
         _surface,
     )
+    from core_authority import assert_revision4_compatibility_authorized
 
 
 class ContractBodyParityBridge(LanguageSurfaceBridge):
-    """Normalize only contract-declared operation body slots losslessly."""
+    """Normalize only Core-authorized compatibility-projection body slots losslessly."""
 
     def __init__(self, *args: Any, operation_errors_evidence: tuple[Any, ...] = (), **kwargs: Any) -> None:
+        contract_path = Path(args[0]) if args else Path(kwargs.get("contract_path", CONTRACT_PATH))
+        assert_revision4_compatibility_authorized(contract_path)
         super().__init__(*args, **kwargs)
         self.operation_errors_evidence = tuple(operation_errors_evidence)
 
