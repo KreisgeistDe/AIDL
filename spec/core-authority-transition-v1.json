@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "phase": "I1",
+  "coreSource": {
+    "path": "spec/core.aidl",
+    "role": "normative-source-for-bootstrap-core-path",
+    "projectWideAuthorityFlipComplete": false
+  },
+  "bootstrapKernel": {
+    "path": "spec/bootstrap-kernel-v1.json",
+    "role": "irreducible-host-defined-syntax"
+  },
+  "generatedProjection": {
+    "path": "spec/core-registry-v1.json",
+    "role": "derived-non-normative",
+    "driftCheck": "tools/test_core_bootstrap.py"
+  },
+  "revision4": {
+    "path": "spec/language-surface-v1.json",
+    "role": "compatibility-and-migration-evidence",
+    "permanentSemanticAuthority": false,
+    "remainsProductionCompatibilityOracleUntilG1": true
+  },
+  "blockedUntilSeparatePhases": [
+    "I2-core-domain-semantic-migration",
+    "V1-independent-broad-validation",
+    "G1-project-wide-authority-flip",
+    "semantics-dependent-future-M10.5"
+  ]
+}
