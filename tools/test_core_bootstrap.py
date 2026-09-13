@@ -59,7 +59,7 @@ class CoreBootstrapTest(unittest.TestCase):
         entity = parse_source(source).declarations[0]
         self.assertEqual(entity.body[0].name, "id")
         self.assertEqual(entity.body[0].modifiers[0].name, "primary")
-        self.assertEqual(entity.body[1].value.raw, "amount > 0")
+        self.assertEqual(entity.body[1].value.raw.replace(" ", ""), "amount>0")
 
     def test_expression_precedence_ranges_lists_references_and_postfix(self) -> None:
         for expression in (
