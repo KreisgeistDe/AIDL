@@ -1,54 +1,51 @@
-# M10.5-01 refreshed Python parity evidence
+# M10.5-01 post-G1 current-main Python parity evidence
 
-M10.5-01 is refreshed only after integrated M10.3. This document describes the
-candidate Python reference/conformance baseline built from
-`main@cbe34ce18dfa696c3bcbf30b6b37af53989112d6`. It is evidence for a later independently validated
-M10.5-01 gate; it does not change AIDL language semantics, Production
-Normalization admission, Canonical IR meaning, runtime behavior, public support,
-or Python's authority.
+M10.5-01 is being refreshed again after the completed Core authority transition and the integrated post-G1 reconciliation. This document describes the candidate Python reference/conformance baseline derived from exact `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`. PR #77 remains already-merged historical/provisional parity evidence at `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and does not satisfy this post-G1 Gate-01 refresh by itself.
 
-## Machine-readable authority
+This package is evidence for later independent exact-head validation and integration. It does not change AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, public support, or Python's reference/conformance role. M10.5-01 remains incomplete until this new candidate is independently validated and integrated; M10.5-02 and later Kotlin semantic work remain blocked.
 
-`spec/m10-5-parity-manifest.json` defines the bounded parity inventory and
-differential contract. `tools/m10_5_python_parity_baseline.py` validates the
-manifest and emits deterministic generated parity evidence. The generated
-fingerprint content-binds:
+## Machine-readable authority boundary
 
-- frozen `spec/language-surface-v1.json` revision 4;
+`spec/m10-5-parity-manifest.json` defines the bounded parity inventory and differential contract. `tools/m10_5_python_parity_baseline.py` validates the manifest and emits deterministic generated parity evidence. The parity manifest is explicitly non-normative: normative Core/Core-authored modules remain the sole permanent semantic authority.
+
+The generated fingerprint content-binds:
+
+- exact candidate base `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`;
+- normative `spec/core.aidl`;
+- Core-authored compatibility authority contract `spec/core.authority.aidl`;
+- exact Core-authored revision-4 compatibility binding `spec/core.compatibility.aidl`;
+- frozen `spec/language-surface-v1.json` revision 4 only as Core-authorized compatibility/conformance evidence;
 - `spec/ir.schema.json`;
 - `spec/profile-registry.json`;
 - the integrated M10.2 classification;
 - the integrated M10.3 shared disposition and closure certification;
-- every inventoried Python compiler, CLI/query, fixture/compatibility,
-  reference-app, IntelliJ-integration and CI evidence file; and
-- the differential comparison contract and baseline base-commit identity.
+- current Core-derived/conformance evidence, including the derived Core registry and Core authority/bootstrap/semantic regressions;
+- every inventoried Python compiler, CLI/query, fixture/compatibility, reference-app, IntelliJ-integration and CI evidence file; and
+- the differential comparison contract.
 
-No semantic allowlist exists. The only declared transport normalization is
-repository-relative path rendering plus canonical JSON object-key ordering.
+Drift in Core source, the Core-authored compatibility contract, or the exact compatibility binding changes the fingerprint and therefore fails closed against a previously accepted baseline. The manifest also rejects any attempt to relabel revision 4 as permanent semantic authority.
+
+No semantic allowlist exists. The only declared transport normalization is repository-relative path rendering plus canonical JSON object-key ordering.
 
 ## Exact runner input identity
 
-Every differential run has exactly three inputs: `source`, `config`, and
-`profile`. Each is identified by a SHA-256 digest. Missing keys, extra keys, or
-different digests fail closed before semantic comparison. This prevents a
-Python/Kotlin comparison from silently using different source, configuration or
-profile inputs.
+Every differential run has exactly three inputs: `source`, `config`, and `profile`. Each is identified by a SHA-256 digest. Missing keys, extra keys, or different digests fail closed before semantic comparison. This prevents a Python/Kotlin comparison from silently using different source, configuration or profile inputs.
 
 ## Observable comparison
 
-The structured result contract compares accepted/rejected classification,
-diagnostics, Canonical IR, stable identities, ordering, source locations, and
-exit behavior. A mismatch is emitted as a structured row naming the semantic
-dimension and both values. The harness does not suppress known differences with
-allowlists.
+The structured result contract compares accepted/rejected classification, diagnostics, Canonical IR, stable identities, ordering, source locations, and exit behavior. A mismatch is emitted as a structured row naming the semantic dimension and both values. The harness does not suppress known differences with allowlists.
 
-`python3 tools/m10_5_python_parity_baseline.py evidence` emits the deterministic
-baseline evidence JSON and semantic fingerprint for the current checkout.
+`python3 tools/m10_5_python_parity_baseline.py evidence` emits the deterministic candidate evidence JSON and semantic fingerprint for the current checkout.
 
 ## Negative evidence
 
 `tools/test_m10_5_python_parity_baseline.py` proves fail-closed behavior for:
 
+- stale pre-G1/post-M10.3 baseline commit identity;
+- semantic-authority role drift that would promote revision 4;
+- drift in `spec/core.aidl`;
+- drift in `spec/core.authority.aidl`;
+- drift in `spec/core.compatibility.aidl`;
 - removal, addition, or substitution of the required runner inputs;
 - missing or extra source/config/profile identities;
 - source/config/profile identity drift between implementations;
@@ -57,6 +54,4 @@ baseline evidence JSON and semantic fingerprint for the current checkout.
 - semantic fingerprint drift; and
 - semantic result mismatches with structured reporting.
 
-M10.5-02 and Kotlin semantic implementation remain blocked until this exact PR
-head is independently validated and integrated. Python remains the
-reference/conformance implementation throughout this gate.
+The historical PR #77 evidence remains useful provenance but is not reused as the post-G1 acceptance target. This exact new PR head requires fresh independent validation and later integration before Gate 01 can be marked complete.
