@@ -56,6 +56,13 @@
   "nextGate": {
     "id": "M10.5-01",
     "status": "dependency-ready",
+    "historicalMergedEvidence": {
+      "pr": 77,
+      "mergeCommit": "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
+      "role": "historical-provisional-parity-evidence",
+      "pendingIntegrationTarget": false
+    },
+    "requiresPostG1CurrentMainRefreshRevalidation": true,
     "laterSemanticKotlinBlockedUntilComplete": true
   }
 }
