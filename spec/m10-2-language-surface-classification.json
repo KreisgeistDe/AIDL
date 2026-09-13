@@ -16,6 +16,12 @@
   ],
   "source_rules": [
     {
+      "id": "core-authority-transition-source",
+      "pattern": "^spec/core\\.aidl$",
+      "class": "canonical-but-not-yet-admitted",
+      "note": "Phase I1 Core source is normative for the isolated Bootstrap/Core path but is not production-admitted and does not complete the G1 project-wide authority flip."
+    },
+    {
       "id": "reference-app-sources",
       "pattern": "^examples/(calendar-offline|petstore|videohub)/.*\\.aidl$",
       "class": "legacy-readable-compatibility",
