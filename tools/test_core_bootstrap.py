@@ -53,7 +53,7 @@ class CoreBootstrapTest(unittest.TestCase):
         with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate or ambiguous bootstrap binding"):
             parse_bootstrap_source(duplicate)
 
-    def test_kernel_contract_is_finite_and_has_no_kind_or_producer_catalog(self) -> None:
+    def test_kernel_contract_is_finite_and_has_no_kind_producer_or_type_catalog(self) -> None:
         contract = json.loads((ROOT / "spec" / "bootstrap-kernel-v1.json").read_text(encoding="utf-8"))
         self.assertEqual(contract["kernelVersion"], KERNEL_VERSION)
         self.assertEqual(tuple(item["name"] for item in contract["metaCombinators"]), KERNEL_META_COMBINATORS)
@@ -61,23 +61,36 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertFalse(contract["authorityFirewall"]["generatedMetaIrOrRegistryIsAuthorityInput"])
         self.assertFalse(contract["authorityFirewall"]["concreteDeclarationKindCatalogOwnedByHost"])
         self.assertFalse(contract["authorityFirewall"]["producerCapabilitySystemOwnedByHost"])
+        self.assertFalse(contract["authorityFirewall"]["separateHostTypeHierarchy"])
         self.assertEqual(contract["typeRef"]["carrierIdentity"], "generic-visible-named-declaration-symbol")
+        self.assertEqual(contract["declarationTypeSelfSimilarity"]["centralMetaClass"], "declaration")
+        self.assertEqual(contract["declarationTypeSelfSimilarity"]["typeSurface"], "direct-core-authored-alias-of-declaration")
         self.assertIn("producer-carrier-capability-system", contract["excludes"])
         self.assertIn("type-position-marker", contract["excludes"])
+        self.assertIn("separate-declaration-vs-type-class-worlds", contract["excludes"])
 
-    def test_transition_freezes_p4_while_semantic_correction_is_validated(self) -> None:
+    def test_transition_freezes_p4_while_amended_semantic_correction_is_validated(self) -> None:
         transition = json.loads((ROOT / "spec" / "core-authority-transition-v1.json").read_text(encoding="utf-8"))
         correction = transition["authorityCorrection"]
         self.assertEqual(correction["durableStateReconciliation"]["mainCommit"], "bb8fb6ff9eb18429c94e9982a9e8d3e03a7ef48d")
-        self.assertTrue(correction["semanticCorrection"]["producesRemoved"])
-        self.assertTrue(correction["semanticCorrection"]["typePositionRemoved"])
-        self.assertEqual(correction["semanticCorrection"]["typeRefCarrierIdentity"], "generic-visible-named-declaration-symbol")
+        semantic = correction["semanticCorrection"]
+        self.assertTrue(semantic["producesRemoved"])
+        self.assertTrue(semantic["typePositionRemoved"])
+        self.assertTrue(semantic["typeIsAliasOfDeclaration"])
+        self.assertTrue(semantic["declarationIsTypeObject"])
+        self.assertTrue(semantic["allVisibleNamedDeclarationsTypeRefAddressable"])
+        self.assertTrue(semantic["argsAbsenceEqualsClosedZeroParameterSet"])
+        self.assertEqual(semantic["typeRefCarrierIdentity"], "generic-visible-named-declaration-symbol")
         self.assertEqual(correction["p4"]["status"], "frozen")
         self.assertTrue(correction["semanticsDependentKotlinFrozen"])
         self.assertIn("PR-99", correction["frozenKotlinWorkIncludes"])
         self.assertFalse(transition["coreMetaIr"]["authorityInput"])
-        self.assertEqual(transition["nextAction"]["id"], "CORE-SELF-DESCRIPTION-CORRECTION-VALIDATION")
-        self.assertEqual(transition["nextAction"]["status"], "pending-independent-exact-head-validation")
+        self.assertEqual(transition["coreMetaIr"]["schemaVersion"], 3)
+        self.assertEqual(
+            transition["nextAction"]["id"],
+            "CORE-SELF-DESCRIPTION-CORRECTION-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
+        )
+        self.assertEqual(transition["nextAction"]["status"], "pending-independent-validation")
 
 
 if __name__ == "__main__":
