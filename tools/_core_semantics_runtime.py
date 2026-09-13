@@ -10,22 +10,8 @@ from tools.core_bootstrap import BodyEntry, Declaration, TypeRef, Value, parse_s
 
 
 BUILTIN_TYPES = {
-    "bool",
-    "bytes",
-    "date",
-    "datetime",
-    "decimal",
-    "duration",
-    "email",
-    "float",
-    "int",
-    "json",
-    "long",
-    "revision",
-    "string",
-    "time",
-    "url",
-    "uuid",
+    "bool", "bytes", "date", "datetime", "decimal", "duration", "email",
+    "float", "int", "json", "long", "revision", "string", "time", "url", "uuid",
 }
 
 
@@ -113,154 +99,6 @@ class CoreContractError(ValueError):
     pass
 
 
-def _argument_value(declaration: Declaration, name: str) -> Value | None:
-    for argument_name, value in declaration.arguments:
-        if argument_name == name:
-            return value
-    return None
-
-
-def _body_value(declaration: Declaration, name: str) -> Value | None:
-    for entry in declaration.body:
-        if entry.name == name:
-            return entry.value
-    return None
-
-
-def _plain(value: Value | None) -> Any:
-    if value is None:
-        return None
-    if value.kind == "typeRef":
-        return value.value
-    return value.value
-
-
-def _type_from_json(value: Any) -> TypeRef:
-    if isinstance(value, TypeRef):
-        return value
-    if not isinstance(value, dict) or "$typeRef" not in value:
-        raise CoreContractError(f"expected TypeRef value, found {value!r}")
-    payload = value["$typeRef"]
-    return TypeRef(
-        str(payload["name"]),
-        tuple(_type_from_json({"$typeRef": child}) for child in payload.get("arguments", [])),
-        bool(payload.get("optional", False)),
-    )
-
-
-def _cardinality(value: Any) -> Cardinality:
-    if not isinstance(value, dict) or "min" not in value or "max" not in value:
-        raise CoreContractError(f"expected Cardinality object, found {value!r}")
-    minimum = int(value["min"])
-    maximum = None if value["max"] is None else int(value["max"])
-    if minimum < 0 or (maximum is not None and maximum < minimum):
-        raise CoreContractError(f"invalid Cardinality {value!r}")
-    return Cardinality(minimum, maximum)
-
-
-def _argument_contract(value: Any) -> ArgumentContract:
-    if not isinstance(value, dict):
-        raise CoreContractError(f"expected ArgumentDefinition object, found {value!r}")
-    return ArgumentContract(
-        name=str(value["name"]),
-        type_ref=_type_from_json(value["type"]),
-        cardinality=_cardinality(value["cardinality"]),
-    )
-
-
-def _body_slot_contract(value: Any) -> BodySlotContract:
-    if not isinstance(value, dict):
-        raise CoreContractError(f"expected BodySlotDefinition object, found {value!r}")
-    allowed = {
-        "bodyType",
-        "namePolicy",
-        "valueType",
-        "cardinality",
-        "ordered",
-        "uniqueByName",
-        "modifiers",
-    }
-    unknown = sorted(set(value) - allowed)
-    if unknown:
-        raise CoreContractError(
-            "BodySlotDefinition contains undeclared metadata: " + ", ".join(unknown)
-        )
-    raw_type = value.get("valueType")
-    return BodySlotContract(
-        body_type=str(value["bodyType"]),
-        name_policy=str(value["namePolicy"]),
-        value_type=None if raw_type is None else _type_from_json(raw_type),
-        cardinality=_cardinality(value["cardinality"]),
-        ordered=bool(value.get("ordered", False)),
-        unique_by_name=bool(value.get("uniqueByName", False)),
-        modifiers=tuple(str(item) for item in value.get("modifiers", [])),
-    )
-
-
-def load_semantic_registry(*module_sources: str) -> SemanticRegistry:
-    declarations: dict[str, DeclarationContract] = {}
-    modifiers: dict[str, ModifierContract] = {}
-    combinators: dict[str, MetaCombinator] = {}
-
-    for source in module_sources:
-        program = parse_source(source)
-        for declaration in program.declarations:
-            if declaration.kind != "declaration" or declaration.name is None:
-                raise CoreContractError("semantic modules may contain only named declaration meta-definitions")
-            kind_value = _argument_value(declaration, "kind")
-            meta_kind = _plain(kind_value)
-            if not isinstance(meta_kind, str):
-                raise CoreContractError(f"{declaration.name}: declaration kind metadata must be a string")
-
-            if meta_kind == "meta-combinator":
-                behavior = _plain(_body_value(declaration, "behavior"))
-                arguments = _plain(_body_value(declaration, "arguments"))
-                if not isinstance(behavior, str):
-                    raise CoreContractError(f"{declaration.name}: combinator behavior must be a string")
-                combinators[declaration.name] = MetaCombinator(
-                    declaration.name,
-                    behavior,
-                    _cardinality(arguments),
-                )
-                continue
-
-            if meta_kind == "modifier":
-                targets = _plain(_body_value(declaration, "targets")) or []
-                arguments = _plain(_body_value(declaration, "arguments")) or []
-                cardinality = _plain(_body_value(declaration, "cardinality"))
-                modifiers[declaration.name] = ModifierContract(
-                    declaration.name,
-                    tuple(str(item) for item in targets),
-                    tuple(_argument_contract(item) for item in arguments),
-                    _cardinality(cardinality),
-                )
-                continue
-
-            if meta_kind == "language":
-                name_policy = _plain(_body_value(declaration, "namePolicy"))
-                arguments = _plain(_body_value(declaration, "arguments")) or []
-                result = _plain(_body_value(declaration, "result"))
-                slots = _plain(_body_value(declaration, "slots")) or []
-                allowed_modifiers = _plain(_body_value(declaration, "modifiers")) or []
-                if name_policy not in {"required", "optional", "forbidden"}:
-                    raise CoreContractError(f"{declaration.name}: invalid NamePolicy {name_policy!r}")
-                declarations[declaration.name] = DeclarationContract(
-                    declaration.name,
-                    str(name_policy),
-                    tuple(_argument_contract(item) for item in arguments),
-                    None if result is None else _type_from_json(result),
-                    tuple(_body_slot_contract(item) for item in slots),
-                    tuple(str(item) for item in allowed_modifiers),
-                )
-                continue
-
-            if meta_kind in {"meta", "bootstrap"}:
-                continue
-            raise CoreContractError(f"{declaration.name}: unsupported semantic declaration category {meta_kind!r}")
-
-    return SemanticRegistry(declarations, modifiers, combinators)
-
-
 def registry_digest(registry: SemanticRegistry) -> str:
     payload = {
         "declarations": {
@@ -282,9 +120,7 @@ def registry_digest(registry: SemanticRegistry) -> str:
 
 
 def _type_json(type_ref: TypeRef | None) -> Any:
-    if type_ref is None:
-        return None
-    return type_ref.to_json()
+    return None if type_ref is None else type_ref.to_json()
 
 
 def _argument_json(argument: ArgumentContract) -> dict[str, Any]:
@@ -332,19 +168,15 @@ class _SourceSpans:
         pattern = re.compile(r"^\s*(?:export\s+)?" + re.escape(declaration.kind) + r"\b")
         for index in range(start, len(self.lines)):
             if pattern.search(self.lines[index]):
-                column = len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
-                return index + 1, column
+                return index + 1, len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
         return 1, 1
 
     def body(self, entry: BodyEntry, start_line: int) -> tuple[int, int]:
-        head = entry.body_type
-        if entry.name is not None:
-            head += " " + entry.name
+        head = entry.body_type + ((" " + entry.name) if entry.name is not None else "")
         pattern = re.compile(r"^\s*" + re.escape(head) + r"\s*:")
         for index in range(max(0, start_line - 1), len(self.lines)):
             if pattern.search(self.lines[index]):
-                column = len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
-                return index + 1, column
+                return index + 1, len(self.lines[index]) - len(self.lines[index].lstrip()) + 1
         return start_line, 1
 
 
@@ -457,7 +289,6 @@ def _validate_value(
         if snapshots:
             diagnostics.extend(snapshots[0][:1])
         return
-
     if combinator and combinator.behavior == "declaration-ref-kind":
         actual = _actual_type_ref(value)
         if actual is None or actual.name != expected.name or len(actual.arguments) != 1:
@@ -472,7 +303,6 @@ def _validate_value(
         if target.kind != expected_kind:
             diagnostics.append(SemanticDiagnostic("CORE-S013", line, column, f"reference {target_name!r} resolves to kind {target.kind!r}", f"declaration kind {expected_kind}"))
         return
-
     if combinator and combinator.behavior == "expression":
         expression_text = value.raw if value.kind != "string" else str(value.value)
         inferred, error = infer_expression_type(expression_text, env)
@@ -483,7 +313,6 @@ def _validate_value(
         if inferred != target:
             diagnostics.append(SemanticDiagnostic("CORE-S015", line, column, f"expression for {subject} has inferred type {inferred!r}", f"expression<{target}>"))
         return
-
     if expected.name == "TypeRef":
         actual = _actual_type_ref(value)
         if actual is None:
@@ -491,12 +320,10 @@ def _validate_value(
             return
         _validate_actual_type_ref(diagnostics, actual, registry, symbols, line, column, subject)
         return
-
     if expected.name == "list" and expected.arguments:
         if value.kind != "list":
             diagnostics.append(SemanticDiagnostic("CORE-S017", line, column, f"{subject} is not a list", _fmt_type(expected)))
         return
-
     primitive_ok = {
         "string": value.kind == "string",
         "bool": value.kind == "literal" and isinstance(value.value, bool),
@@ -508,14 +335,12 @@ def _validate_value(
         if not primitive_ok[expected.name]:
             diagnostics.append(SemanticDiagnostic("CORE-S018", line, column, f"{subject} has incompatible value kind {value.kind!r}", _fmt_type(expected)))
         return
-
     actual = _actual_type_ref(value)
     if actual is not None:
         _validate_actual_type_ref(diagnostics, actual, registry, symbols, line, column, subject)
         if actual.name != expected.name:
             diagnostics.append(SemanticDiagnostic("CORE-S019", line, column, f"{subject} has TypeRef {_fmt_type(actual)!r}", _fmt_type(expected)))
         return
-
     diagnostics.append(SemanticDiagnostic("CORE-S019", line, column, f"{subject} does not match expected type", _fmt_type(expected)))
 
 
@@ -525,7 +350,6 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
     symbols = {item.name: item for item in program.declarations if item.name is not None}
     diagnostics: list[SemanticDiagnostic] = []
     declaration_cursor = 0
-
     for declaration in program.declarations:
         decl_line, decl_column = spans.declaration(declaration, declaration_cursor)
         declaration_cursor = decl_line
@@ -533,25 +357,18 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
         if contract is None:
             diagnostics.append(SemanticDiagnostic("CORE-S000", decl_line, decl_column, f"unknown declaration kind {declaration.kind!r}", "Core-declared language kind"))
             continue
-
         _check_name_policy(diagnostics, contract.name_policy, declaration.name, decl_line, decl_column, f"declaration {declaration.kind}")
         _validate_arguments(diagnostics, declaration.arguments, contract.arguments, registry, symbols, {}, decl_line, decl_column, f"declaration {declaration.kind}")
         if declaration.result is not None and contract.result is None:
             diagnostics.append(SemanticDiagnostic("CORE-S005", decl_line, decl_column, f"declaration {declaration.kind} does not permit a result type", "no result type"))
-
         slot_by_type = {slot.body_type: slot for slot in contract.slots}
-        ordered_positions = {
-            slot.body_type: index
-            for index, slot in enumerate(contract.slots)
-            if slot.ordered
-        }
+        ordered_positions = {slot.body_type: index for index, slot in enumerate(contract.slots) if slot.ordered}
         ordered_sequence = [slot.body_type for slot in contract.slots if slot.ordered]
         counts: dict[str, int] = {}
         names: dict[str, set[str]] = {}
         env: dict[str, TypeRef] = {}
         last_ordered_position: int | None = None
         body_cursor = decl_line
-
         for entry in declaration.body:
             line, column = spans.body(entry, body_cursor)
             body_cursor = line + 1
@@ -564,15 +381,7 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
             if slot.ordered:
                 position = ordered_positions[entry.body_type]
                 if last_ordered_position is not None and position < last_ordered_position:
-                    diagnostics.append(
-                        SemanticDiagnostic(
-                            "CORE-S007",
-                            line,
-                            column,
-                            f"body slot {entry.body_type!r} appears out of Core-declared slot sequence",
-                            "ordered BodySlot sequence: " + " before ".join(ordered_sequence),
-                        )
-                    )
+                    diagnostics.append(SemanticDiagnostic("CORE-S007", line, column, f"body slot {entry.body_type!r} appears out of Core-declared slot sequence", "ordered BodySlot sequence: " + " before ".join(ordered_sequence)))
                 last_ordered_position = max(last_ordered_position or position, position)
             if slot.unique_by_name and entry.name is not None:
                 seen = names.setdefault(entry.body_type, set())
@@ -588,7 +397,6 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
                 actual_type = _actual_type_ref(entry.value)
                 if entry.name is not None and actual_type is not None:
                     env[entry.name] = actual_type
-
             allowed = set(slot.modifiers)
             modifier_counts: dict[str, int] = {}
             for modifier in entry.modifiers:
@@ -610,19 +418,15 @@ def validate_source(source: str, registry: SemanticRegistry) -> tuple[SemanticDi
                 count = modifier_counts.get(modifier_name, 0)
                 if not modifier_contract.cardinality.accepts(count):
                     diagnostics.append(SemanticDiagnostic("CORE-S033", line, column, f"modifier @{modifier_name} occurs {count} time(s)", modifier_contract.cardinality.describe()))
-
         for slot in contract.slots:
             count = counts.get(slot.body_type, 0)
             if not slot.cardinality.accepts(count):
                 diagnostics.append(SemanticDiagnostic("CORE-S034", decl_line, decl_column, f"body slot {slot.body_type!r} occurs {count} time(s)", slot.cardinality.describe()))
-
     diagnostics.sort(key=lambda item: (item.line, item.column, item.code, item.message))
     return tuple(diagnostics)
 
 
-_EXPR_TOKEN = re.compile(
-    r"\s*(?:(true|false)|(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(\&\&|\|\||==|!=|!|\(|\)))"
-)
+_EXPR_TOKEN = re.compile(r"\s*(?:(true|false)|(\d+(?:\.\d+)?)|([A-Za-z_][A-Za-z0-9_]*)|(\&\&|\|\||==|!=|!|\(|\)))")
 
 
 def _expression_tokens(text: str) -> list[str]:
@@ -632,8 +436,7 @@ def _expression_tokens(text: str) -> list[str]:
         match = _EXPR_TOKEN.match(text, position)
         if match is None:
             raise ValueError(f"unsupported token near {text[position:position + 12]!r}")
-        token = next(group for group in match.groups() if group is not None)
-        tokens.append(token)
+        tokens.append(next(group for group in match.groups() if group is not None))
         position = match.end()
     return tokens
 
