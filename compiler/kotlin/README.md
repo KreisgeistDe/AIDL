@@ -1,6 +1,6 @@
-# Kotlin compiler skeleton (M10.5-02)
+# Kotlin compiler migration (M10.5)
 
-This directory is the non-normative Kotlin Multiplatform compiler skeleton for M10.5-02. Python remains the reference/conformance implementation. Nothing here changes AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, reference-app behavior, or public support.
+This directory contains the non-normative Kotlin Multiplatform compiler work for M10.5. Python remains the reference/conformance implementation. Nothing here changes AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, reference-app behavior, or public support.
 
 The build deliberately reuses the repository's existing Gradle wrapper at `plugins/intellij/gradlew` instead of introducing a second wrapper binary. From the repository root:
 
@@ -10,10 +10,16 @@ plugins/intellij/gradlew -p compiler/kotlin --no-daemon check koverVerify koverX
 
 Source-set boundaries are intentional:
 
-- `commonMain` owns only platform-neutral contract scaffolding and deterministic transport utilities.
-- `jvmMain` is a thin adapter that exposes the same common contract snapshot for future JVM consumers.
-- `linuxX64Main` is a thin Kotlin/Native CLI adapter that emits the same common contract snapshot and owns no compiler semantics.
+- `commonMain` owns platform-neutral parity contracts and the bounded source-projection implementation.
+- `jvmMain` remains a thin adapter; JVM-only fixture execution may exercise common code but owns no parser semantics.
+- `linuxX64Main` remains a thin Kotlin/Native CLI adapter and owns no compiler semantics.
 
-The integrated M10.5-01 contract is inherited exactly: runner inputs are `source`, `config`, and `profile`; their identities are exact SHA-256 values; the semantic fingerprint remains bound to the six current normative authorities; semantic allowlists are forbidden. The Kotlin skeleton validates only the contract boundary. It does not parse AIDL, construct Canonical IR, emit diagnostics, or claim differential parity.
+The integrated M10.5-01 contract is inherited exactly: runner inputs are `source`, `config`, and `profile`; their identities are exact SHA-256 values; the semantic fingerprint remains bound to the six current normative authorities; semantic allowlists are forbidden.
 
-Kover verification enforces at least 95% line and branch coverage for the JVM-executed common/JVM skeleton. The Native target must compile and link from the same common source set. M10.5-03 remains blocked until this exact skeleton is independently validated and integrated.
+## M10.5-03 first bounded front-end slice
+
+`AidlSourceProjector` implements only deterministic lexical/source projection for module/import headers and named `enum`, `value`, and `entity` declaration boundaries. Declaration bodies are retained as lexical tokens so canonical and legacy spellings can be compared without moving resolution, typing, validation, diagnostics, Canonical IR, Production Normalization, or runtime semantics into Kotlin. Any top-level declaration kind outside this explicit slice fails closed.
+
+Shared fixtures under `parity/` are executed by Kotlin and independently pinned to the Python `tools.aidl_parser` oracle by `tools/test_m10_5_kotlin_parser_projection.py`. The fixtures cover the canonical data-declaration spelling and retained legacy entity-field spelling. This is evidence for only this bounded source-projection subset; it is not a claim that M10.5-03 Gate 03 or the complete parser surface is finished.
+
+Kover verification continues to enforce at least 95% line and branch coverage for JVM-executed common/JVM code, and the Native target must compile and link from the same common source set.
