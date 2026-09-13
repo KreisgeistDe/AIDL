@@ -1,0 +1,142 @@
+{
+  "schema_version": "aidl.m10.5-python-parity-baseline/v1",
+  "authority": "M10.5-01",
+  "status": "refreshed-post-m10.3-candidate",
+  "normative_language_source": false,
+  "reference_implementation": "python",
+  "baseline_base_commit": "cbe34ce18dfa696c3bcbf30b6b37af53989112d6",
+  "runner_inputs": [
+    "source",
+    "config",
+    "profile"
+  ],
+  "input_identity": {
+    "algorithm": "sha256",
+    "exact_key_set": true,
+    "required_keys": [
+      "source",
+      "config",
+      "profile"
+    ]
+  },
+  "comparison_contract": {
+    "mode": "exact_structured",
+    "semantic_dimensions": [
+      "accepted_rejected",
+      "diagnostics",
+      "canonical_ir",
+      "stable_identities",
+      "ordering",
+      "source_locations",
+      "exit_behavior"
+    ],
+    "transport_normalization": [
+      "repository_relative_path_rendering",
+      "json_object_key_order"
+    ],
+    "semantic_allowlists": []
+  },
+  "normative_bindings": [
+    "spec/language-surface-v1.json",
+    "spec/ir.schema.json",
+    "spec/profile-registry.json",
+    "spec/m10-2-language-surface-classification.json",
+    "spec/m10-3-shared-disposition.json",
+    "spec/m10-3-closure-certification.json"
+  ],
+  "parity_inventory": [
+    {
+      "id": "source_projection",
+      "evidence": [
+        "tools/aidl_parser.py",
+        "tools/compiler_project.py",
+        "tools/compiler_typecheck.py"
+      ]
+    },
+    {
+      "id": "diagnostics",
+      "evidence": [
+        "tools/compiler_diagnostics.py",
+        "tools/test_compiler_diagnostics.py"
+      ]
+    },
+    {
+      "id": "canonical_ir",
+      "evidence": [
+        "tools/compiler_ir.py",
+        "tools/ir_canonical_json.py",
+        "spec/ir.schema.json"
+      ]
+    },
+    {
+      "id": "cli_and_semantic_queries",
+      "evidence": [
+        "aidl",
+        "tools/aidl_cli.py",
+        "tools/compiler_resolution.py",
+        "tools/compiler_completion.py",
+        "tools/compiler_documentation.py",
+        "tools/compiler_refactoring.py",
+        "tools/compiler_inspection.py",
+        "tools/compiler_dependencies.py",
+        "tools/compiler_explanation.py",
+        "tools/compiler_change_impact.py"
+      ]
+    },
+    {
+      "id": "fixtures_compatibility_reference_apps",
+      "evidence": [
+        "spec/conformance-manifest.json",
+        "tools/test_m5_fixture_corpus.py",
+        "tools/ir_compatibility.py",
+        "tools/test_ir_compatibility.py",
+        "examples/petstore/m4-app/app.aidl",
+        "examples/calendar-offline/README.md",
+        "examples/videohub/README.md"
+      ]
+    },
+    {
+      "id": "intellij_integration",
+      "evidence": [
+        "plugins/intellij/README.md",
+        "plugins/intellij/src/main/kotlin/de/kreisgeist/aidl/diagnostics/AidlCompilerDiagnostics.kt",
+        "plugins/intellij/src/main/kotlin/de/kreisgeist/aidl/references/AidlCompilerReferenceResolver.kt"
+      ]
+    },
+    {
+      "id": "ci_gates",
+      "evidence": [
+        "tools/ci_required_regressions.py",
+        "tools/ci_test_selection.py",
+        ".github/python-test-selection.json"
+      ]
+    }
+  ],
+  "parity_corpus": {
+    "golden_fixtures": [
+      "tools/test_m5_fixture_corpus.py"
+    ],
+    "core_conformance": [
+      "spec/conformance-manifest.json"
+    ],
+    "negative_diagnostics": [
+      "tools/test_compiler_diagnostics.py"
+    ],
+    "canonical_ir": [
+      "tools/test_ir_compatibility.py"
+    ],
+    "reference_apps": [
+      "examples/petstore/m4-app/app.aidl",
+      "examples/calendar-offline/README.md",
+      "examples/videohub/README.md"
+    ],
+    "compatibility": [
+      "tools/ir_compatibility.py",
+      "tools/test_ir_compatibility.py"
+    ],
+    "representative_cli": [
+      "aidl",
+      "tools/aidl_cli.py"
+    ]
+  }
+}
