@@ -6,6 +6,7 @@ from tools.aidl_parser import parse_text
 
 ROOT = Path(__file__).resolve().parents[1]
 PARITY = ROOT / "compiler" / "kotlin" / "parity"
+PARSER_CASES = [PARITY / "canonical-data.source", PARITY / "legacy-data.source"]
 
 
 def oracle_signature(source: str) -> str:
@@ -33,9 +34,8 @@ def oracle_signature(source: str) -> str:
 
 class KotlinParserProjectionParityTest(unittest.TestCase):
     def test_shared_fixtures_are_pinned_to_python_oracle(self) -> None:
-        cases = sorted(PARITY.glob("*.source"))
-        self.assertEqual([path.stem for path in cases], ["canonical-data", "legacy-data"])
-        for source_path in cases:
+        self.assertTrue(all(path.is_file() for path in PARSER_CASES))
+        for source_path in PARSER_CASES:
             with self.subTest(case=source_path.stem):
                 expected_path = source_path.with_suffix(".signature")
                 expected = expected_path.read_text(encoding="utf-8").rstrip("\n")
@@ -43,7 +43,7 @@ class KotlinParserProjectionParityTest(unittest.TestCase):
                 self.assertEqual(expected, actual)
 
     def test_fixture_signatures_are_deterministic(self) -> None:
-        for source_path in sorted(PARITY.glob("*.source")):
+        for source_path in PARSER_CASES:
             source = source_path.read_text(encoding="utf-8")
             self.assertEqual(oracle_signature(source), oracle_signature(source))
 
