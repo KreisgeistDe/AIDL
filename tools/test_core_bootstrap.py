@@ -7,8 +7,11 @@ from pathlib import Path
 
 from tools.core_bootstrap import (
     BootstrapSyntaxError,
+    KERNEL_META_COMBINATORS,
     KERNEL_VERSION,
     check_projection,
+    generate_projection,
+    parse_meta_combinator,
     parse_source,
     parse_type_ref,
     projection_text,
@@ -20,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class CoreBootstrapTest(unittest.TestCase):
     def test_uniform_envelope_named_args_result_and_generic_type(self) -> None:
         program = parse_source(
-            'export declaration Demo(kind: "meta") -> list<ref<entity>>? {\n'
+            'export declaration Demo(kind: "meta") -> list<ref<sample>>? {\n'
             ' body x: string\n'
             '}\n'
         )
@@ -33,12 +36,64 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertTrue(declaration.result.optional)
         self.assertEqual(declaration.result.arguments[0].name, "ref")
 
+    def test_generic_envelope_does_not_require_host_known_declaration_kind(self) -> None:
+        source = (
+            'module example.foundation\n\n'
+            'futurekind Example {\n'
+            ' slot value: string\n'
+            '}\n'
+        )
+        program = parse_source(source)
+        self.assertEqual(program.declarations[0].kind, "futurekind")
+        projection = generate_projection(source)
+        self.assertEqual(projection["declarations"][0]["kind"], "futurekind")
+
     def test_typeref_recursive_and_optional_binds_complete_type(self) -> None:
-        type_ref = parse_type_ref("outer<left<int>, right<ref<entity>?>>?")
+        type_ref = parse_type_ref("outer<left<int>, right<ref<sample>?>>?")
         self.assertEqual(type_ref.name, "outer")
         self.assertTrue(type_ref.optional)
         self.assertEqual(type_ref.arguments[1].arguments[0].name, "ref")
         self.assertTrue(type_ref.arguments[1].arguments[0].optional)
+
+    def test_finite_structural_meta_combinators_parse_deterministically(self) -> None:
+        samples = {
+            "name(required)": "name",
+            "args(cardinal(optional))": "args",
+            "body(type-position, cardinal(many))": "body",
+            "cardinal(optional)": "cardinal",
+            "modifier(cardinal(optional))": "modifier",
+            "type-position": "type-position",
+            "produces(type)": "produces",
+        }
+        self.assertEqual(tuple(samples.values()), KERNEL_META_COMBINATORS)
+        for source, expected_name in samples.items():
+            with self.subTest(source=source):
+                first = parse_meta_combinator(source)
+                second = parse_meta_combinator(source)
+                self.assertEqual(first, second)
+                self.assertEqual(first.name, expected_name)
+
+    def test_unknown_or_malformed_meta_combinators_fail_closed(self) -> None:
+        for source in (
+            "entity(required)",
+            "name(",
+            "type-position(extra)",
+            "produces(type",
+            "produces(type) trailing",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(BootstrapSyntaxError):
+                    parse_meta_combinator(source)
+
+    def test_duplicate_bootstrap_bindings_fail_closed(self) -> None:
+        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate or ambiguous bootstrap binding"):
+            parse_source("first Same {}\nsecond Same {}\n")
+        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate import binding"):
+            parse_source("module demo\nimport shared\nimport shared\n")
+        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate named argument"):
+            parse_source('thing T(a: "x", a: "y") {}\n')
+        with self.assertRaisesRegex(BootstrapSyntaxError, "duplicate object binding"):
+            parse_source("thing T {\n slot x: {same: 1, same: 2}\n}\n")
 
     def test_inline_modifier_boundary_ignores_quoted_and_nested_at(self) -> None:
         program = parse_source(
@@ -72,7 +127,7 @@ class CoreBootstrapTest(unittest.TestCase):
     def test_multiline_v2_value_then_modifier_block(self) -> None:
         source = (
             'declaration D {\n'
-            ' body x: list<ref<entity>>? {\n'
+            ' body x: list<ref<sample>>? {\n'
             '  @required\n'
             ' }\n'
             '}\n'
@@ -92,7 +147,7 @@ class CoreBootstrapTest(unittest.TestCase):
 
     def test_negative_unbalanced_generic_rejected(self) -> None:
         with self.assertRaises(BootstrapSyntaxError):
-            parse_type_ref("list<ref<entity>")
+            parse_type_ref("list<ref<sample>")
 
     def test_negative_multiline_modifier_block_rejects_non_modifier_tail(self) -> None:
         with self.assertRaises(BootstrapSyntaxError):
@@ -127,128 +182,79 @@ class CoreBootstrapTest(unittest.TestCase):
         )
         self.assertEqual({declaration.kind for declaration in program.declarations}, {"declaration"})
 
-    def test_kernel_contract_is_versioned_and_domain_free(self) -> None:
+    def test_parsing_current_core_does_not_require_generated_registry(self) -> None:
+        source = (ROOT / "spec" / "core.aidl").read_text(encoding="utf-8")
+        first = parse_source(source)
+        second = parse_source(source)
+        self.assertEqual(first, second)
+        self.assertGreater(len(first.declarations), 0)
+
+    def test_kernel_contract_is_versioned_finite_and_domain_free(self) -> None:
         contract = json.loads(
             (ROOT / "spec" / "bootstrap-kernel-v1.json").read_text(encoding="utf-8")
         )
         self.assertEqual(contract["kernelVersion"], KERNEL_VERSION)
-        self.assertNotIn("domain-declaration-catalog", contract["owns"])
-        self.assertIn("domain-declaration-catalog", contract["excludes"])
+        self.assertEqual(
+            tuple(item["name"] for item in contract["metaCombinators"]),
+            KERNEL_META_COMBINATORS,
+        )
+        self.assertTrue(contract["authorityFirewall"]["directAidlDeclarationKindContractsAreNormative"])
+        self.assertFalse(contract["authorityFirewall"]["generatedMetaIrOrRegistryIsAuthorityInput"])
+        self.assertIn("concrete-declaration-kind-catalog", contract["excludes"])
+        self.assertIn("concrete-category-to-schema-map", contract["excludes"])
+        self.assertIn("name-policy-values", contract["excludes"])
+        self.assertEqual(contract["directives"]["module"], "compilation-unit-identity-only")
         self.assertEqual(
             contract["bodyForms"],
             ["inline", "multiline-v1", "multiline-v2"],
         )
 
-    def test_revision4_is_core_authorized_compatibility_not_semantic_authority(self) -> None:
+    def test_host_source_has_no_concrete_kind_or_category_semantic_table(self) -> None:
+        source = (ROOT / "tools" / "core_bootstrap.py").read_text(encoding="utf-8")
+        forbidden_fragments = (
+            'declaration.kind == "entity"',
+            'declaration.kind == "query"',
+            'declaration.kind == "enum"',
+            '"language": DeclarationDefinition',
+            '"meta-combinator": MetaCombinatorDefinition',
+            '"required", "optional", "forbidden"',
+        )
+        for fragment in forbidden_fragments:
+            with self.subTest(fragment=fragment):
+                self.assertNotIn(fragment, source)
+        self.assertNotIn("core source may only contain declaration meta-definitions", source)
+
+    def test_revision4_stays_compatibility_only_while_authority_correction_is_open(self) -> None:
         transition = json.loads(
             (ROOT / "spec" / "core-authority-transition-v1.json").read_text(
                 encoding="utf-8"
             )
         )
-        self.assertEqual(transition["phase"], "complete")
+        self.assertEqual(transition["phase"], "self-description-correction-in-progress")
         self.assertEqual(
             transition["completedPhases"], ["D0", "I1", "I2", "V1", "G1"]
         )
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
-        self.assertFalse(
-            transition["revision4"]["remainsProductionCompatibilityOracleUntilG1"]
-        )
         self.assertTrue(transition["revision4"]["productionUseRequiresCoreAuthorization"])
         self.assertTrue(transition["coreSource"]["projectWideAuthorityFlipComplete"])
-        self.assertTrue(transition["integrationState"]["g1IntegratedOnMain"])
+        correction = transition["authorityCorrection"]
+        self.assertTrue(correction["supersedesPermanentDefinitionObjectAuthorityDesign"])
+        self.assertEqual(correction["p1"]["status"], "implemented")
+        self.assertFalse(correction["p1"]["changesPermanentSemantics"])
+        self.assertEqual(correction["p2"]["status"], "pending")
+        self.assertEqual(correction["p3"]["status"], "pending")
+        self.assertEqual(correction["p4"]["status"], "pending")
+        self.assertTrue(correction["semanticsDependentKotlinFrozen"])
+        self.assertIn("PR-99", correction["frozenKotlinWorkIncludes"])
+        self.assertFalse(transition["generatedProjection"]["authorityInput"])
         self.assertEqual(
-            transition["integrationState"]["mainCommit"],
-            "b90c44912d7f82450c2190473035bce14bef828d",
+            transition["nextAction"]["id"],
+            "CORE-SELF-DESCRIPTION-P1-VALIDATION",
         )
-        self.assertEqual(transition["nextGate"]["id"], "M10.5-01")
-        self.assertEqual(transition["nextGate"]["status"], "complete")
-        self.assertFalse(transition["nextGate"]["requiresPostG1CurrentMainRefreshRevalidation"])
-        self.assertFalse(transition["nextGate"]["laterSemanticKotlinBlockedUntilComplete"])
-        evidence = transition["nextGate"]["historicalMergedEvidence"]
-        self.assertEqual(evidence["pr"], 77)
         self.assertEqual(
-            evidence["mergeCommit"],
-            "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
+            transition["nextAction"]["status"],
+            "pending-independent-validation",
         )
-        self.assertEqual(evidence["role"], "historical-provisional-parity-evidence")
-        self.assertFalse(evidence["pendingIntegrationTarget"])
-        accepted = transition["nextGate"]["postG1CurrentMainRefresh"]
-        self.assertEqual(
-            accepted["baselineBaseCommit"],
-            "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
-        )
-        self.assertEqual(accepted["manifest"], "spec/m10-5-parity-manifest.json")
-        self.assertEqual(accepted["implementationPr"], 94)
-        self.assertEqual(
-            accepted["implementationHead"],
-            "9228f94302c1fbbc6cd5fc0b5fc7af9231071d76",
-        )
-        self.assertTrue(accepted["independentlyValidated"])
-        self.assertTrue(accepted["integratedOnMain"])
-        self.assertEqual(
-            accepted["mainCommit"],
-            "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9",
-        )
-        reconciliation = transition["nextGate"]["statusReconciliation"]
-        self.assertEqual(reconciliation["implementationPr"], 95)
-        self.assertEqual(
-            reconciliation["implementationHead"],
-            "2a26b1deff1baa5504e5e714222e8726181c7d5a",
-        )
-        self.assertTrue(reconciliation["independentlyValidated"])
-        self.assertTrue(reconciliation["integratedOnMain"])
-        self.assertEqual(
-            reconciliation["mainCommit"],
-            "3fa5c969338d1f0dc6b9bc573e70c7004f53aceb",
-        )
-        self.assertEqual(transition["nextAction"]["id"], "M10.5-02")
-        self.assertEqual(transition["nextAction"]["status"], "dependency-ready")
-
-    def test_post_g1_durable_status_is_consistent_across_authority_sources(self) -> None:
-        transition = json.loads(
-            (ROOT / "spec" / "core-authority-transition-v1.json").read_text(
-                encoding="utf-8"
-            )
-        )
-        todo = (ROOT / "TODO.md").read_text(encoding="utf-8")
-        authority_doc = (ROOT / "docs" / "core-language-authority-gate.md").read_text(
-            encoding="utf-8"
-        )
-        parity_doc = (ROOT / "docs" / "m10-5-parity-evidence.md").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("G1", transition["completedPhases"])
-        self.assertTrue(transition["integrationState"]["g1IntegratedOnMain"])
-        self.assertNotIn("candidateState", transition)
-        self.assertIn("- [x] **G1 — Core authority integration/flip.**", todo)
-        self.assertNotIn("G1 remains unchecked", todo)
-        self.assertIn("- [x] **M10.5-01 — Refresh the Python parity baseline", todo)
-        self.assertIn("PR #94", todo)
-        self.assertIn("9228f94302c1fbbc6cd5fc0b5fc7af9231071d76", todo)
-        self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", todo)
-        self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
-        self.assertIn("PR #95", todo)
-        self.assertIn("2a26b1deff1baa5504e5e714222e8726181c7d5a", todo)
-        self.assertIn("3fa5c969338d1f0dc6b9bc573e70c7004f53aceb", todo)
-        self.assertIn("- [x] **M10.5-02 — Kotlin Multiplatform compiler skeleton / Gate 02.**", todo)
-        self.assertIn("dfb3af756f2c726f925ee16bddecebe004e5c781", todo)
-        self.assertIn("5ca01218246982e4b21701254bf3f1844b103014", todo)
-        self.assertIn("- [ ] **M10.5-03 and later Kotlin semantic work.**", todo)
-        self.assertIn("Gate 03 remains incomplete", todo)
-        self.assertNotIn("Dependency-ready next roadmap action", todo)
-        self.assertNotIn("blocked until this durable-state correction", todo.lower())
-        self.assertNotIn("PR #77 remains candidate compatibility evidence only and is not validated or integrated", authority_doc)
-        self.assertIn("D0, I1, I2, V1 and G1 are complete and integrated.", authority_doc)
-        self.assertIn("PR #77 remains already-merged historical/provisional M10.5-01 parity evidence", authority_doc)
-        self.assertIn("not a pending integration target", authority_doc)
-        self.assertIn("M10.5-01 refresh is complete", authority_doc)
-        self.assertIn("3fa5c969338d1f0dc6b9bc573e70c7004f53aceb", authority_doc)
-        self.assertIn("durable-state reconciliation is complete", parity_doc)
-        self.assertIn("M10.5-02 and is dependency-ready", parity_doc)
-        self.assertNotIn("requires fresh independent validation and later integration before Gate 01 is complete", authority_doc)
-        self.assertNotIn("M10.5-01 remains incomplete until this new candidate", parity_doc)
-        self.assertNotIn("This branch implements G1", authority_doc)
 
     def test_projection_drift_fails_deterministically(self) -> None:
         source = (
