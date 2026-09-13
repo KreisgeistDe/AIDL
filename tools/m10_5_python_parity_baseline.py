@@ -21,13 +21,15 @@ SEMANTIC_DIMENSIONS = (
     "exit_behavior",
 )
 SEMANTIC_AUTHORITY = {
-    "permanent_source": "spec/core.aidl",
+    "permanent_source": "spec/core-self-description-v1.aidl",
+    "bootstrap_contract": "spec/bootstrap-kernel-v1.json",
     "compatibility_contract": "spec/core.authority.aidl",
     "compatibility_binding": "spec/core.compatibility.aidl",
     "revision4_role": "core-authorized-compatibility-evidence",
 }
 CORE_AUTHORITY_BINDINGS = {
-    "spec/core.aidl",
+    "spec/bootstrap-kernel-v1.json",
+    "spec/core-self-description-v1.aidl",
     "spec/core.authority.aidl",
     "spec/core.compatibility.aidl",
 }
