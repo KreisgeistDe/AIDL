@@ -286,10 +286,7 @@ class _Parser:
                 module = self.qualified_name()
                 self.line_end()
             elif self.match("import"):
-                imported = self.qualified_name()
-                if imported in imports:
-                    self.fail(f"duplicate import binding {imported!r}")
-                imports.append(imported)
+                imports.append(self.qualified_name())
                 self.line_end()
             else:
                 declarations.append(self.declaration())
@@ -346,15 +343,11 @@ class _Parser:
 
     def named_arguments(self) -> tuple[tuple[str, Value], ...]:
         arguments: list[tuple[str, Value]] = []
-        seen: set[str] = set()
         self.skip_newlines()
         if self.match(")"):
             return ()
         while True:
             name = self.name()
-            if name in seen:
-                self.fail(f"duplicate named argument {name!r}")
-            seen.add(name)
             self.require(":")
             value = self.value(stop={",", ")"})
             arguments.append((name, value))
@@ -588,8 +581,6 @@ class _Parser:
                 key = json.loads(self.advance().value)
             else:
                 key = self.name()
-            if key in result:
-                self.fail(f"duplicate object binding {key!r}")
             self.require(":")
             result[key] = self.value(stop={",", "}"}).to_json()
             self.skip_newlines()
@@ -624,6 +615,8 @@ class _Parser:
 
 
 def _validate_bindings(program: Program) -> None:
+    if len(program.imports) != len(set(program.imports)):
+        raise BootstrapSyntaxError("duplicate or ambiguous bootstrap import binding")
     seen: dict[str, str] = {}
     for declaration in program.declarations:
         if declaration.name is None:
@@ -638,9 +631,15 @@ def _validate_bindings(program: Program) -> None:
 
 
 def parse_source(source: str) -> Program:
-    """Parse only framing plus the generic declaration envelope; no domain kinds are known."""
+    """Parse framing plus the generic declaration envelope without domain knowledge."""
 
-    program = _Parser(source).program()
+    return _Parser(source).program()
+
+
+def parse_bootstrap_source(source: str) -> Program:
+    """Parse a bootstrap source unit and apply only bootstrap-level binding checks."""
+
+    program = parse_source(source)
     _validate_bindings(program)
     return program
 
@@ -672,7 +671,7 @@ def source_digest(source: str) -> str:
 def generate_projection(source: str) -> dict[str, Any]:
     """Derive deterministic transition evidence; it is output, never an authority input."""
 
-    program = parse_source(source)
+    program = parse_bootstrap_source(source)
     return {
         "schemaVersion": 1,
         "kernelVersion": KERNEL_VERSION,
