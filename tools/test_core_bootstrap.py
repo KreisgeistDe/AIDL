@@ -161,30 +161,17 @@ class CoreBootstrapTest(unittest.TestCase):
                 '}\n'
             )
 
-    def test_checked_in_core_is_kernel_parsable_and_projection_is_exact(self) -> None:
+    def test_checked_in_legacy_runtime_core_is_kernel_parsable_and_projection_is_exact(self) -> None:
         core_path = ROOT / "spec" / "core.aidl"
         projection_path = ROOT / "spec" / "core-registry-v1.json"
         check_projection(core_path, projection_path)
         program = parse_bootstrap_source(core_path.read_text(encoding="utf-8"))
         names = {declaration.name for declaration in program.declarations}
-        self.assertTrue(
-            {
-                "NamePolicy",
-                "Cardinality",
-                "TypeRef",
-                "ArgumentDefinition",
-                "ModifierDefinition",
-                "BodySlotDefinition",
-                "DeclarationDefinition",
-                "MetaCombinatorDefinition",
-                "SemanticMetaModel",
-                "declaration",
-                "body",
-            }.issubset(names)
-        )
+        self.assertIn("DeclarationDefinition", names)
+        self.assertIn("SemanticMetaModel", names)
         self.assertEqual({declaration.kind for declaration in program.declarations}, {"declaration"})
 
-    def test_parsing_current_core_does_not_require_generated_registry(self) -> None:
+    def test_parsing_current_runtime_core_does_not_require_generated_registry(self) -> None:
         source = (ROOT / "spec" / "core.aidl").read_text(encoding="utf-8")
         first = parse_bootstrap_source(source)
         second = parse_bootstrap_source(source)
@@ -202,6 +189,7 @@ class CoreBootstrapTest(unittest.TestCase):
         )
         self.assertTrue(contract["authorityFirewall"]["directAidlDeclarationKindContractsAreNormative"])
         self.assertFalse(contract["authorityFirewall"]["generatedMetaIrOrRegistryIsAuthorityInput"])
+        self.assertFalse(contract["authorityFirewall"]["concreteProducerKindCatalogOwnedByHost"])
         self.assertIn("concrete-declaration-kind-catalog", contract["excludes"])
         self.assertIn("concrete-category-to-schema-map", contract["excludes"])
         self.assertIn("name-policy-values", contract["excludes"])
@@ -210,6 +198,10 @@ class CoreBootstrapTest(unittest.TestCase):
             contract["bodyForms"],
             ["inline", "multiline-v1", "multiline-v2"],
         )
+        carrier = contract["typeCarrierRule"]
+        self.assertEqual(carrier["producer"], "produces(type)")
+        self.assertFalse(carrier["hostKnowsConcreteProducerKinds"])
+        self.assertTrue(carrier["recursiveGenericArgumentsUseSameRule"])
 
     def test_host_source_has_no_concrete_kind_or_category_semantic_table(self) -> None:
         source = (ROOT / "tools" / "core_bootstrap.py").read_text(encoding="utf-8")
@@ -239,11 +231,24 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
         self.assertTrue(transition["revision4"]["productionUseRequiresCoreAuthorization"])
         self.assertTrue(transition["coreSource"]["projectWideAuthorityFlipComplete"])
+        self.assertFalse(transition["coreSource"]["permanentAuthorityAfterCorrection"])
+        self.assertEqual(
+            transition["coreSelfDescription"]["path"],
+            "spec/core-self-description-v1.aidl",
+        )
+        self.assertFalse(
+            transition["coreSelfDescription"]["permanentDefinitionObjectAuthority"]
+        )
         correction = transition["authorityCorrection"]
         self.assertTrue(correction["supersedesPermanentDefinitionObjectAuthorityDesign"])
-        self.assertEqual(correction["p1"]["status"], "implemented")
-        self.assertFalse(correction["p1"]["changesPermanentSemantics"])
-        self.assertEqual(correction["p2"]["status"], "pending")
+        self.assertEqual(correction["p1"]["status"], "integrated")
+        self.assertEqual(
+            correction["p1"]["mainCommit"],
+            "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
+        )
+        self.assertEqual(correction["p2"]["status"], "implemented")
+        self.assertFalse(correction["p2"]["permanentDefinitionObjectAuthority"])
+        self.assertTrue(correction["p2"]["enumInstancesValidAtTypePositions"])
         self.assertEqual(correction["p3"]["status"], "pending")
         self.assertEqual(correction["p4"]["status"], "pending")
         self.assertTrue(correction["semanticsDependentKotlinFrozen"])
@@ -251,7 +256,7 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertFalse(transition["generatedProjection"]["authorityInput"])
         self.assertEqual(
             transition["nextAction"]["id"],
-            "CORE-SELF-DESCRIPTION-P1-VALIDATION",
+            "CORE-SELF-DESCRIPTION-P2-VALIDATION",
         )
         self.assertEqual(
             transition["nextAction"]["status"],
