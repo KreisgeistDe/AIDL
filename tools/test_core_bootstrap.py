@@ -145,24 +145,64 @@ class CoreBootstrapTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(transition["phase"], "G1")
-        self.assertEqual(transition["completedPhases"], ["D0", "I1", "I2", "V1"])
+        self.assertEqual(transition["phase"], "complete")
+        self.assertEqual(
+            transition["completedPhases"], ["D0", "I1", "I2", "V1", "G1"]
+        )
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
         self.assertFalse(
             transition["revision4"]["remainsProductionCompatibilityOracleUntilG1"]
         )
         self.assertTrue(transition["revision4"]["productionUseRequiresCoreAuthorization"])
         self.assertTrue(transition["coreSource"]["projectWideAuthorityFlipComplete"])
-        self.assertTrue(transition["candidateState"]["g1ImplementedOnCandidate"])
-        self.assertFalse(transition["candidateState"]["integratedOnMain"])
-        self.assertNotIn(
-            "G1-project-wide-authority-flip",
-            transition["blockedUntilSeparatePhases"],
+        self.assertTrue(transition["integrationState"]["g1IntegratedOnMain"])
+        self.assertEqual(
+            transition["integrationState"]["mainCommit"],
+            "b90c44912d7f82450c2190473035bce14bef828d",
         )
-        self.assertIn(
-            "semantics-dependent-future-M10.5",
-            transition["blockedUntilSeparatePhases"],
+        self.assertEqual(transition["nextGate"]["id"], "M10.5-01")
+        self.assertEqual(transition["nextGate"]["status"], "dependency-ready")
+        self.assertTrue(transition["nextGate"]["requiresPostG1CurrentMainRefreshRevalidation"])
+        self.assertTrue(transition["nextGate"]["laterSemanticKotlinBlockedUntilComplete"])
+        evidence = transition["nextGate"]["historicalMergedEvidence"]
+        self.assertEqual(evidence["pr"], 77)
+        self.assertEqual(
+            evidence["mergeCommit"],
+            "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
         )
+        self.assertEqual(evidence["role"], "historical-provisional-parity-evidence")
+        self.assertFalse(evidence["pendingIntegrationTarget"])
+
+    def test_post_g1_durable_status_is_consistent_across_authority_sources(self) -> None:
+        transition = json.loads(
+            (ROOT / "spec" / "core-authority-transition-v1.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        todo = (ROOT / "TODO.md").read_text(encoding="utf-8")
+        authority_doc = (ROOT / "docs" / "core-language-authority-gate.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("G1", transition["completedPhases"])
+        self.assertTrue(transition["integrationState"]["g1IntegratedOnMain"])
+        self.assertNotIn("candidateState", transition)
+        self.assertIn("- [x] **G1 — Core authority integration/flip.**", todo)
+        self.assertNotIn("G1 remains unchecked", todo)
+        self.assertIn("M10.5-01 — Refresh the Python parity baseline", todo)
+        self.assertIn("**Next dependency-ready gate.**", todo)
+        self.assertIn("PR #77 is the focused candidate", todo)
+        self.assertIn("is already merged on main", todo)
+        self.assertIn("it is not a future integration target", todo)
+        self.assertIn("Completion requires fresh independent validation and integration", todo)
+        self.assertIn("separate post-G1 current-main refresh/revalidation package", todo)
+        self.assertNotIn("PR #77 remains candidate compatibility evidence only and is not validated or integrated", authority_doc)
+        self.assertIn("D0, I1, I2, V1 and G1 are complete and integrated.", authority_doc)
+        self.assertIn("M10.5-01 is the next dependency-ready gate", authority_doc)
+        self.assertIn("PR #77 is already-merged historical/provisional M10.5-01 parity evidence", authority_doc)
+        self.assertIn("it is not a pending integration target", authority_doc)
+        self.assertIn("separate current-main M10.5-01 refresh/revalidation package", authority_doc)
+        self.assertNotIn("This branch implements G1", authority_doc)
 
     def test_projection_drift_fails_deterministically(self) -> None:
         source = (
