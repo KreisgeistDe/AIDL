@@ -55,7 +55,7 @@ The former execution order `M10.1 -> M10.2 -> M10.3 -> M10.5` was interrupted by
 
 [M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md) is now unblocked by the completed Core gate, but its internal sequencing remains mandatory. M10.5-01 must be refreshed and independently accepted before M10.5-02 or later Kotlin semantic work may proceed. Python and revision-4 artifacts remain compatibility/conformance evidence under Core-owned authority.
 
-- [ ] **M10.5-01 — Refresh the Python parity baseline and differential harness.** **Next dependency-ready gate.** PR #77 is the focused candidate retained as compatibility evidence only; it must be freshly reconciled with the post-G1 Core-owned authority and current Python reference state, then independently validated and integrated before Gate 01 can complete.
+- [ ] **M10.5-01 — Refresh the Python parity baseline and differential harness.** **Next dependency-ready gate.** PR #77 is the focused candidate retained as compatibility evidence only. Completion requires fresh independent validation and integration after reconciling it with the post-G1 Core-owned authority and current Python reference state; Gate 01 is not complete in this reconciliation.
 - [ ] **M10.5-02 and later Kotlin work.** Blocked until M10.5-01 is durably integrated. PR #88's integrated TypeConstruction slice remains bounded historical evidence; generic Core TypeRef adaptation and further semantics-dependent Kotlin work belong only after Gate 01.
 
 ## Priority legend
