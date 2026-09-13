@@ -1,8 +1,7 @@
 package de.kreisgeist.aidl.compiler.jvm
 
-import de.kreisgeist.aidl.compiler.contract.DeterministicJson
-import de.kreisgeist.aidl.compiler.contract.ParityContract
+import de.kreisgeist.aidl.compiler.contract.CommonCompilerBoundary
 
 object JvmCompilerAdapter {
-    fun contractSnapshotJson(): String = DeterministicJson.objectOf(ParityContract.contractSnapshot())
+    fun contractSnapshotJson(): String = CommonCompilerBoundary.deterministicContractSnapshot()
 }
