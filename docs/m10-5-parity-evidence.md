@@ -2,7 +2,7 @@
 
 M10.5-01 was refreshed after the completed Core authority transition and the integrated post-G1 reconciliation. The accepted Python reference/conformance baseline was derived from exact `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`, independently validated at exact PR #94 head `9228f94302c1fbbc6cd5fc0b5fc7af9231071d76`, and integrated on `main` as `fcfc3fc92e6577270dbf89be22c4ddfac5c187a9`. PR #77 remains already-merged historical/provisional parity evidence at `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and did not satisfy the post-G1 Gate-01 refresh by itself.
 
-This package is accepted M10.5-01 evidence. It does not change AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, public support, or Python's reference/conformance role. M10.5-02 and later Kotlin semantic work remain blocked until the focused durable-state correction that records this completed Gate 01 receives fresh independent validation and integration.
+This package is accepted M10.5-01 evidence. It does not change AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, public support, or Python's reference/conformance role. The focused durable-state reconciliation was independently validated at exact PR #95 head `2a26b1deff1baa5504e5e714222e8726181c7d5a` and integrated on `main` as `3fa5c969338d1f0dc6b9bc573e70c7004f53aceb`; M10.5-02 is now dependency-ready as the next roadmap action.
 
 ## Machine-readable authority boundary
 
@@ -54,4 +54,4 @@ The structured result contract compares accepted/rejected classification, diagno
 - semantic fingerprint drift; and
 - semantic result mismatches with structured reporting.
 
-The historical PR #77 evidence remains useful provenance but is not reused as the post-G1 acceptance target. Gate 01 is complete through independently validated and integrated PR #94. The next semantic roadmap step is M10.5-02, but it remains blocked until the separate durable-state reconciliation recording this completion is independently validated and integrated.
+The historical PR #77 evidence remains useful provenance but is not reused as the post-G1 acceptance target. Gate 01 is complete through independently validated and integrated PR #94, and its durable-state reconciliation is complete through independently validated and integrated PR #95. The next semantic roadmap step is M10.5-02 and is dependency-ready; this reconciliation does not itself implement any Kotlin semantic work.

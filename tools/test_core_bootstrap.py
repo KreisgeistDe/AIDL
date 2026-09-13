@@ -189,11 +189,20 @@ class CoreBootstrapTest(unittest.TestCase):
             accepted["mainCommit"],
             "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9",
         )
-        self.assertEqual(transition["nextAction"]["id"], "M10.5-02")
+        reconciliation = transition["nextGate"]["statusReconciliation"]
+        self.assertEqual(reconciliation["implementationPr"], 95)
         self.assertEqual(
-            transition["nextAction"]["status"],
-            "blocked-pending-gate01-status-reconciliation-integration",
+            reconciliation["implementationHead"],
+            "2a26b1deff1baa5504e5e714222e8726181c7d5a",
         )
+        self.assertTrue(reconciliation["independentlyValidated"])
+        self.assertTrue(reconciliation["integratedOnMain"])
+        self.assertEqual(
+            reconciliation["mainCommit"],
+            "3fa5c969338d1f0dc6b9bc573e70c7004f53aceb",
+        )
+        self.assertEqual(transition["nextAction"]["id"], "M10.5-02")
+        self.assertEqual(transition["nextAction"]["status"], "dependency-ready")
 
     def test_post_g1_durable_status_is_consistent_across_authority_sources(self) -> None:
         transition = json.loads(
@@ -219,15 +228,20 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertIn("9228f94302c1fbbc6cd5fc0b5fc7af9231071d76", todo)
         self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", todo)
         self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
+        self.assertIn("PR #95", todo)
+        self.assertIn("2a26b1deff1baa5504e5e714222e8726181c7d5a", todo)
+        self.assertIn("3fa5c969338d1f0dc6b9bc573e70c7004f53aceb", todo)
         self.assertIn("M10.5-02 and later Kotlin work", todo)
-        self.assertIn("blocked until this durable-state correction", todo.lower())
+        self.assertIn("Dependency-ready next roadmap action", todo)
+        self.assertNotIn("blocked until this durable-state correction", todo.lower())
         self.assertNotIn("PR #77 remains candidate compatibility evidence only and is not validated or integrated", authority_doc)
         self.assertIn("D0, I1, I2, V1 and G1 are complete and integrated.", authority_doc)
         self.assertIn("PR #77 remains already-merged historical/provisional M10.5-01 parity evidence", authority_doc)
         self.assertIn("not a pending integration target", authority_doc)
-        self.assertIn("M10.5-01 refresh is now complete", authority_doc)
-        self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", authority_doc)
-        self.assertIn("Gate 01 is complete through independently validated and integrated PR #94", parity_doc)
+        self.assertIn("M10.5-01 refresh is complete", authority_doc)
+        self.assertIn("3fa5c969338d1f0dc6b9bc573e70c7004f53aceb", authority_doc)
+        self.assertIn("durable-state reconciliation is complete", parity_doc)
+        self.assertIn("M10.5-02 and is dependency-ready", parity_doc)
         self.assertNotIn("requires fresh independent validation and later integration before Gate 01 is complete", authority_doc)
         self.assertNotIn("M10.5-01 remains incomplete until this new candidate", parity_doc)
         self.assertNotIn("This branch implements G1", authority_doc)
