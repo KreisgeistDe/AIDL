@@ -2,10 +2,13 @@ module aidl.core.self
 
 declaration declaration(name: name(required), args: args(any, cardinal(0, many))) -> any {
   body body: body(any, name(required), cardinal(0, many))
+  body semantic: body(any, name(required), cardinal(0, many))
 }
 
-declaration type(name: name(required), args: args(any, cardinal(0, many))) {
+declaration type(name: name(required), args: args(any, cardinal(0, many))) -> any {
+  body body: body(any, name(required), cardinal(0, many))
   body semantic: body(any, name(required), cardinal(0, many))
+  semantic alias: "declaration"
 }
 
 declaration enum(name: name(required)) {
@@ -28,6 +31,7 @@ declaration compatibilityProjection(name: name(required)) {
 }
 
 type string {}
+declaration declarationAliasExample {}
 type bool {}
 type int {}
 type uuid {}
@@ -70,6 +74,7 @@ enum CardinalityLabel {
 entity CoreEntityExample {
   field id: string @primary
   field state: NamePolicy
+  field declarationKind: entity
   invariant: bool
 }
 
