@@ -27,6 +27,8 @@ class CoreSemanticsTest(unittest.TestCase):
     def test_registry_is_direct_core_derived_and_deterministic(self) -> None:
         registry = self.registry()
         self.assertIn("entity", registry.declarations)
+        self.assertIn("enum", registry.declarations)
+        self.assertIn("query", registry.declarations)
         self.assertIn("compatibilityProjection", registry.declarations)
         self.assertEqual(registry.combinators["choice"].behavior, "choice")
         self.assertEqual(registry.combinators["ref"].behavior, "declaration-ref-kind")
@@ -46,11 +48,14 @@ class CoreSemanticsTest(unittest.TestCase):
         with self.assertRaisesRegex(CoreContractError, "legacy Definition-object semantic modules"):
             load_semantic_registry('declaration old(kind: "language") {}\n')
 
-    def test_valid_entity_uses_aidl_defined_types_enum_carriers_and_modifiers(self) -> None:
+    def test_valid_entity_uses_named_symbol_typerefs_and_modifiers(self) -> None:
         source = """
+enum LocalState {
+  case READY:
+}
 entity Parent {
   field active: bool @primary
-  field state: NamePolicy
+  field state: LocalState
   invariant: active
 }
 
@@ -60,6 +65,29 @@ entity Child {
 }
 """
         self.assertEqual(validate_source(source, self.registry()), ())
+
+    def test_query_args_and_result_use_same_generic_named_symbol_rule(self) -> None:
+        source = """
+type LocalId {}
+type Page {}
+query MyQuery(id: LocalId) -> Page<MyQuery> {
+}
+"""
+        self.assertEqual(validate_source(source, self.registry()), ())
+
+    def test_void_args_and_result_fail_closed(self) -> None:
+        explicit_empty_args = """
+enum V() {
+  case A:
+}
+"""
+        self.assertIn("CORE-S035", self.codes(explicit_empty_args))
+        unexpected_result = """
+enum V -> string {
+  case A:
+}
+"""
+        self.assertIn("CORE-S005", self.codes(unexpected_result))
 
     def test_ref_resolution_and_wrong_kind_remain_fail_closed(self) -> None:
         unresolved = """
@@ -79,7 +107,7 @@ entity E {
 """
         self.assertIn("CORE-S013", self.codes(wrong_kind))
 
-    def test_unknown_carrier_modifier_duplicate_name_and_order_fail(self) -> None:
+    def test_unknown_symbol_modifier_duplicate_name_and_order_fail(self) -> None:
         source = """
 entity E {
   invariant first: true
