@@ -1,0 +1,4 @@
+module demo.shared
+export value Public {}
+value Hidden {}
+export entity Duplicate {}

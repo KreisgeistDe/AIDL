@@ -1,0 +1,3 @@
+module demo.shared
+export enum Duplicate {}
+export value Other {}

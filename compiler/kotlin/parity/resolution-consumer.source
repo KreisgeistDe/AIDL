@@ -1,0 +1,4 @@
+module demo.consumer
+import demo.shared.Public
+import demo.shared.*
+entity Local {}
