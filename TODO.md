@@ -37,7 +37,14 @@ M10.1 acceptance is certified by `docs/m10-1-closure-certification.md`: all froz
 
 - [x] **M10.3-01 — Migrate intended reference examples and close production semantic mismatches.** **P1** `spec/m10-3-closure-certification.json` and `tools/m10_3_closure_certification.py` compose the exhaustive M10.2 classification, the complete shared disposition, all three integrated reference-app inventories, and all committed valid/compatibility, rejection and semantic-diagnostic fixture classes. New unclassified/inconsistent app or fixture surfaces fail closed. `app.links` remains separately versioned-admission only; all other retained mismatches remain explicit non-production/fail-closed evidence; revision 4, Production Normalization, Canonical IR meaning and parser/compiler/runtime semantics are unchanged.
 
-The required execution order is `M10.1 -> M10.2 -> M10.3 -> refreshed M10.5-01 -> M10.5-02 and later Kotlin work`. Current PR #77 and any other pre-M10.2 M10.5-01 baseline are provisional/deferred and cannot serve as the final Kotlin parity baseline. M16.5 remains the later broader normalization/metamodel milestone and does not substitute for M10.2/M10.3.
+The required execution order is `M10.1 -> M10.2 -> M10.3 -> refreshed M10.5-01 -> M10.5-02 and later Kotlin work`. Integrated M10.3 now permits a refreshed M10.5-01 candidate to be built from the current Python reference state. PR #77 is that refreshed candidate only after it contains `spec/m10-5-parity-manifest.json` plus generated parity evidence from the post-M10.3 baseline; it remains incomplete until fresh independent validation and integration. Any older pre-M10.2/pre-M10.3 PR #77 inventory or fingerprint is stale and must not be used as the Kotlin parity baseline. M16.5 remains the later broader normalization/metamodel milestone and does not substitute for M10.2/M10.3.
+
+## M10.5 Kotlin compiler-core migration gate
+
+[M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md) begins with the post-M10.3 Python parity baseline. Python remains the reference/conformance implementation.
+
+- [ ] **M10.5-01 — Refresh the Python parity baseline and differential harness.** PR #77 is the focused candidate. The machine-readable manifest must pin exact `source`, `config`, and `profile` runner-input identity, content-bind the current frozen language, IR schema, profile registry, M10.2/M10.3 authorities and inventoried evidence, emit deterministic parity evidence, and fail closed on identity/fingerprint drift. Completion requires fresh independent validation and integration of the exact refreshed head.
+- [ ] **M10.5-02 and later Kotlin work.** Blocked until M10.5-01 is durably integrated; no Kotlin semantic implementation is authorized by the baseline refresh itself.
 
 ## Priority legend
 
