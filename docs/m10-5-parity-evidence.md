@@ -1,8 +1,8 @@
 # M10.5-01 post-G1 current-main Python parity evidence
 
-M10.5-01 is being refreshed again after the completed Core authority transition and the integrated post-G1 reconciliation. This document describes the candidate Python reference/conformance baseline derived from exact `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`. PR #77 remains already-merged historical/provisional parity evidence at `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and does not satisfy this post-G1 Gate-01 refresh by itself.
+M10.5-01 was refreshed after the completed Core authority transition and the integrated post-G1 reconciliation. The accepted Python reference/conformance baseline was derived from exact `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`, independently validated at exact PR #94 head `9228f94302c1fbbc6cd5fc0b5fc7af9231071d76`, and integrated on `main` as `fcfc3fc92e6577270dbf89be22c4ddfac5c187a9`. PR #77 remains already-merged historical/provisional parity evidence at `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and did not satisfy the post-G1 Gate-01 refresh by itself.
 
-This package is evidence for later independent exact-head validation and integration. It does not change AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, public support, or Python's reference/conformance role. M10.5-01 remains incomplete until this new candidate is independently validated and integrated; M10.5-02 and later Kotlin semantic work remain blocked.
+This package is accepted M10.5-01 evidence. It does not change AIDL language semantics, Production Normalization admission, Canonical IR meaning, runtime behavior, public support, or Python's reference/conformance role. M10.5-02 and later Kotlin semantic work remain blocked until the focused durable-state correction that records this completed Gate 01 receives fresh independent validation and integration.
 
 ## Machine-readable authority boundary
 
@@ -10,7 +10,7 @@ This package is evidence for later independent exact-head validation and integra
 
 The generated fingerprint content-binds:
 
-- exact candidate base `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`;
+- exact accepted baseline base `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`;
 - normative `spec/core.aidl`;
 - Core-authored compatibility authority contract `spec/core.authority.aidl`;
 - exact Core-authored revision-4 compatibility binding `spec/core.compatibility.aidl`;
@@ -23,7 +23,7 @@ The generated fingerprint content-binds:
 - every inventoried Python compiler, CLI/query, fixture/compatibility, reference-app, IntelliJ-integration and CI evidence file; and
 - the differential comparison contract.
 
-Drift in Core source, the Core-authored compatibility contract, or the exact compatibility binding changes the fingerprint and therefore fails closed against a previously accepted baseline. The manifest also rejects any attempt to relabel revision 4 as permanent semantic authority.
+Drift in Core source, the Core-authored compatibility contract, or the exact compatibility binding changes the fingerprint and therefore fails closed against the accepted baseline. The manifest also rejects any attempt to relabel revision 4 as permanent semantic authority.
 
 No semantic allowlist exists. The only declared transport normalization is repository-relative path rendering plus canonical JSON object-key ordering.
 
@@ -35,7 +35,7 @@ Every differential run has exactly three inputs: `source`, `config`, and `profil
 
 The structured result contract compares accepted/rejected classification, diagnostics, Canonical IR, stable identities, ordering, source locations, and exit behavior. A mismatch is emitted as a structured row naming the semantic dimension and both values. The harness does not suppress known differences with allowlists.
 
-`python3 tools/m10_5_python_parity_baseline.py evidence` emits the deterministic candidate evidence JSON and semantic fingerprint for the current checkout.
+`python3 tools/m10_5_python_parity_baseline.py evidence` emits the deterministic accepted evidence JSON and semantic fingerprint for the current checkout.
 
 ## Negative evidence
 
@@ -54,4 +54,4 @@ The structured result contract compares accepted/rejected classification, diagno
 - semantic fingerprint drift; and
 - semantic result mismatches with structured reporting.
 
-The historical PR #77 evidence remains useful provenance but is not reused as the post-G1 acceptance target. This exact new PR head requires fresh independent validation and later integration before Gate 01 can be marked complete.
+The historical PR #77 evidence remains useful provenance but is not reused as the post-G1 acceptance target. Gate 01 is complete through independently validated and integrated PR #94. The next semantic roadmap step is M10.5-02, but it remains blocked until the separate durable-state reconciliation recording this completion is independently validated and integrated.
