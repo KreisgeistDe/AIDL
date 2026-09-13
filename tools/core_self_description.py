@@ -30,8 +30,9 @@ class Cardinality:
 
 
 @dataclass(frozen=True)
-class ArgumentSlotContract:
-    value_type: TypeRef
+class ArgumentSetContract:
+    mode: str
+    value_type: TypeRef | None
     cardinality: Cardinality
 
 
@@ -54,7 +55,7 @@ class BodyContract:
 class DeclarationKindContract:
     name: str
     name_policy: str
-    arguments: ArgumentSlotContract | None
+    arguments: ArgumentSetContract
     result: TypeRef | None
     body: tuple[BodyContract, ...]
 
@@ -62,6 +63,7 @@ class DeclarationKindContract:
 @dataclass(frozen=True)
 class SelfDescribedCore:
     contracts: dict[str, DeclarationKindContract]
+    aliases: dict[str, str]
     symbols: frozenset[str]
     declarations: tuple[Declaration, ...]
 
@@ -70,8 +72,13 @@ class SelfDescribedCore:
             "contracts": {
                 name: {
                     "namePolicy": contract.name_policy,
-                    "arguments": None if contract.arguments is None else {
-                        "valueType": contract.arguments.value_type.to_json(),
+                    "arguments": {
+                        "mode": contract.arguments.mode,
+                        "valueType": (
+                            None
+                            if contract.arguments.value_type is None
+                            else contract.arguments.value_type.to_json()
+                        ),
                         "cardinality": {
                             "min": contract.arguments.cardinality.minimum,
                             "max": contract.arguments.cardinality.maximum,
@@ -86,7 +93,9 @@ class SelfDescribedCore:
                                 "min": slot.cardinality.minimum,
                                 "max": slot.cardinality.maximum,
                             },
-                            "expectedType": None if slot.expected_type is None else slot.expected_type.to_json(),
+                            "expectedType": (
+                                None if slot.expected_type is None else slot.expected_type.to_json()
+                            ),
                             "modifiers": [
                                 {
                                     "name": modifier.name,
@@ -103,13 +112,16 @@ class SelfDescribedCore:
                 }
                 for name, contract in sorted(self.contracts.items())
             },
+            "aliases": dict(sorted(self.aliases.items())),
             "symbols": sorted(self.symbols),
         }
 
 
 def _term(value: Value | None, subject: str) -> KernelTerm:
     if value is None or value.kind != "raw":
-        raise CoreSelfDescriptionError(f"{subject} must be a Bootstrap meta-combinator expression")
+        raise CoreSelfDescriptionError(
+            f"{subject} must be a Bootstrap meta-combinator expression"
+        )
     try:
         return parse_meta_combinator(value.raw)
     except BootstrapSyntaxError as exc:
@@ -128,36 +140,56 @@ def _cardinality(term: KernelTerm, subject: str) -> Cardinality:
         if term.arguments[0] in aliases:
             return aliases[term.arguments[0]]
     if len(term.arguments) != 2:
-        raise CoreSelfDescriptionError(f"{subject} cardinality must be cardinal(min, max|many)")
+        raise CoreSelfDescriptionError(
+            f"{subject} cardinality must be cardinal(min, max|many)"
+        )
     minimum, maximum = term.arguments
     if not isinstance(minimum, int) or isinstance(minimum, bool) or minimum < 0:
         raise CoreSelfDescriptionError(f"{subject} cardinal minimum must be >= 0")
     if maximum == "many" or maximum is None:
         return Cardinality(minimum, None)
-    if not isinstance(maximum, int) or isinstance(maximum, bool) or maximum < minimum:
-        raise CoreSelfDescriptionError(f"{subject} cardinal maximum must be >= minimum or many")
+    if (
+        not isinstance(maximum, int)
+        or isinstance(maximum, bool)
+        or maximum < minimum
+    ):
+        raise CoreSelfDescriptionError(
+            f"{subject} cardinal maximum must be >= minimum or many"
+        )
     return Cardinality(minimum, maximum)
 
 
 def _name_policy(term: KernelTerm, subject: str) -> str:
     if term.name != "name" or len(term.arguments) != 1:
-        raise CoreSelfDescriptionError(f"{subject} must use name(required|optional|forbidden)")
+        raise CoreSelfDescriptionError(
+            f"{subject} must use name(required|optional|forbidden)"
+        )
     policy = term.arguments[0]
     if policy not in {"required", "optional", "forbidden"}:
-        raise CoreSelfDescriptionError(f"{subject} has unsupported name policy {policy!r}")
+        raise CoreSelfDescriptionError(
+            f"{subject} has unsupported name policy {policy!r}"
+        )
     return str(policy)
 
 
 def _modifier(term: KernelTerm, subject: str) -> ModifierUse:
-    if term.name != "modifier" or not term.arguments or not isinstance(term.arguments[0], str):
-        raise CoreSelfDescriptionError(f"{subject} must use modifier(name[, cardinal(...)])")
+    if (
+        term.name != "modifier"
+        or not term.arguments
+        or not isinstance(term.arguments[0], str)
+    ):
+        raise CoreSelfDescriptionError(
+            f"{subject} must use modifier(name[, cardinal(...)])"
+        )
     cardinality = Cardinality(0, 1)
     if len(term.arguments) > 2:
         raise CoreSelfDescriptionError(f"{subject} modifier has too many arguments")
     if len(term.arguments) == 2:
         nested = term.arguments[1]
         if not isinstance(nested, KernelTerm):
-            raise CoreSelfDescriptionError(f"{subject} modifier cardinality must be structural")
+            raise CoreSelfDescriptionError(
+                f"{subject} modifier cardinality must be structural"
+            )
         cardinality = _cardinality(nested, subject)
     return ModifierUse(term.arguments[0], cardinality)
 
@@ -168,16 +200,23 @@ def _as_type_ref(value: object, subject: str) -> TypeRef:
     try:
         return parse_type_ref(value)
     except BootstrapSyntaxError as exc:
-        raise CoreSelfDescriptionError(f"{subject}: invalid direct type contract {value!r}: {exc}") from exc
+        raise CoreSelfDescriptionError(
+            f"{subject}: invalid direct type contract {value!r}: {exc}"
+        ) from exc
 
 
-def _argument_contract(term: KernelTerm, subject: str) -> ArgumentSlotContract:
+def _argument_contract(term: KernelTerm, subject: str) -> ArgumentSetContract:
     if term.name != "args" or len(term.arguments) != 2:
-        raise CoreSelfDescriptionError(f"{subject} must use args(<value-type>, cardinal(...))")
+        raise CoreSelfDescriptionError(
+            f"{subject} must use args(<value-type>, cardinal(...))"
+        )
     value_type_raw, cardinal_raw = term.arguments
     if not isinstance(cardinal_raw, KernelTerm):
-        raise CoreSelfDescriptionError(f"{subject} argument cardinality must be structural")
-    return ArgumentSlotContract(
+        raise CoreSelfDescriptionError(
+            f"{subject} argument cardinality must be structural"
+        )
+    return ArgumentSetContract(
+        "open",
         _as_type_ref(value_type_raw, subject),
         _cardinality(cardinal_raw, subject),
     )
@@ -185,7 +224,9 @@ def _argument_contract(term: KernelTerm, subject: str) -> ArgumentSlotContract:
 
 def _body_contract(entry: BodyEntry, owner: str) -> BodyContract:
     if entry.body_type != "body" or entry.name is None:
-        raise CoreSelfDescriptionError(f"{owner}: declaration-kind contracts must use named body entries")
+        raise CoreSelfDescriptionError(
+            f"{owner}: declaration-kind contracts must use named body entries"
+        )
     term = _term(entry.value, f"{owner}.{entry.name}")
     if term.name != "body":
         raise CoreSelfDescriptionError(f"{owner}.{entry.name} must use body(...)")
@@ -197,11 +238,15 @@ def _body_contract(entry: BodyEntry, owner: str) -> BodyContract:
         if isinstance(item, KernelTerm):
             if item.name == "name":
                 if name_policy is not None:
-                    raise CoreSelfDescriptionError(f"{owner}.{entry.name}: duplicate name(...)")
+                    raise CoreSelfDescriptionError(
+                        f"{owner}.{entry.name}: duplicate name(...)"
+                    )
                 name_policy = _name_policy(item, f"{owner}.{entry.name}")
             elif item.name == "cardinal":
                 if cardinality is not None:
-                    raise CoreSelfDescriptionError(f"{owner}.{entry.name}: duplicate cardinal(...)")
+                    raise CoreSelfDescriptionError(
+                        f"{owner}.{entry.name}: duplicate cardinal(...)"
+                    )
                 cardinality = _cardinality(item, f"{owner}.{entry.name}")
             elif item.name == "modifier":
                 modifiers.append(_modifier(item, f"{owner}.{entry.name}"))
@@ -225,7 +270,9 @@ def _body_contract(entry: BodyEntry, owner: str) -> BodyContract:
         )
     modifier_names = [modifier.name for modifier in modifiers]
     if len(modifier_names) != len(set(modifier_names)):
-        raise CoreSelfDescriptionError(f"{owner}.{entry.name}: duplicate modifier contract")
+        raise CoreSelfDescriptionError(
+            f"{owner}.{entry.name}: duplicate modifier contract"
+        )
     return BodyContract(
         entry.name,
         name_policy,
@@ -239,7 +286,7 @@ def _kind_contract(declaration: Declaration) -> DeclarationKindContract:
     if declaration.name is None:
         raise CoreSelfDescriptionError("declaration-kind contract requires a name")
     name_policy = "optional"
-    argument_contract: ArgumentSlotContract | None = None
+    argument_contract = ArgumentSetContract("closed", None, Cardinality(0, 0))
     seen_header_terms: set[str] = set()
     for header_name, value in declaration.arguments:
         term = _term(value, f"{declaration.name}.{header_name}")
@@ -251,7 +298,9 @@ def _kind_contract(declaration: Declaration) -> DeclarationKindContract:
         if term.name == "name":
             name_policy = _name_policy(term, f"{declaration.name}.name")
         elif term.name == "args":
-            argument_contract = _argument_contract(term, f"{declaration.name}.args")
+            argument_contract = _argument_contract(
+                term, f"{declaration.name}.args"
+            )
         else:
             raise CoreSelfDescriptionError(
                 f"{declaration.name}: unsupported declaration header combinator {term.name!r}"
@@ -261,7 +310,11 @@ def _kind_contract(declaration: Declaration) -> DeclarationKindContract:
         name_policy,
         argument_contract,
         declaration.result,
-        tuple(_body_contract(entry, declaration.name) for entry in declaration.body),
+        tuple(
+            _body_contract(entry, declaration.name)
+            for entry in declaration.body
+            if entry.body_type == "body"
+        ),
     )
 
 
@@ -271,13 +324,17 @@ def _within(count: int, cardinality: Cardinality) -> bool:
     )
 
 
-def _validate_type_ref(type_ref: TypeRef, symbols: frozenset[str], subject: str) -> None:
+def _validate_type_ref(
+    type_ref: TypeRef, symbols: frozenset[str], subject: str
+) -> None:
     if type_ref.name in {"any", "type", "identifier"}:
         for index, argument in enumerate(type_ref.arguments):
             _validate_type_ref(argument, symbols, f"{subject}.argument[{index}]")
         return
     if type_ref.name not in symbols:
-        raise CoreSelfDescriptionError(f"{subject}: unresolved type symbol {type_ref.name!r}")
+        raise CoreSelfDescriptionError(
+            f"{subject}: unresolved type symbol {type_ref.name!r}"
+        )
     for index, argument in enumerate(type_ref.arguments):
         _validate_type_ref(argument, symbols, f"{subject}.argument[{index}]")
 
@@ -296,7 +353,9 @@ def _validate_contract_value(
         return
     if expected.name == "identifier":
         if value is not None:
-            raise CoreSelfDescriptionError(f"{subject}: identifier slots carry identity in the entry name")
+            raise CoreSelfDescriptionError(
+                f"{subject}: identifier slots carry identity in the entry name"
+            )
         return
     if expected.name == "type":
         if value is None or value.kind != "typeRef":
@@ -308,11 +367,20 @@ def _validate_contract_value(
             raise CoreSelfDescriptionError(f"{subject}: value must be string")
         return
     if expected.name == "bool":
-        if value is None or value.kind != "literal" or not isinstance(value.value, bool):
+        if (
+            value is None
+            or value.kind != "literal"
+            or not isinstance(value.value, bool)
+        ):
             raise CoreSelfDescriptionError(f"{subject}: value must be bool")
         return
     if expected.name == "int":
-        if value is None or value.kind != "number" or not isinstance(value.value, int) or isinstance(value.value, bool):
+        if (
+            value is None
+            or value.kind != "number"
+            or not isinstance(value.value, int)
+            or isinstance(value.value, bool)
+        ):
             raise CoreSelfDescriptionError(f"{subject}: value must be int")
         return
     if value is None:
@@ -330,17 +398,18 @@ def _validate_instance(
     if contract.name_policy == "forbidden" and declaration.name is not None:
         raise CoreSelfDescriptionError(f"{subject}: declaration name is forbidden")
 
-    if contract.arguments is None:
-        if declaration.arguments_present:
+    actual_arguments = declaration.arguments
+    if contract.arguments.mode == "closed":
+        if actual_arguments:
             raise CoreSelfDescriptionError(
-                f"{subject}: declaration kind {contract.name} has Args=void"
+                f"{subject}: declaration kind {contract.name} has a closed zero-parameter signature"
             )
     else:
-        actual_arguments = declaration.arguments
         if not _within(len(actual_arguments), contract.arguments.cardinality):
             raise CoreSelfDescriptionError(
                 f"{subject}: declaration argument count violates {contract.name} contract"
             )
+        assert contract.arguments.value_type is not None
         if contract.arguments.value_type.name != "any":
             for name, value in actual_arguments:
                 _validate_contract_value(
@@ -353,12 +422,19 @@ def _validate_instance(
     if contract.result is None:
         if declaration.result is not None:
             raise CoreSelfDescriptionError(
-                f"{subject}: declaration kind {contract.name} has Return=void"
+                f"{subject}: declaration kind {contract.name} does not permit a result"
             )
+    elif contract.name != "declaration" and declaration.result is None:
+        raise CoreSelfDescriptionError(
+            f"{subject}: declaration kind {contract.name} requires a result TypeRef"
+        )
     elif declaration.result is not None:
         if contract.result.name == "type":
             _validate_type_ref(declaration.result, symbols, f"{subject}.result")
-        elif contract.result.name != "any" and declaration.result.name != contract.result.name:
+        elif (
+            contract.result.name != "any"
+            and declaration.result.name != contract.result.name
+        ):
             raise CoreSelfDescriptionError(
                 f"{subject}: result {_fmt_type(declaration.result)!r} does not match "
                 f"{_fmt_type(contract.result)!r}"
@@ -371,7 +447,9 @@ def _validate_instance(
             f"{subject}: undeclared body type(s): {', '.join(unknown)}"
         )
     for body_type, slot in by_type.items():
-        entries = [entry for entry in declaration.body if entry.body_type == body_type]
+        entries = [
+            entry for entry in declaration.body if entry.body_type == body_type
+        ]
         if not _within(len(entries), slot.cardinality):
             raise CoreSelfDescriptionError(
                 f"{subject}.{body_type}: body-entry count violates cardinality"
@@ -380,9 +458,13 @@ def _validate_instance(
         modifier_contracts = {item.name: item for item in slot.modifiers}
         for entry in entries:
             if slot.name_policy == "required" and entry.name is None:
-                raise CoreSelfDescriptionError(f"{subject}.{body_type}: name is required")
+                raise CoreSelfDescriptionError(
+                    f"{subject}.{body_type}: name is required"
+                )
             if slot.name_policy == "forbidden" and entry.name is not None:
-                raise CoreSelfDescriptionError(f"{subject}.{body_type}: name is forbidden")
+                raise CoreSelfDescriptionError(
+                    f"{subject}.{body_type}: name is forbidden"
+                )
             if entry.name is not None:
                 if entry.name in seen_names:
                     raise CoreSelfDescriptionError(
@@ -403,7 +485,9 @@ def _validate_instance(
                         f"{subject}.{body_type}: modifier {modifier.name!r} is not declared"
                     )
             for name, modifier_contract in modifier_contracts.items():
-                if not _within(counts.get(name, 0), modifier_contract.cardinality):
+                if not _within(
+                    counts.get(name, 0), modifier_contract.cardinality
+                ):
                     raise CoreSelfDescriptionError(
                         f"{subject}.{body_type}: modifier {name!r} violates cardinality"
                     )
@@ -421,44 +505,6 @@ def _fmt_type(type_ref: TypeRef) -> str:
     )
 
 
-def compile_self_described_core(source: str) -> SelfDescribedCore:
-    """Compile the direct Core using only the finite Bootstrap Kernel vocabulary."""
-    program = parse_bootstrap_source(source)
-    contract_declarations = [
-        declaration
-        for declaration in program.declarations
-        if declaration.kind == "declaration"
-    ]
-    contracts = {
-        declaration.name: _kind_contract(declaration)
-        for declaration in contract_declarations
-        if declaration.name is not None
-    }
-    if "declaration" not in contracts:
-        raise CoreSelfDescriptionError(
-            "self-described Core must define the declaration declaration-kind"
-        )
-    unknown_kinds = sorted(
-        {
-            declaration.kind
-            for declaration in program.declarations
-            if declaration.kind not in contracts
-        }
-    )
-    if unknown_kinds:
-        raise CoreSelfDescriptionError(
-            "declarations use undefined declaration-kind(s): " + ", ".join(unknown_kinds)
-        )
-    symbols = frozenset(
-        declaration.name
-        for declaration in program.declarations
-        if declaration.name is not None
-    )
-    for declaration in program.declarations:
-        _validate_instance(declaration, contracts[declaration.kind], symbols)
-    return SelfDescribedCore(contracts, symbols, program.declarations)
-
-
 def _semantic_metadata(declaration: Declaration) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for entry in declaration.body:
@@ -470,6 +516,110 @@ def _semantic_metadata(declaration: Declaration) -> dict[str, Any]:
             )
         result[entry.name] = None if entry.value is None else entry.value.to_json()
     return result
+
+
+def _contract_shape(contract: DeclarationKindContract) -> tuple[Any, ...]:
+    return (
+        contract.name_policy,
+        contract.arguments,
+        contract.result,
+        contract.body,
+    )
+
+
+def compile_self_described_core(source: str) -> SelfDescribedCore:
+    """Compile the direct Core using only the finite Bootstrap Kernel vocabulary."""
+    program = parse_bootstrap_source(source)
+    contract_declarations = [
+        declaration
+        for declaration in program.declarations
+        if declaration.kind == "declaration"
+    ]
+    raw_contracts = {
+        declaration.name: _kind_contract(declaration)
+        for declaration in contract_declarations
+        if declaration.name is not None
+    }
+    if "declaration" not in raw_contracts:
+        raise CoreSelfDescriptionError(
+            "self-described Core must define the declaration declaration-kind"
+        )
+
+    aliases: dict[str, str] = {}
+    for declaration in contract_declarations:
+        if declaration.name is None:
+            continue
+        metadata = _semantic_metadata(declaration)
+        alias = metadata.get("alias")
+        if alias is None:
+            continue
+        if not isinstance(alias, str) or not alias:
+            raise CoreSelfDescriptionError(
+                f"{declaration.name}: semantic alias must be a non-empty string"
+            )
+        if alias == declaration.name:
+            raise CoreSelfDescriptionError(
+                f"{declaration.name}: semantic alias cannot target itself"
+            )
+        aliases[declaration.name] = alias
+
+    for alias, target in aliases.items():
+        if target not in raw_contracts:
+            raise CoreSelfDescriptionError(
+                f"{alias}: semantic alias target {target!r} is not a declaration contract"
+            )
+        if _contract_shape(raw_contracts[alias]) != _contract_shape(raw_contracts[target]):
+            raise CoreSelfDescriptionError(
+                f"{alias}: alias contract must exactly match canonical {target!r} contract"
+            )
+    if "declaration" in aliases:
+        raise CoreSelfDescriptionError(
+            "the central declaration meta-class cannot itself be an alias"
+        )
+
+    contracts = {
+        name: contract
+        for name, contract in raw_contracts.items()
+        if name not in aliases
+    }
+
+    def canonical_kind(kind: str) -> str:
+        seen: set[str] = set()
+        current = kind
+        while current in aliases:
+            if current in seen:
+                raise CoreSelfDescriptionError(
+                    f"cyclic declaration-kind alias involving {kind!r}"
+                )
+            seen.add(current)
+            current = aliases[current]
+        return current
+
+    unknown_kinds = sorted(
+        {
+            declaration.kind
+            for declaration in program.declarations
+            if canonical_kind(declaration.kind) not in contracts
+        }
+    )
+    if unknown_kinds:
+        raise CoreSelfDescriptionError(
+            "declarations use undefined declaration-kind(s): "
+            + ", ".join(unknown_kinds)
+        )
+
+    symbols = frozenset(
+        declaration.name
+        for declaration in program.declarations
+        if declaration.name is not None
+    )
+    for declaration in program.declarations:
+        _validate_instance(
+            declaration,
+            contracts[canonical_kind(declaration.kind)],
+            symbols,
+        )
+    return SelfDescribedCore(contracts, aliases, symbols, program.declarations)
 
 
 def _runtime_type(type_ref: TypeRef | None) -> dict[str, Any] | None:
@@ -523,7 +673,8 @@ def semantic_meta_ir(model: SelfDescribedCore, source_sha256: str) -> dict[str, 
                         f"modifier {item.name!r} has incompatible cardinalities"
                     )
         arguments: list[dict[str, Any]] = []
-        if contract.arguments is not None:
+        if contract.arguments.mode == "open":
+            assert contract.arguments.value_type is not None
             arguments.append(
                 {
                     "name": "*",
@@ -538,13 +689,14 @@ def semantic_meta_ir(model: SelfDescribedCore, source_sha256: str) -> dict[str, 
             "namePolicy": contract.name_policy,
             "arguments": arguments,
             "result": _runtime_type(contract.result),
+            "resultRequired": contract.result is not None and kind != "declaration",
             "slots": slots,
             "modifiers": [],
         }
 
     combinators: dict[str, dict[str, Any]] = {}
     for declaration in model.declarations:
-        if declaration.name is None or declaration.kind != "type":
+        if declaration.name is None:
             continue
         metadata = _semantic_metadata(declaration)
         behavior = metadata.get("behavior")
@@ -577,21 +729,17 @@ def semantic_meta_ir(model: SelfDescribedCore, source_sha256: str) -> dict[str, 
             "arguments": [minimum, maximum],
         }
 
-    predeclared_symbols = sorted(
-        declaration.name
-        for declaration in model.declarations
-        if declaration.name is not None and declaration.kind != "declaration"
-    )
     return {
-        "schemaVersion": 2,
+        "schemaVersion": 3,
         "role": "derived-non-authoritative-runtime-meta-ir",
         "source": "spec/core-self-description-v1.aidl",
         "sourceSha256": source_sha256,
         "authorityInput": False,
         "declarations": declarations,
+        "kindAliases": dict(sorted(model.aliases.items())),
         "modifiers": modifiers,
         "combinators": combinators,
-        "predeclaredTypeSymbols": predeclared_symbols,
+        "predeclaredTypeSymbols": sorted(model.symbols),
     }
 
 
@@ -624,7 +772,7 @@ def load_self_described_core(path: Path | None = None) -> SelfDescribedCore:
 
 
 __all__ = [
-    "ArgumentSlotContract",
+    "ArgumentSetContract",
     "BodyContract",
     "Cardinality",
     "CoreSelfDescriptionError",
