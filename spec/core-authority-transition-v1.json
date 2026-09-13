@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "self-description-correction-in-progress",
+  "phase": "self-description-semantic-correction-in-progress",
   "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
   "coreSource": {
     "path": "spec/core.aidl",
@@ -16,20 +16,26 @@
     "compiler": "tools/core_self_description.py",
     "usesOnlyFiniteBootstrapMetaCombinators": true,
     "concreteDeclarationKindCatalogInHost": false,
-    "permanentDefinitionObjectAuthority": false
+    "permanentDefinitionObjectAuthority": false,
+    "argumentAbsence": "void-not-present",
+    "returnAbsence": "void-not-present",
+    "returnMechanism": "declaration-arrow-result-only",
+    "typeIdentity": "generic-visible-named-declaration-symbol"
   },
   "coreMetaIr": {
     "path": "spec/core-meta-ir-v1.json",
     "role": "derived-non-authoritative-runtime-meta-ir",
     "authorityInput": false,
     "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
-    "runtimeLoader": "tools/core_semantics.py"
+    "runtimeLoader": "tools/core_semantics.py",
+    "schemaVersion": 2,
+    "typeIdentityField": "predeclaredTypeSymbols"
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
     "role": "compatibility-shell-no-definition-object-authority",
     "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-integrated"
+    "migrationToDirectSelfDescription": "p3-integrated-correction-active"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
@@ -44,8 +50,10 @@
     "path": "spec/bootstrap-kernel-v1.json",
     "role": "finite-versioned-irreducible-host-bootstrap-contract",
     "concreteDeclarationKindsOwnedByHost": false,
-    "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier", "type-position", "produces"],
-    "typeCarrierRule": "named instances of any declaration-kind contract containing produces(type) are valid type carriers"
+    "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier"],
+    "producesPresent": false,
+    "typePositionPresent": false,
+    "typeIdentityRule": "visible named declaration symbol identity"
   },
   "generatedProjection": {
     "path": "spec/core-registry-v1.json",
@@ -62,52 +70,55 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "p3-integrated-p4-frozen",
-    "p1": {
-      "id": "bootstrap-boundary-architecture-contract",
-      "status": "integrated",
+    "status": "semantic-correction-implementation-in-progress-p4-frozen",
+    "historicalP1": {
       "implementationPr": 100,
-      "implementationHead": "2ad8b0ebfab069f8514ec74ddab9bb35ba40d516",
-      "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9"
+      "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
+      "obsoleteAssumptionsBeingRemoved": ["produces-carrier-capability", "type-position-marker"]
     },
-    "p2": {
-      "id": "core-self-description-and-type-carriers",
-      "status": "integrated",
+    "historicalP2": {
       "implementationPr": 101,
-      "implementationHead": "09574d3ace752cdda91504e4f6370daaa0ba4a51",
       "mainCommit": "7280f01a2c97b004c79cd0a2e598513bfa183ac0",
-      "normativeSource": "spec/core-self-description-v1.aidl",
-      "generalTypeCarrierProducer": "produces(type)",
-      "permanentDefinitionObjectAuthority": false
+      "obsoleteAssumptionsBeingRemoved": ["produces(type)-type-carrier-rule"]
     },
-    "p3": {
-      "id": "semantic-loader-meta-ir-compat-migration",
-      "status": "integrated",
+    "historicalP3": {
       "implementationPr": 102,
       "implementationHead": "4992c896cf9818ab51c6ade60fd2a58c657461fe",
       "mainCommit": "ca87cdc2ef0ce6e00808512897144ea99ef59293",
       "independentlyValidated": true,
-      "semanticAuthority": "spec/core-self-description-v1.aidl",
-      "derivedRuntimeMetaIr": "spec/core-meta-ir-v1.json",
-      "legacyDefinitionObjectRuntimeAuthority": false,
-      "legacyDefinitionObjectInputsFailClosed": true
+      "legacyDefinitionObjectRuntimeAuthority": false
+    },
+    "durableStateReconciliation": {
+      "implementationPr": 103,
+      "mainCommit": "bb8fb6ff9eb18429c94e9982a9e8d3e03a7ef48d",
+      "statusFactsRetained": true,
+      "p4NextWordingSupersededByCorrectionGate": true
+    },
+    "semanticCorrection": {
+      "id": "args-return-symbol-identity-correction",
+      "status": "implementation-candidate",
+      "producesRemoved": true,
+      "typePositionRemoved": true,
+      "argsVoidDistinctFromPresentEmpty": true,
+      "returnVoidUsesAbsentArrowContract": true,
+      "typeRefCarrierIdentity": "generic-visible-named-declaration-symbol",
+      "generatedMetaIrAuthority": false
     },
     "p4": {
       "id": "downstream-surfaces-and-kotlin-parity-rebase",
-      "status": "pending"
+      "status": "frozen"
     },
     "semanticsDependentKotlinFrozen": true,
     "frozenKotlinWorkIncludes": ["M10.5-03+", "PR-99"]
   },
   "nextGate": {
-    "id": "M10.5-01",
-    "status": "complete",
-    "requiresPostG1CurrentMainRefreshRevalidation": false,
+    "id": "CORE-SELF-DESCRIPTION-SEMANTIC-CORRECTION",
+    "status": "implementation-pending-independent-validation-and-integration",
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-P4",
-    "status": "frozen-pending-explicit-dispatch",
-    "reason": "P3 is independently validated and integrated. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until an explicit authorized dispatch resumes downstream work."
+    "id": "CORE-SELF-DESCRIPTION-CORRECTION-VALIDATION",
+    "status": "pending-independent-exact-head-validation",
+    "reason": "The P1-P3 produces/type-position interpretation is being corrected. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until the correction is independently validated and integrated."
   }
 }
