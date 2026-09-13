@@ -574,6 +574,125 @@
     },
     {
       "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "behavior",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "arguments",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "Cardinality",
+              "optional": false
+            }
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "MetaCombinatorDefinition",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "categoryArgument",
+          "value": "kind"
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "categories",
+          "value": {
+            "language": {
+              "$typeRef": {
+                "arguments": [],
+                "name": "DeclarationDefinition",
+                "optional": false
+              }
+            },
+            "meta-combinator": {
+              "$typeRef": {
+                "arguments": [],
+                "name": "MetaCombinatorDefinition",
+                "optional": false
+              }
+            },
+            "modifier": {
+              "$typeRef": {
+                "arguments": [],
+                "name": "ModifierDefinition",
+                "optional": false
+              }
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "ignoredCategories",
+          "value": [
+            "meta",
+            "bootstrap"
+          ]
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "SemanticMetaModel",
+      "result": null
+    },
+    {
+      "arguments": {
         "kind": "bootstrap"
       },
       "body": [
@@ -640,5 +759,5 @@
   "kernelVersion": 1,
   "schemaVersion": 1,
   "sourceModule": "aidl.core",
-  "sourceSha256": "085470155b35e236da26a935c127dc9a4fd190260270335c10be45a61d51d72f"
+  "sourceSha256": "761acf0e10781d4b3b574753a04774dab3e36ececd21950ecd65816ec8e72ba4"
 }
