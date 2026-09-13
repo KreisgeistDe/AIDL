@@ -31,7 +31,6 @@ declaration compatibilityProjection(name: name(required)) {
 }
 
 type string {}
-declaration declarationAliasExample {}
 type bool {}
 type int {}
 type uuid {}
