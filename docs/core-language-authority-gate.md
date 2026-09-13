@@ -8,7 +8,7 @@ The completed sequence is:
 
 `D0 review -> I1 Bootstrap/Core authority -> I2 Core semantic/domain migration -> V1 independent broad validation -> G1 integration/authority flip`
 
-Normative Core/Core-authored modules are now the sole permanent semantic authority. The next dependency-ready roadmap gate is the separately dispatched M10.5-01 parity-baseline refresh; M10.5-02 and later semantics-dependent Kotlin work remain blocked until Gate 01 is durably completed.
+Normative Core/Core-authored modules are now the sole permanent semantic authority. The post-G1/current-main M10.5-01 parity-baseline refresh was independently validated at exact PR #94 head `9228f94302c1fbbc6cd5fc0b5fc7af9231071d76` and integrated on `main` as `fcfc3fc92e6577270dbf89be22c4ddfac5c187a9`. M10.5-02 and later semantics-dependent Kotlin work remain blocked until the focused durable-state correction recording that completed Gate 01 is itself independently validated and integrated.
 
 ## G1 authority disposition
 
@@ -54,8 +54,8 @@ Ordered BodySlots still derive solely from the normative `DeclarationDefinition.
 
 ## Post-G1 roadmap boundary
 
-The Core Language Authority Gate is complete. M10.5-01 is the next dependency-ready gate and must refresh/reconcile the Python parity baseline and differential harness against the post-G1 Core-owned authority and current Python reference state. PR #77 is already-merged historical/provisional M10.5-01 parity evidence on main via `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and does not by itself satisfy the post-G1 current-main Gate 01 refresh/revalidation requirement.
+The Core Language Authority Gate is complete. PR #77 remains already-merged historical/provisional M10.5-01 parity evidence on main via `1574963eed95a2f80c1cdc47f48a3eaa39df4a4b`; it is not a pending integration target and did not by itself satisfy the required post-G1/current-main Gate 01 refresh.
 
-A separate current-main M10.5-01 refresh/revalidation package now exists as an implementation candidate derived from `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`. Its parity fingerprint binds the normative Core source, Core-authored compatibility contract/binding, current Python reference/conformance evidence and the existing IR/profile/M10.2/M10.3 contracts. It remains non-normative and requires fresh independent exact-head validation and later integration before Gate 01 is complete.
+That separate current-main M10.5-01 refresh is now complete: PR #94 was implemented from exact `main@f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5`, independently validated at exact head `9228f94302c1fbbc6cd5fc0b5fc7af9231071d76`, and integrated on `main` as `fcfc3fc92e6577270dbf89be22c4ddfac5c187a9`. Its parity fingerprint keeps the normative Core source and Core-authored compatibility contract/binding as the sole permanent authority inputs, keeps revision 4 as Core-authorized compatibility/conformance evidence, preserves the inherited six parity bindings, and preserves exact `source`/`config`/`profile` runner identity.
 
-M10.5-02 and later Kotlin work remain dependent on durable acceptance of that post-G1 Gate 01 package. No semantics-dependent Kotlin adaptation, parser/type semantic change, Canonical IR widening, production-admission change, Bootstrap Kernel change, Core registry semantic change or revision-4 compatibility-content change is part of this Gate-01 refresh.
+M10.5-02 is the next roadmap action, but semantics-dependent Kotlin work must not begin from this correction branch. This focused durable-state correction must first receive fresh independent exact-head validation and later integration so repository status truth and the completed Gate 01 cannot diverge again. No parser/type semantic change, Canonical IR widening, production-admission change, Bootstrap Kernel change, Core registry semantic change, revision-4 compatibility-content change, or Kotlin semantic implementation is part of this correction.

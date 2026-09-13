@@ -189,13 +189,16 @@ class M105PythonParityBaselineTest(unittest.TestCase):
                 actual_fingerprint="sha256:" + "0" * 64,
             )
 
-    def test_todo_projects_new_post_g1_candidate_without_starting_m10_5_02(self) -> None:
+    def test_todo_records_integrated_gate01_without_starting_m10_5_02(self) -> None:
         todo = (self.root / "TODO.md").read_text(encoding="utf-8")
         self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
-        self.assertIn("post-G1 current-main Gate-01 refresh candidate", todo)
-        self.assertIn("requires fresh independent validation and integration", todo)
+        self.assertIn("- [x] **M10.5-01 — Refresh the Python parity baseline", todo)
+        self.assertIn("9228f94302c1fbbc6cd5fc0b5fc7af9231071d76", todo)
+        self.assertIn("fcfc3fc92e6577270dbf89be22c4ddfac5c187a9", todo)
         self.assertIn("M10.5-02 and later Kotlin work", todo)
-        self.assertIn("Blocked until M10.5-01 is durably integrated", todo)
+        self.assertIn("blocked until this durable-state correction", todo.lower())
+        self.assertNotIn("Current post-G1 candidate", todo)
+        self.assertNotIn("requires fresh independent validation and integration before Gate 01", todo)
 
 
 if __name__ == "__main__":
