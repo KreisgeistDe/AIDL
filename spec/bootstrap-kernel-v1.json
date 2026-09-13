@@ -48,9 +48,9 @@
   "failClosed": [
     "unknown-bootstrap-meta-combinator",
     "malformed-meta-combinator-shape",
-    "duplicate-module-or-import-binding",
-    "duplicate-or-ambiguous-named-declaration-binding",
-    "duplicate-named-argument-or-object-binding",
+    "duplicate-module-directive",
+    "duplicate-or-ambiguous-bootstrap-import-binding",
+    "duplicate-or-ambiguous-named-bootstrap-declaration-binding",
     "unclosed-or-unbalanced-kernel-shape"
   ],
   "authorityFirewall": {
