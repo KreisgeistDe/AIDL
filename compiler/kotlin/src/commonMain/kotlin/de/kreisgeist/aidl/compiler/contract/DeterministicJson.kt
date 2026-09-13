@@ -2,8 +2,8 @@ package de.kreisgeist.aidl.compiler.contract
 
 object DeterministicJson {
     fun objectOf(values: Map<String, String>): String = values
-        .toSortedMap()
         .entries
+        .sortedBy { it.key }
         .joinToString(prefix = "{", postfix = "}", separator = ",") { (key, value) ->
             "${quote(key)}:${quote(value)}"
         }
