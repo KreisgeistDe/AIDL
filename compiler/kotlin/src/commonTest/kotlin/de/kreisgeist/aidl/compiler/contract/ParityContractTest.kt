@@ -18,7 +18,8 @@ class ParityContractTest {
 
     @Test
     fun exactInputIdentityPassesAndPreservesRunnerOrder() {
-        val value = mapOf("profile" to digest, "source" to digest, "config" to digest)
+        val digitDigest = "sha256:" + "0".repeat(64)
+        val value = mapOf("profile" to digest, "source" to digitDigest, "config" to digest)
         val validated = ParityContract.validateInputIdentity(value)
         assertEquals(listOf("source", "config", "profile"), validated.keys.toList())
         assertEquals(value, validated)
