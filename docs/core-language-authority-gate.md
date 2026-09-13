@@ -2,37 +2,41 @@
 
 ## Status
 
-Phases I1 and I2 are integrated on `main`. Phase V1 is the current independent broad-validation gate and is **not certified**. Broad V1 review found that the I2 semantic registry loader still duplicated part of the Core meta-schema in host code. This focused correction makes normative `spec/core.aidl` own that meta-contract; a fresh independent broad/differential validation of the exact corrected head is still required before V1 may complete.
+D0, I1, I2 and V1 are complete inputs to the G1 authority-flip candidate. V1 was independently certified on the exact corrected PR #91 head and that correction is integrated on `main` at `f0a8097f926aa9d3940f2684c01b1d66de4dff2a`.
 
 The required sequence remains:
 
 `D0 review -> I1 Bootstrap/Core authority -> I2 Core semantic/domain migration -> V1 independent broad validation -> G1 integration/authority flip -> semantics-dependent future M10.5`
 
-G1 and later semantics-dependent Kotlin migration remain blocked until V1 is separately certified and the later gates are separately dispatched.
+This branch implements G1 but does not claim it is integrated on `main`. Independent exact-head G1 validation and a later separate integration step are still required. Semantics-dependent Kotlin/M10.5 work remains outside this candidate.
 
-## Authority disposition through V1 correction
+## G1 authority disposition
 
-`spec/bootstrap-kernel-v1.json` remains the irreducible host-defined syntax contract. The kernel owns only lexical rules, module/import framing, the uniform declaration envelope, recursive generic `TypeRef` syntax, primitive/list/object literal framing, BodyEntry framing, and `@ModifierCall` tokenization. It contains no domain declaration catalog or semantic meta-schema.
+`spec/bootstrap-kernel-v1.json` remains the irreducible host-defined syntax contract. It owns only lexical rules, module/import framing, the uniform declaration envelope, recursive generic `TypeRef` syntax, primitive/list/object literal framing, BodyEntry framing and `@ModifierCall` tokenization. It owns no domain declaration catalog, semantic meta-schema, production admission table or compatibility catalog.
 
-`spec/core.aidl` is the normative source for the Bootstrap/Core meta-model. In addition to NamePolicy, Cardinality, TypeRef, ArgumentDefinition, ModifierDefinition, BodySlotDefinition and DeclarationDefinition, it now declares `MetaCombinatorDefinition` plus `SemanticMetaModel`. `SemanticMetaModel` owns the semantic category argument, category-to-definition mapping, and intentionally ignored bootstrap/meta categories. Required fields remain expressed by Core's own `@required` metadata on the relevant definitions.
+`spec/core.aidl` remains the normative Bootstrap/Core meta-model. `SemanticMetaModel` owns semantic category mapping and meta-contract structure. `spec/core-registry-v1.json` remains a deterministic derived projection of `spec/core.aidl`, never an independent authority, and projection drift remains fail-closed.
 
-`spec/core-registry-v1.json` remains a deterministic derived projection of `spec/core.aidl`, not an independent authority. `tools/core_bootstrap.py` regenerates the projection and its exact source hash; both bootstrap tests and the semantic loader fail closed on projection drift.
+`spec/core.domain.aidl` remains an ordinary AIDL module importing Core. It owns the currently accepted domain semantics (`choice`, `ref`, `expression`, `primary`, `unique`, and the `entity` contract) as data rather than parser branches or host declaration catalogs.
 
-`spec/core.domain.aidl` remains an ordinary AIDL module importing Core. It defines the I2 meta-combinator behavior declarations used by semantic validation, the `primary`/`unique` modifier definitions, and the `entity` declaration contract with `field` and `invariant` BodySlots. Domain rules remain data loaded from AIDL rather than parser branches or a host declaration catalog.
+G1 adds `spec/core.authority.aidl`, another ordinary Core-authored semantic module. It defines the language contract `compatibilityProjection`: a compatibility artifact must name its source, bind an exact Git-blob SHA-1 and declare its role. `spec/core.compatibility.aidl` is a concrete Core-validated instance binding revision 4 to the exact checked-in `spec/language-surface-v1.json` blob with role `compatibility-only`.
 
-`tools/core_semantics.py` now loads the exact Core source/projection pair first, derives the accepted semantic category mapping and each meta-definition's field names, requiredness and value types from Core, and then validates semantic modules before interpreting them. ArgumentDefinition, ModifierDefinition, BodySlotDefinition, DeclarationDefinition and MetaCombinatorDefinition all reject undeclared metadata and missing required Core fields deterministically. The host no longer owns a parallel list of those body fields or category strings.
+`tools/core_authority.py` validates that Core itself, the deterministic Core projection, the authority module and the compatibility binding are mutually consistent before accepting the revision-4 artifact. It then verifies the exact Git blob identity and frozen M10.1 evidence disposition. Any drift in the legacy JSON without a corresponding Core-authored binding change fails closed.
 
-`tools/_core_semantics_runtime.py` contains the existing semantic execution and diagnostic machinery only. It consumes the validated registry and does not contain a registry loader or semantic meta-schema catalog. Existing NamePolicy, Cardinality, named-argument, BodySlot, modifier, recursive TypeRef, `ref<K>` and `expression<T>` behavior is unchanged by this authority correction.
+`tools/compiler_language_surface_body_parity.py` is the production adapter used by Production Normalization. Its constructor now requires the revision-4 artifact to pass `tools/core_authority.py` before the legacy compatibility table can be consumed. The generic `LanguageSurfaceBridge` remains available for compatibility/migration evidence, formatter and differential harnesses, but it is no longer sufficient by itself to authorize production semantic construction.
 
-Ordered BodySlots still follow their normative declaration sequence when `ordered: true`; there is no numeric host-only `order` property. Violations continue to produce deterministic `CORE-Sxxx` diagnostics with line/column spans and expected-contract text.
+This is the G1 authority flip: normative Core/Core-authored modules determine permanent semantic authority. Revision-4 JSON can continue to carry frozen compatibility facts and legacy normalization shapes only as an exact Core-authorized projection. It cannot independently change declaration, body-slot, modifier or production semantics after G1.
 
-`tools/core_compat.py` remains a migration adapter, not a grammar authority. It normalizes representable revision-4 spellings into the Core compatibility representation and emits deterministic semantic hashes. Legacy `[T]` becomes `list<T>`; legacy `T(min..max)` keeps its Core TypeRef plus an explicit lossless range-constraint fact in the compatibility envelope. Representative positional `client ... for ...` and `migration ... from ... to ...` headers normalize to named semantic arguments.
+## Compatibility and production boundary
 
-`spec/language-surface-v1.json` revision 4 remains compatibility and migration evidence and remains the production compatibility oracle until G1. It is not allowed to become a second permanent normative grammar.
+The legacy parser remains a recognizer for legacy source. G1 does not invent a second parser or remove compatibility syntax. Migration adapters and formatters remain separate from semantic authority.
 
-The machine-readable transition disposition is `spec/core-authority-transition-v1.json`. It marks D0/I1/I2 complete and V1 as the current phase, but it does not mark V1 complete or perform a project-wide authority flip.
+`tools/core_compat.py` remains deterministic migration evidence. Representable legacy forms continue to converge on the same compatibility facts and semantic hashes: legacy list TypeRefs normalize to Core generics, legacy range constraints remain explicit compatibility facts, and representative client/migration headers normalize deterministically. Unsupported or lossy legacy shapes remain fail-closed.
 
-## Bootstrap syntax fixed by I1
+`spec/language-surface-v1.json` revision 4 remains frozen M10.1 compatibility/migration evidence. Its former pre-G1 role as an independent production compatibility oracle is ended by G1. Production may still consume its exact data only through the Core-authored compatibility binding; changing the artifact alone is rejected before normalization.
+
+The existing Production Normalization and Canonical IR semantic envelope is not broadened by this phase. Existing admitted/fail-closed dispositions remain intact. G1 changes the authority source, not the language meaning or admission set.
+
+## Preserved I1/I2/V1 semantics
 
 The declaration envelope remains:
 
@@ -40,35 +44,16 @@ The declaration envelope remains:
 [export] <kind> [<identifier>] [(<named-args>)] [-> <typeRef>] { <body-entries>* }
 ```
 
-The parser captures a candidate identifier; Core semantics enforces required/optional/forbidden name policy. Header and modifier arguments are named.
+Core continues to own NamePolicy, Cardinality, ArgumentDefinition, ModifierDefinition, BodySlotDefinition, DeclarationDefinition and MetaCombinatorDefinition. The semantic loader remains Core-derived and validates all required meta-contract families before interpretation; undeclared or missing metadata fails closed.
 
-`TypeRef` supports qualified names, recursive generics such as `ref<entity>`, `expression<bool>`, `range<int>`, and `list<ref<entity>>`, plus a trailing `?` on a complete TypeRef. Cardinality is separate from TypeRef optionality.
+`TypeRef` continues to support recursive generics and trailing optionality. Cardinality remains independent of TypeRef optionality. `ref<K>` and `expression<T>` remain Core-declared combinator behavior. Diagnostics remain deterministic, sorted and source-spanned.
 
-Canonical modifiers begin with `@`. `@name` and `@name(arg: value, ...)` are kernel forms. At body top level the first `@` after a complete balanced value is the hard value/modifier boundary; quoted and nested `@` remains value content.
+Ordered BodySlots still derive solely from the normative `DeclarationDefinition.slots` sequence filtered by `ordered: true`. There is no numeric host-only `order` property.
 
-The three BodyEntry forms remain:
+`tools/_core_semantics_runtime.py` remains loader/meta-schema free. It executes already validated Core contracts and dispatches combinator behavior from the validated registry; it does not own a parallel semantic catalog.
 
-```text
-<body-type> [identifier]: [value] [@modifier ...]
+## Scope boundary
 
-<body-type> [identifier]: {
-  [value]
-  @modifier
-}
+This G1 candidate changes only authority plumbing, durable transition state, focused tests and the exhaustive committed-source classification needed for the two new Core AIDL modules. It does not add project `.ai/**`, introduce new language semantics, widen Canonical IR meaning, change production admission, or perform semantics-dependent Kotlin/M10.5 adaptation.
 
-<body-type> [identifier]: [value] {
-  @modifier
-}
-```
-
-## I2 domain model
-
-The integrated Core-owned `entity` contract requires a declaration identifier. Its repeated `field` slot requires a unique field identifier and accepts either an ordinary `TypeRef` or `ref<entity>`; `@primary` and `@unique` are optional singleton modifiers on fields. Its repeated `invariant` slot has an optional identifier and requires an `expression<bool>` value. Both slots are marked `ordered: true`, so their order is derived from the normative `slots` sequence in the AIDL-authored declaration contract: fields precede invariants.
-
-The `choice`, `ref`, and `expression` semantics used by that contract are declared as AIDL meta-combinators in `core.domain`, and the semantic engine dispatches by their declared behavior metadata rather than by domain declaration names.
-
-## V1 correction and scope boundary
-
-The correction is limited to the authority defect found by broad V1 validation: semantic meta-definition structure must be owned by Core rather than duplicated by the loader. Regression tests cover exact projection consumption, projection drift, Core-owned required/optional fields, Core-owned category mapping, and fail-closed undeclared metadata for ArgumentDefinition, ModifierDefinition, BodySlotDefinition, DeclarationDefinition and MetaCombinatorDefinition while retaining existing I2 behavior.
-
-This correction does not certify V1 by itself. It does not migrate `core.persistence` or `core.frontend`; does not change Production Normalization or Canonical IR meaning; does not broaden revision-4 production admission; does not perform G1; and does not adapt the integrated Kotlin `TypeConstruction` slice. PR #88 remains bounded implementation evidence and generic Core TypeRef adaptation remains deferred until after the Core authority gate.
+After independent validation and later integration of this exact candidate, semantics-dependent M10.5 may be separately reconsidered under Core-owned authority. That later work remains a distinct dispatch and must not be inferred from this candidate alone.
