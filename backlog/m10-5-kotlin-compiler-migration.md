@@ -56,14 +56,16 @@ No Kotlin semantic implementation proceeds beyond scaffolding until integrated M
 
 ### M10.5-02 — Kotlin Multiplatform compiler skeleton
 
-- [ ] Establish the Kotlin Multiplatform module boundaries for common compiler core, Kotlin/Native CLI adapter, and JVM adapter without moving semantic authority away from Python.
-- [ ] Keep filesystem/process/protocol integration outside common semantic packages and document every unavoidable platform-specific boundary.
-- [ ] Add deterministic serialization/test utilities required for byte- or structure-stable parity evidence.
-- [ ] Enforce at least 95% code coverage for new Kotlin-core and designated critical compiler packages, plus branch/condition coverage reporting and critical semantic-path tests.
+Gate 02 is complete. PR #97 exact independently validated head `dfb3af756f2c726f925ee16bddecebe004e5c781` was squash-integrated on main as `5ca01218246982e4b21701254bf3f1844b103014` with sole parent `11fd92d991cf2ff9f5354589dbfd0c0397908621`. Resulting-main push Validation #409 run `34760402346` and Kotlin Compiler Skeleton #66 run `34760402339` completed successfully.
+
+- [x] Establish the Kotlin Multiplatform module boundaries for common compiler core, Kotlin/Native CLI adapter, and JVM adapter without moving semantic authority away from Python.
+- [x] Keep filesystem/process/protocol integration outside common semantic packages and document every unavoidable platform-specific boundary.
+- [x] Add deterministic serialization/test utilities required for byte- or structure-stable parity evidence.
+- [x] Enforce at least 95% code coverage for new Kotlin-core and designated critical compiler packages, plus branch/condition coverage reporting and critical semantic-path tests.
 
 #### Gate 02
 
-The common-core boundary must be demonstrably platform-neutral, with both Native and JVM targets consuming it and no duplicated semantic implementation hidden in adapters.
+The common-core boundary is demonstrably platform-neutral, both Native and JVM targets consume it, and no duplicated semantic implementation is hidden in adapters. The accepted Kover evidence is the configured-and-passed minimum of 95% LINE and 95% BRANCH for JVM-executed common/JVM code; no unpublished raw percentage is asserted.
 
 ### M10.5-03 — Front-end parity slices
 
