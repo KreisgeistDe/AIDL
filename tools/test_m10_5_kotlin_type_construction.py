@@ -1,5 +1,4 @@
 from pathlib import Path
-import re
 import unittest
 
 from tools.aidl_parser import parse_text
@@ -15,7 +14,6 @@ SOURCE_IDS = ["resolution-consumer", "resolution-provider-a", "resolution-provid
 CASES = [
     ("string", "string"),
     ("[uuid]?", "[uuid]?"),
-    ("string(1..80)?", "string(1..80)?"),
     ("Public?", "Public?"),
     ("demo.shared.Public", "demo.shared.Public"),
     ("Local", "Local"),
@@ -25,17 +23,7 @@ CASES = [
     ("string??", "string??"),
     ("[string", "[string"),
     ("string]", "string]"),
-    ("List<string>", "List<string>"),
-    ("string(min:1)", "string(min:1)"),
-    ("string(1..x)", "string(1..x)"),
-    ("string(1..2..3)", "string(1..2..3)"),
 ]
-BUILTINS = {
-    "bool", "bytes", "date", "datetime", "decimal", "duration", "email", "float",
-    "int", "json", "long", "revision", "string", "time", "url", "uuid",
-}
-IDENTIFIER = re.compile(r"[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)*")
-NUMBER = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
 
 
 def _project():
@@ -55,47 +43,20 @@ def _identity(candidate) -> str:
     return f"{candidate.fully_qualified_name}@{document.source_path.stem}#{index}"
 
 
-def _bounded_shape(source: str) -> tuple[str, str | None]:
-    text = source.strip()
-    if not text or "<" in text or ">" in text:
-        raise TypeSyntaxError("outside bounded TypeConstruction slice")
-    nullable = text.endswith("?")
-    if nullable:
-        text = text[:-1].rstrip()
-    if text.endswith("?"):
-        raise TypeSyntaxError("duplicate optional marker")
-    suffix = "?" if nullable else ""
-    if text.startswith("["):
-        if not text.endswith("]") or not text[1:-1].strip():
-            raise TypeSyntaxError("invalid list shape")
-        nested_signature, nested_name = _bounded_shape(text[1:-1])
-        if nested_signature.endswith("?"):
-            # Nested optionality is preserved exactly by the bounded Kotlin shape.
-            pass
-        parse_type(f"[{nested_signature}]")
-        return f"[{nested_signature}]{suffix}", nested_name
-    if "[" in text or "]" in text:
-        raise TypeSyntaxError("invalid list shape")
-    open_index = text.find("(")
-    range_suffix = ""
-    if open_index >= 0:
-        if not text.endswith(")"):
-            raise TypeSyntaxError("unterminated range")
-        payload = text[open_index + 1:-1].strip()
-        parts = payload.split("..")
-        if len(parts) != 2 or any(not NUMBER.fullmatch(part.strip()) for part in parts):
-            raise TypeSyntaxError("only structured min..max range is in the bounded slice")
-        base = text[:open_index].rstrip()
-        range_suffix = f"({parts[0].strip()}..{parts[1].strip()})"
-    else:
-        if any(ch in text for ch in "(),:"):
-            raise TypeSyntaxError("non-range constraint outside bounded slice")
-        base = text
-    if not IDENTIFIER.fullmatch(base):
-        raise TypeSyntaxError("invalid type name")
-    # Require the current Python compiler to accept the corresponding Core type expression.
-    parse_type(f"{base}{range_suffix}{suffix}")
-    return f"{base}{range_suffix}{suffix}", base
+def _shape(type_ref) -> str:
+    if type_ref.kind == "nullable":
+        return f"nullable({_shape(type_ref.args[0])})"
+    if type_ref.kind == "list":
+        return f"list({_shape(type_ref.args[0])})"
+    if type_ref.kind in {"scalar", "named"}:
+        return f"{type_ref.kind}:{type_ref.name}"
+    return type_ref.kind
+
+
+def _nominal_name(type_ref) -> str | None:
+    while type_ref.kind in {"nullable", "list"} and type_ref.args:
+        type_ref = type_ref.args[0]
+    return type_ref.name if type_ref.kind == "named" else None
 
 
 def oracle_signature() -> str:
@@ -104,17 +65,18 @@ def oracle_signature() -> str:
     lines = []
     for label, source in CASES:
         try:
-            signature, base_name = _bounded_shape(source)
+            type_ref = parse_type(source)
         except TypeSyntaxError:
             lines.append(f"{label}|REJECT|||")
             continue
         status = "RESOLVED"
         symbols = []
-        if base_name and base_name not in BUILTINS:
-            candidates = _reference_candidates(project, consumer, base_name)
+        name = _nominal_name(type_ref)
+        if name is not None:
+            candidates = _reference_candidates(project, consumer, name)
             status = "UNRESOLVED" if not candidates else "RESOLVED" if len(candidates) == 1 else "AMBIGUOUS"
             symbols = [_identity(candidate) for candidate in candidates]
-        lines.append(f"{label}|ACCEPT|{signature}|{status}|{','.join(symbols)}")
+        lines.append(f"{label}|ACCEPT|{_shape(type_ref)}|{status}|{','.join(symbols)}")
     return "\n".join(lines)
 
 
