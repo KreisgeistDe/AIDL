@@ -2,7 +2,7 @@
 
 ## Status
 
-P1 is integrated as `755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9`. P2 / PR #101 is independently validated and integrated as `7280f01a2c97b004c79cd0a2e598513bfa183ac0`. This P3 candidate migrates semantic loading, type-carrier resolution and compatibility authorization to the direct self-described Core. P4 and semantics-dependent Kotlin work remain frozen.
+P1 is integrated as `755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9`. P2 / PR #101 is independently validated and integrated as `7280f01a2c97b004c79cd0a2e598513bfa183ac0`. P3 / PR #102 exact implementation head `4992c896cf9818ab51c6ade60fd2a58c657461fe` is independently validated and squash-integrated on `main` as `ca87cdc2ef0ce6e00808512897144ea99ef59293`. P4 and semantics-dependent Kotlin work remain frozen.
 
 ## Authority flow
 
@@ -22,8 +22,8 @@ The representative `entity` contract flows through the same path. Its fields acc
 
 ## Compatibility boundary
 
-`tools/core_authority.py` now validates `spec/core.compatibility.aidl` with the direct Core-derived registry. Revision 4 remains frozen compatibility/migration evidence and still requires the exact Core-authored source, blob SHA-1 and `compatibility-only` role binding before production normalization may consume it.
+`tools/core_authority.py` validates `spec/core.compatibility.aidl` with the direct Core-derived registry. Revision 4 remains frozen compatibility/migration evidence and still requires the exact Core-authored source, blob SHA-1 and `compatibility-only` role binding before production normalization may consume it.
 
 ## Deferred work
 
-P3 does not perform P4 downstream surface migration, Kotlin semantic parity, Canonical IR redesign, Production Normalization widening, or public support expansion. PR #99 and M10.5-03+ remain frozen until this P3 candidate is independently validated and integrated.
+P3 integration does not authorize P4 downstream surface migration, Kotlin semantic parity, Canonical IR redesign, Production Normalization widening, or public support expansion. PR #99 and M10.5-03+ remain frozen until an explicit authorized dispatch resumes downstream work.
