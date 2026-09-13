@@ -161,7 +161,7 @@ class CoreBootstrapTest(unittest.TestCase):
             "b90c44912d7f82450c2190473035bce14bef828d",
         )
         self.assertEqual(transition["nextGate"]["id"], "M10.5-01")
-        self.assertEqual(transition["nextGate"]["status"], "dependency-ready")
+        self.assertEqual(transition["nextGate"]["status"], "implementation-candidate")
         self.assertTrue(transition["nextGate"]["requiresPostG1CurrentMainRefreshRevalidation"])
         self.assertTrue(transition["nextGate"]["laterSemanticKotlinBlockedUntilComplete"])
         evidence = transition["nextGate"]["historicalMergedEvidence"]
@@ -172,6 +172,14 @@ class CoreBootstrapTest(unittest.TestCase):
         )
         self.assertEqual(evidence["role"], "historical-provisional-parity-evidence")
         self.assertFalse(evidence["pendingIntegrationTarget"])
+        candidate = transition["nextGate"]["postG1CurrentMainRefresh"]
+        self.assertEqual(
+            candidate["baselineBaseCommit"],
+            "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
+        )
+        self.assertEqual(candidate["manifest"], "spec/m10-5-parity-manifest.json")
+        self.assertTrue(candidate["independentValidationRequired"])
+        self.assertFalse(candidate["integratedOnMain"])
 
     def test_post_g1_durable_status_is_consistent_across_authority_sources(self) -> None:
         transition = json.loads(
@@ -190,12 +198,10 @@ class CoreBootstrapTest(unittest.TestCase):
         self.assertIn("- [x] **G1 — Core authority integration/flip.**", todo)
         self.assertNotIn("G1 remains unchecked", todo)
         self.assertIn("M10.5-01 — Refresh the Python parity baseline", todo)
-        self.assertIn("**Next dependency-ready gate.**", todo)
-        self.assertIn("PR #77 is the focused candidate", todo)
-        self.assertIn("is already merged on main", todo)
-        self.assertIn("it is not a future integration target", todo)
-        self.assertIn("Completion requires fresh independent validation and integration", todo)
-        self.assertIn("separate post-G1 current-main refresh/revalidation package", todo)
+        self.assertIn("**Current post-G1 candidate.**", todo)
+        self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
+        self.assertIn("post-G1 current-main Gate-01 refresh candidate", todo)
+        self.assertIn("requires fresh independent validation and integration", todo)
         self.assertNotIn("PR #77 remains candidate compatibility evidence only and is not validated or integrated", authority_doc)
         self.assertIn("D0, I1, I2, V1 and G1 are complete and integrated.", authority_doc)
         self.assertIn("M10.5-01 is the next dependency-ready gate", authority_doc)

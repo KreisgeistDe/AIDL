@@ -8,6 +8,8 @@ from typing import Any, Mapping, Sequence
 
 SCHEMA_VERSION = "aidl.m10.5-python-parity-baseline/v1"
 AUTHORITY = "M10.5-01"
+MANIFEST_STATUS = "post-g1-current-main-candidate"
+BASELINE_BASE_COMMIT = "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5"
 RUNNER_INPUTS = ("source", "config", "profile")
 SEMANTIC_DIMENSIONS = (
     "accepted_rejected",
@@ -18,6 +20,17 @@ SEMANTIC_DIMENSIONS = (
     "source_locations",
     "exit_behavior",
 )
+SEMANTIC_AUTHORITY = {
+    "permanent_source": "spec/core.aidl",
+    "compatibility_contract": "spec/core.authority.aidl",
+    "compatibility_binding": "spec/core.compatibility.aidl",
+    "revision4_role": "core-authorized-compatibility-evidence",
+}
+CORE_AUTHORITY_BINDINGS = {
+    "spec/core.aidl",
+    "spec/core.authority.aidl",
+    "spec/core.compatibility.aidl",
+}
 REQUIRED_BINDINGS = {
     "spec/language-surface-v1.json",
     "spec/ir.schema.json",
@@ -27,6 +40,7 @@ REQUIRED_BINDINGS = {
     "spec/m10-3-closure-certification.json",
 }
 REQUIRED_SURFACES = {
+    "core_authority_and_conformance",
     "source_projection",
     "diagnostics",
     "canonical_ir",
@@ -74,12 +88,24 @@ def validate_manifest(
         raise ValueError("parity manifest schema version drift detected")
     if source.get("authority") != AUTHORITY:
         raise ValueError("parity authority drift detected")
+    if source.get("status") != MANIFEST_STATUS:
+        raise ValueError("parity manifest status drift detected")
     if source.get("normative_language_source") is not False:
         raise ValueError("parity evidence must not become a normative language source")
     if source.get("reference_implementation") != "python":
         raise ValueError("Python must remain the M10.5-01 reference implementation")
-    if not isinstance(source.get("baseline_base_commit"), str) or len(source["baseline_base_commit"]) != 40:
-        raise ValueError("baseline base commit identity is missing or invalid")
+    if source.get("baseline_base_commit") != BASELINE_BASE_COMMIT:
+        raise ValueError("post-G1 baseline base commit drift detected")
+    if source.get("semantic_authority") != SEMANTIC_AUTHORITY:
+        raise ValueError("Core semantic authority boundary drift detected")
+
+    core_bindings = source.get("core_authority_bindings")
+    if (
+        not isinstance(core_bindings, list)
+        or set(core_bindings) != CORE_AUTHORITY_BINDINGS
+        or len(core_bindings) != len(CORE_AUTHORITY_BINDINGS)
+    ):
+        raise ValueError("Core authority binding inventory drift detected")
 
     runner_inputs = source.get("runner_inputs")
     if runner_inputs != list(RUNNER_INPUTS):
@@ -125,7 +151,7 @@ def validate_manifest(
     if not isinstance(corpus, Mapping):
         raise ValueError("parity corpus is missing")
 
-    paths: set[str] = set(bindings)
+    paths: set[str] = set(bindings) | set(core_bindings)
     for surface in surfaces:
         evidence = surface.get("evidence")
         if not isinstance(evidence, list) or not evidence:
@@ -186,6 +212,10 @@ def build_parity_evidence(
     root = (repo_root or _root()).resolve()
     source = validate_manifest(repo_root=root, manifest=manifest)
 
+    core_authority = [
+        {"path": raw, "sha256": _sha256_file(root / raw)}
+        for raw in sorted(source["core_authority_bindings"])
+    ]
     normative = [
         {"path": raw, "sha256": _sha256_file(root / raw)}
         for raw in sorted(source["normative_bindings"])
@@ -209,7 +239,10 @@ def build_parity_evidence(
     fingerprint_payload = {
         "schema_version": SCHEMA_VERSION,
         "authority": AUTHORITY,
+        "status": source["status"],
         "baseline_base_commit": source["baseline_base_commit"],
+        "semantic_authority": source["semantic_authority"],
+        "core_authority_bindings": core_authority,
         "runner_inputs": list(RUNNER_INPUTS),
         "input_identity_contract": source["input_identity"],
         "comparison_contract": source["comparison_contract"],
@@ -275,7 +308,7 @@ def _main(argv: Sequence[str] | None = None) -> int:
         nargs="?",
         default="evidence",
         choices=("evidence",),
-        help="emit deterministic refreshed Python parity evidence",
+        help="emit deterministic post-G1 Python parity evidence",
     )
     args = parser.parse_args(argv)
     if args.command == "evidence":
