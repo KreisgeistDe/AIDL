@@ -13,7 +13,8 @@
     "primitive-list-object-literals",
     "body-entry-framing",
     "modifier-call-tokenization",
-    "finite-structural-meta-combinators"
+    "finite-structural-meta-combinators",
+    "generic-produced-type-carrier-resolution"
   ],
   "directives": {
     "module": "compilation-unit-identity-only",
@@ -36,6 +37,17 @@
     {"name": "type-position", "shape": "type-position"},
     {"name": "produces", "shape": "produces(<carrier-space>)"}
   ],
+  "typeCarrierRule": {
+    "carrierSpace": "type",
+    "producer": "produces(type)",
+    "instanceRule": "a named declaration instance whose declaration-kind contract contains produces(type) is a valid type carrier",
+    "recursiveGenericArgumentsUseSameRule": true,
+    "hostKnowsConcreteProducerKinds": false,
+    "examples": [
+      "type string {}",
+      "enum NamePolicy { case REQUIRED: }"
+    ]
+  },
   "modifierCall": {
     "prefix": "@",
     "namedArgumentsOnly": true
@@ -51,13 +63,16 @@
     "duplicate-module-directive",
     "duplicate-or-ambiguous-bootstrap-import-binding",
     "duplicate-or-ambiguous-named-bootstrap-declaration-binding",
+    "undefined-declaration-kind-contract",
+    "unresolved-produced-type-carrier",
     "unclosed-or-unbalanced-kernel-shape"
   ],
   "authorityFirewall": {
     "directAidlDeclarationKindContractsAreNormative": true,
     "generatedMetaIrOrRegistryIsAuthorityInput": false,
     "generatedMetaIrOrRegistryRole": "deterministic-derived-output-only",
-    "temporaryLegacyDefinitionObjectLayerRole": "migration-and-conformance-evidence-only-until-p2-p3-remove-permanent-authority"
+    "temporaryLegacyDefinitionObjectLayerRole": "migration-and-conformance-evidence-only-until-p3-removes-runtime-dependency",
+    "concreteProducerKindCatalogOwnedByHost": false
   },
   "excludes": [
     "concrete-declaration-kind-catalog",

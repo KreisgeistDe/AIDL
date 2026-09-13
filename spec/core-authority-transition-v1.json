@@ -10,14 +10,24 @@
   ],
   "coreSource": {
     "path": "spec/core.aidl",
-    "role": "normative-project-wide-semantic-authority",
+    "role": "legacy-definition-object-runtime-adapter-pending-p3",
     "projectWideAuthorityFlipComplete": true,
-    "directDeclarationKindContractsTarget": true
+    "directDeclarationKindContractsTarget": false,
+    "permanentAuthorityAfterCorrection": false
+  },
+  "coreSelfDescription": {
+    "path": "spec/core-self-description-v1.aidl",
+    "role": "normative-direct-self-described-core-p2",
+    "compiler": "tools/core_self_description.py",
+    "usesOnlyFiniteBootstrapMetaCombinators": true,
+    "concreteDeclarationKindCatalogInHost": false,
+    "permanentDefinitionObjectAuthority": false
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
     "role": "ordinary-aidl-module-importing-core",
-    "semanticValidation": "tools/core_semantics.py"
+    "semanticValidation": "tools/core_semantics.py",
+    "migrationToDirectSelfDescription": "p3-pending"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
@@ -40,11 +50,12 @@
       "modifier",
       "type-position",
       "produces"
-    ]
+    ],
+    "typeCarrierRule": "named instances of any declaration-kind contract containing produces(type) are valid type carriers"
   },
   "generatedProjection": {
     "path": "spec/core-registry-v1.json",
-    "role": "derived-non-normative-output-only",
+    "role": "legacy-runtime-derived-non-normative-output-only-pending-p3",
     "authorityInput": false,
     "driftCheck": "tools/test_core_bootstrap.py"
   },
@@ -67,20 +78,41 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "p1-implemented-pending-independent-validation-and-integration",
+    "status": "p2-implemented-pending-independent-validation-and-integration",
     "p1": {
       "id": "bootstrap-boundary-architecture-contract",
-      "status": "implemented",
+      "status": "integrated",
       "changesPermanentSemantics": false,
-      "legacyDefinitionObjectLayerRole": "temporary-migration-and-conformance-evidence"
+      "implementationPr": 100,
+      "implementationHead": "2ad8b0ebfab069f8514ec74ddab9bb35ba40d516",
+      "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9"
     },
     "p2": {
       "id": "core-self-description-and-type-carriers",
-      "status": "pending"
+      "status": "implemented",
+      "normativeSource": "spec/core-self-description-v1.aidl",
+      "compiler": "tools/core_self_description.py",
+      "directDeclarationKinds": [
+        "declaration",
+        "type",
+        "enum",
+        "entity"
+      ],
+      "aidlDefinedBaseTypeExamples": [
+        "string",
+        "bool",
+        "int"
+      ],
+      "generalTypeCarrierProducer": "produces(type)",
+      "enumInstancesValidAtTypePositions": true,
+      "directEntityProof": "CoreEntityExample",
+      "permanentDefinitionObjectAuthority": false,
+      "legacyDefinitionObjectLayerRole": "temporary-runtime-compatibility-and-migration-adapter-only-until-p3"
     },
     "p3": {
       "id": "semantic-loader-meta-ir-compat-migration",
-      "status": "pending"
+      "status": "pending",
+      "goal": "move semantic loading and compatibility adapters from the temporary Definition-object runtime adapter to the direct P2 self-description and a derived non-authoritative meta-IR"
     },
     "p4": {
       "id": "downstream-surfaces-and-kotlin-parity-rebase",
@@ -121,8 +153,8 @@
     "laterSemanticKotlinBlockedUntilComplete": false
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-P1-VALIDATION",
+    "id": "CORE-SELF-DESCRIPTION-P2-VALIDATION",
     "status": "pending-independent-validation",
-    "reason": "The finite bootstrap-boundary P1 contract is implemented, but P2/P3/P4 remain pending and semantics-dependent Kotlin work including PR #99 stays frozen until the corrected Core semantics are integrated."
+    "reason": "P1 is integrated and P2 direct self-description/type-carrier contracts are implemented. Independent exact-head validation is required before serial P2 integration; P3/P4 and semantics-dependent Kotlin work remain frozen."
   }
 }
