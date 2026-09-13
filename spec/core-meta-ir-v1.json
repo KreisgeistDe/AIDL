@@ -32,71 +32,53 @@
       "slots": [
         {
           "bodyType": "source",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         },
         {
           "bodyType": "gitBlobSha1",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         },
         {
           "bodyType": "role",
-          "cardinality": [
-            1,
-            1
-          ],
+          "cardinality": [1, 1],
           "modifiers": [],
           "namePolicy": "forbidden",
           "ordered": true,
           "uniqueByName": false,
-          "valueType": {
-            "arguments": [],
-            "name": "string",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "string", "optional": false}
         }
       ]
     },
     "declaration": {
-      "arguments": [],
+      "arguments": [
+        {
+          "cardinality": [0, null],
+          "name": "*",
+          "type": {"arguments": [], "name": "any", "optional": false}
+        }
+      ],
       "modifiers": [],
       "namePolicy": "required",
-      "result": null,
+      "result": {"arguments": [], "name": "any", "optional": false},
       "slots": [
         {
           "bodyType": "body",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": null
+          "valueType": {"arguments": [], "name": "any", "optional": false}
         }
       ]
     },
@@ -108,57 +90,23 @@
       "slots": [
         {
           "bodyType": "field",
-          "cardinality": [
-            0,
-            null
-          ],
-          "modifiers": [
-            "unique",
-            "primary"
-          ],
+          "cardinality": [0, null],
+          "modifiers": ["unique", "primary"],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": {
-            "arguments": [
-              {
-                "arguments": [],
-                "name": "TypeRef",
-                "optional": false
-              },
-              {
-                "arguments": [
-                  {
-                    "arguments": [],
-                    "name": "entity",
-                    "optional": false
-                  }
-                ],
-                "name": "ref",
-                "optional": false
-              }
-            ],
-            "name": "choice",
-            "optional": false
-          }
+          "valueType": {"arguments": [], "name": "TypeRef", "optional": false}
         },
         {
           "bodyType": "invariant",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "optional",
           "ordered": true,
           "uniqueByName": true,
           "valueType": {
             "arguments": [
-              {
-                "arguments": [],
-                "name": "bool",
-                "optional": false
-              }
+              {"arguments": [], "name": "bool", "optional": false}
             ],
             "name": "expression",
             "optional": false
@@ -174,35 +122,58 @@
       "slots": [
         {
           "bodyType": "case",
-          "cardinality": [
-            1,
-            null
-          ],
+          "cardinality": [1, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": null
+          "valueType": {"arguments": [], "name": "identifier", "optional": false}
+        }
+      ]
+    },
+    "query": {
+      "arguments": [
+        {
+          "cardinality": [0, null],
+          "name": "*",
+          "type": {"arguments": [], "name": "TypeRef", "optional": false}
+        }
+      ],
+      "modifiers": [],
+      "namePolicy": "required",
+      "result": {"arguments": [], "name": "TypeRef", "optional": false},
+      "slots": [
+        {
+          "bodyType": "field",
+          "cardinality": [0, null],
+          "modifiers": [],
+          "namePolicy": "required",
+          "ordered": true,
+          "uniqueByName": true,
+          "valueType": {"arguments": [], "name": "TypeRef", "optional": false}
         }
       ]
     },
     "type": {
-      "arguments": [],
+      "arguments": [
+        {
+          "cardinality": [0, null],
+          "name": "*",
+          "type": {"arguments": [], "name": "any", "optional": false}
+        }
+      ],
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
       "slots": [
         {
           "bodyType": "semantic",
-          "cardinality": [
-            0,
-            null
-          ],
+          "cardinality": [0, null],
           "modifiers": [],
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": null
+          "valueType": {"arguments": [], "name": "any", "optional": false}
         }
       ]
     }
@@ -210,32 +181,21 @@
   "modifiers": {
     "primary": {
       "arguments": [],
-      "cardinality": [
-        0,
-        1
-      ],
-      "targets": [
-        "field"
-      ]
+      "cardinality": [0, 1],
+      "targets": ["field"]
     },
     "unique": {
       "arguments": [],
-      "cardinality": [
-        0,
-        1
-      ],
-      "targets": [
-        "field"
-      ]
+      "cardinality": [0, 1],
+      "targets": ["field"]
     }
   },
-  "role": "derived-non-authoritative-runtime-meta-ir",
-  "schemaVersion": 1,
-  "source": "spec/core-self-description-v1.aidl",
-  "sourceSha256": "1a8ddc2dbd412158009b94908fbca6973014cde5bb209cee45859262850d0269",
-  "typeCarriers": [
+  "predeclaredTypeSymbols": [
     "CardinalityLabel",
+    "CoreEntityExample",
+    "Id",
     "NamePolicy",
+    "Page",
     "TypeRef",
     "bool",
     "choice",
@@ -243,9 +203,14 @@
     "int",
     "json",
     "list",
+    "myQuery",
     "range",
     "ref",
     "string",
     "uuid"
-  ]
+  ],
+  "role": "derived-non-authoritative-runtime-meta-ir",
+  "schemaVersion": 2,
+  "source": "spec/core-self-description-v1.aidl",
+  "sourceSha256": "3302301e8478df3921c055327a19454fbea59eb6a98f45c0c332e5ce9c6636ad"
 }
