@@ -1,21 +1,41 @@
 {
   "schemaVersion": 1,
   "kernelVersion": 1,
+  "role": "finite-versioned-irreducible-host-bootstrap-contract",
   "owns": [
-    "lexical-rules",
-    "module-import-directives",
-    "uniform-declaration-envelope",
+    "identifiers-and-qualified-names",
+    "strings-numbers-bool-null",
+    "delimiters-source-locations-and-source-order",
+    "module-import-graph-framing",
+    "export-visibility-framing",
+    "uniform-generic-declaration-envelope",
     "recursive-generic-type-ref-syntax",
     "primitive-list-object-literals",
     "body-entry-framing",
-    "modifier-call-tokenization"
+    "modifier-call-tokenization",
+    "finite-structural-meta-combinators"
   ],
+  "directives": {
+    "module": "compilation-unit-identity-only",
+    "import": "dependency-and-initial-scope-edge-only",
+    "export": "initial-visibility-framing-only"
+  },
   "declarationEnvelope": "[export] <kind> [<identifier>] [(<named-args>)] [-> <typeRef>] { <body-entries>* }",
   "typeRef": {
     "qualifiedNames": true,
     "recursiveGenerics": true,
-    "trailingOptionality": true
+    "trailingOptionality": true,
+    "semanticMeaningOwnedByHost": false
   },
+  "metaCombinators": [
+    {"name": "name", "shape": "name(...)"},
+    {"name": "args", "shape": "args(...)"},
+    {"name": "body", "shape": "body(...)"},
+    {"name": "cardinal", "shape": "cardinal(...)"},
+    {"name": "modifier", "shape": "modifier(...)"},
+    {"name": "type-position", "shape": "type-position"},
+    {"name": "produces", "shape": "produces(<carrier-space>)"}
+  ],
   "modifierCall": {
     "prefix": "@",
     "namedArgumentsOnly": true
@@ -25,11 +45,31 @@
     "multiline-v1",
     "multiline-v2"
   ],
+  "failClosed": [
+    "unknown-bootstrap-meta-combinator",
+    "malformed-meta-combinator-shape",
+    "duplicate-module-or-import-binding",
+    "duplicate-or-ambiguous-named-declaration-binding",
+    "duplicate-named-argument-or-object-binding",
+    "unclosed-or-unbalanced-kernel-shape"
+  ],
+  "authorityFirewall": {
+    "directAidlDeclarationKindContractsAreNormative": true,
+    "generatedMetaIrOrRegistryIsAuthorityInput": false,
+    "generatedMetaIrOrRegistryRole": "deterministic-derived-output-only",
+    "temporaryLegacyDefinitionObjectLayerRole": "migration-and-conformance-evidence-only-until-p2-p3-remove-permanent-authority"
+  },
   "excludes": [
+    "concrete-declaration-kind-catalog",
     "domain-declaration-catalog",
-    "name-policy-validation",
-    "body-slot-semantic-validation",
-    "modifier-target-validation",
+    "concrete-category-to-schema-map",
+    "name-policy-values",
+    "body-slot-semantic-catalog",
+    "concrete-modifier-catalog",
+    "core-base-type-name-catalog",
+    "compatibility-semantics",
+    "canonical-ir-meaning",
+    "domain-validation",
     "reference-kind-validation",
     "expression-typechecking",
     "production-admission"
