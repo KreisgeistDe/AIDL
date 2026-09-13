@@ -1,37 +1,39 @@
 {
   "schemaVersion": 1,
   "phase": "self-description-correction-in-progress",
-  "completedPhases": [
-    "D0",
-    "I1",
-    "I2",
-    "V1",
-    "G1"
-  ],
+  "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
   "coreSource": {
     "path": "spec/core.aidl",
-    "role": "legacy-definition-object-runtime-adapter-pending-p3",
+    "role": "legacy-definition-object-migration-evidence-only",
     "projectWideAuthorityFlipComplete": true,
     "directDeclarationKindContractsTarget": false,
-    "permanentAuthorityAfterCorrection": false
+    "permanentAuthorityAfterCorrection": false,
+    "runtimeSemanticAuthority": false
   },
   "coreSelfDescription": {
     "path": "spec/core-self-description-v1.aidl",
-    "role": "normative-direct-self-described-core-p2",
+    "role": "normative-direct-self-described-core",
     "compiler": "tools/core_self_description.py",
     "usesOnlyFiniteBootstrapMetaCombinators": true,
     "concreteDeclarationKindCatalogInHost": false,
     "permanentDefinitionObjectAuthority": false
   },
+  "coreMetaIr": {
+    "path": "spec/core-meta-ir-v1.json",
+    "role": "derived-non-authoritative-runtime-meta-ir",
+    "authorityInput": false,
+    "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
+    "runtimeLoader": "tools/core_semantics.py"
+  },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
-    "role": "ordinary-aidl-module-importing-core",
+    "role": "compatibility-shell-no-definition-object-authority",
     "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-pending"
+    "migrationToDirectSelfDescription": "p3-complete-candidate"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
-    "role": "core-authored-compatibility-projection-contract"
+    "role": "compatibility-shell-contract-moved-to-direct-core"
   },
   "coreCompatibility": {
     "path": "spec/core.compatibility.aidl",
@@ -42,119 +44,66 @@
     "path": "spec/bootstrap-kernel-v1.json",
     "role": "finite-versioned-irreducible-host-bootstrap-contract",
     "concreteDeclarationKindsOwnedByHost": false,
-    "finiteStructuralMetaCombinators": [
-      "name",
-      "args",
-      "body",
-      "cardinal",
-      "modifier",
-      "type-position",
-      "produces"
-    ],
+    "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier", "type-position", "produces"],
     "typeCarrierRule": "named instances of any declaration-kind contract containing produces(type) are valid type carriers"
   },
   "generatedProjection": {
     "path": "spec/core-registry-v1.json",
-    "role": "legacy-runtime-derived-non-normative-output-only-pending-p3",
+    "role": "legacy-definition-object-migration-evidence-only",
     "authorityInput": false,
-    "driftCheck": "tools/test_core_bootstrap.py"
-  },
-  "compatibilityBridge": {
-    "path": "tools/core_compat.py",
-    "role": "revision-4-to-core-normalization-evidence",
-    "semanticHashEvidence": "tools/test_core_compat.py"
+    "runtimeAuthorityInput": false
   },
   "revision4": {
     "path": "spec/language-surface-v1.json",
     "role": "core-authorized-compatibility-and-migration-projection",
     "permanentSemanticAuthority": false,
-    "remainsProductionCompatibilityOracleUntilG1": false,
     "productionUseRequiresCoreAuthorization": true,
     "authorityBinding": "spec/core.compatibility.aidl"
   },
-  "integrationState": {
-    "g1IntegratedOnMain": true,
-    "mainCommit": "b90c44912d7f82450c2190473035bce14bef828d"
-  },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "p2-implemented-pending-independent-validation-and-integration",
+    "status": "p3-implemented-pending-independent-validation-and-integration",
     "p1": {
       "id": "bootstrap-boundary-architecture-contract",
       "status": "integrated",
-      "changesPermanentSemantics": false,
       "implementationPr": 100,
       "implementationHead": "2ad8b0ebfab069f8514ec74ddab9bb35ba40d516",
       "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9"
     },
     "p2": {
       "id": "core-self-description-and-type-carriers",
-      "status": "implemented",
+      "status": "integrated",
+      "implementationPr": 101,
+      "implementationHead": "09574d3ace752cdda91504e4f6370daaa0ba4a51",
+      "mainCommit": "7280f01a2c97b004c79cd0a2e598513bfa183ac0",
       "normativeSource": "spec/core-self-description-v1.aidl",
-      "compiler": "tools/core_self_description.py",
-      "directDeclarationKinds": [
-        "declaration",
-        "type",
-        "enum",
-        "entity"
-      ],
-      "aidlDefinedBaseTypeExamples": [
-        "string",
-        "bool",
-        "int"
-      ],
       "generalTypeCarrierProducer": "produces(type)",
-      "enumInstancesValidAtTypePositions": true,
-      "directEntityProof": "CoreEntityExample",
-      "permanentDefinitionObjectAuthority": false,
-      "legacyDefinitionObjectLayerRole": "temporary-runtime-compatibility-and-migration-adapter-only-until-p3"
+      "permanentDefinitionObjectAuthority": false
     },
     "p3": {
       "id": "semantic-loader-meta-ir-compat-migration",
-      "status": "pending",
-      "goal": "move semantic loading and compatibility adapters from the temporary Definition-object runtime adapter to the direct P2 self-description and a derived non-authoritative meta-IR"
+      "status": "implemented",
+      "semanticAuthority": "spec/core-self-description-v1.aidl",
+      "derivedRuntimeMetaIr": "spec/core-meta-ir-v1.json",
+      "legacyDefinitionObjectRuntimeAuthority": false,
+      "legacyDefinitionObjectInputsFailClosed": true
     },
     "p4": {
       "id": "downstream-surfaces-and-kotlin-parity-rebase",
       "status": "pending"
     },
     "semanticsDependentKotlinFrozen": true,
-    "frozenKotlinWorkIncludes": [
-      "M10.5-03+",
-      "PR-99"
-    ]
+    "frozenKotlinWorkIncludes": ["M10.5-03+", "PR-99"]
   },
   "nextGate": {
     "id": "M10.5-01",
     "status": "complete",
-    "historicalMergedEvidence": {
-      "pr": 77,
-      "mergeCommit": "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
-      "role": "historical-provisional-parity-evidence",
-      "pendingIntegrationTarget": false
-    },
-    "postG1CurrentMainRefresh": {
-      "baselineBaseCommit": "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
-      "manifest": "spec/m10-5-parity-manifest.json",
-      "implementationPr": 94,
-      "implementationHead": "9228f94302c1fbbc6cd5fc0b5fc7af9231071d76",
-      "independentlyValidated": true,
-      "integratedOnMain": true,
-      "mainCommit": "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9"
-    },
-    "statusReconciliation": {
-      "implementationPr": 95,
-      "implementationHead": "2a26b1deff1baa5504e5e714222e8726181c7d5a",
-      "independentlyValidated": true,
-      "integratedOnMain": true,
-      "mainCommit": "3fa5c969338d1f0dc6b9bc573e70c7004f53aceb"
-    },
     "requiresPostG1CurrentMainRefreshRevalidation": false,
-    "laterSemanticKotlinBlockedUntilComplete": false
+    "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-P2-VALIDATION",
+    "id": "CORE-SELF-DESCRIPTION-P3-VALIDATION",
     "status": "pending-independent-validation",
-    "reason": "P1 is integrated and P2 direct self-description/type-carrier contracts are implemented. Independent exact-head validation is required before serial P2 integration; P3/P4 and semantics-dependent Kotlin work remain frozen."
+    "reason": "P2 is integrated and P3 has migrated semantic loading and compatibility authorization to direct self-described Core plus exact derived non-authoritative meta-IR. Independent exact-head validation and integration are required before P4 or semantics-dependent Kotlin work resumes."
   }
 }

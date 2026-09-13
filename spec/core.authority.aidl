@@ -1,41 +1,6 @@
 module aidl.core.authority
-import aidl.core
+import aidl.core.self
 
-// G1 authority plumbing is itself Core-authored data. A compatibility
-// projection may describe legacy semantics only when an exact artifact digest
-// is bound here and validated before production normalization consumes it.
-declaration compatibilityProjection(kind: "language") {
-  body namePolicy: "required"
-  body arguments: []
-  body result: null
-  body slots: [
-    {
-      bodyType: "source",
-      namePolicy: "forbidden",
-      valueType: string,
-      cardinality: {min: 1, max: 1},
-      ordered: true,
-      uniqueByName: false,
-      modifiers: []
-    },
-    {
-      bodyType: "gitBlobSha1",
-      namePolicy: "forbidden",
-      valueType: string,
-      cardinality: {min: 1, max: 1},
-      ordered: true,
-      uniqueByName: false,
-      modifiers: []
-    },
-    {
-      bodyType: "role",
-      namePolicy: "forbidden",
-      valueType: string,
-      cardinality: {min: 1, max: 1},
-      ordered: true,
-      uniqueByName: false,
-      modifiers: []
-    }
-  ]
-  body modifiers: []
-}
+// P3 compatibility shell only. The compatibilityProjection declaration-kind
+// contract is now declared directly in spec/core-self-description-v1.aidl.
+// This module intentionally carries no legacy Definition-object authority.
