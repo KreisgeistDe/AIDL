@@ -12,11 +12,11 @@ The completed design review supersedes revision-4 JSON as the future permanent s
 
 - [x] **D0 — Core authority architecture review.** Select the minimal host Bootstrap Kernel plus AIDL-authored self-describing Core; reject a permanent dual-grammar model.
 - [x] **I1 — Bootstrap/Core authority implementation.** Integrated as PR #89. `spec/bootstrap-kernel-v1.json`, normative `spec/core.aidl`, deterministic generated Core registry/projection, exact declaration/generic-TypeRef/modifier/body framing, focused tests, and transition disposition are on main without a project-wide authority flip.
-- [ ] **I2 — Core semantic model and domain migration.** **Current phase.** Add Core-owned semantic validation, ordinary AIDL `core.domain`, deterministic diagnostics, and revision-4 compatibility normalization; no authority flip.
-- [ ] **V1 — Independent broad Core validation.** Blocked on I2. Differentially certify the exact implementation head and prove the new canonical path has no hidden revision-4 semantic lookup.
+- [x] **I2 — Core semantic model and domain migration.** Integrated as PR #90. Core-owned semantic validation, ordinary AIDL `core.domain`, deterministic diagnostics, and revision-4 compatibility normalization are on main without an authority flip.
+- [ ] **V1 — Independent broad Core validation.** **Current validation gate; uncertified.** Broad validation found that the semantic registry loader still duplicated Core meta-schema authority in host code. The focused correction derives category and meta-contract structure from normative `spec/core.aidl`; V1 remains incomplete until fresh independent broad/differential validation succeeds on the exact corrected head.
 - [ ] **G1 — Core authority integration/flip.** Blocked on V1. Only this gate may make Core the sole project-wide semantic authority and demote remaining revision-4 tooling to generated/compatibility status.
 
-Until G1 is complete, `spec/language-surface-v1.json` revision 4 remains usable only as compatibility/migration evidence and as the existing production compatibility oracle. It is not the future permanent semantic authority. PR #88's Kotlin type-construction implementation remains bounded evidence and must not be widened for generic Core TypeRefs during I2.
+Until G1 is complete, `spec/language-surface-v1.json` revision 4 remains usable only as compatibility/migration evidence and as the existing production compatibility oracle. It is not the future permanent semantic authority. PR #88's Kotlin type-construction implementation remains bounded evidence and must not be widened for generic Core TypeRefs during V1.
 
 ## M10.1 blocking language-freeze gate
 
@@ -53,7 +53,7 @@ The former execution order `M10.1 -> M10.2 -> M10.3 -> M10.5` is now interrupted
 
 ## M10.5 Kotlin compiler-core migration gate
 
-[M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md) currently remains blocked for new semantics-dependent work by the Core Language Authority Gate. Python and revision-4 artifacts remain compatibility/conformance evidence until G1; they are not permission to widen Kotlin semantics during I2.
+[M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md) currently remains blocked for new semantics-dependent work by the Core Language Authority Gate. Python and revision-4 artifacts remain compatibility/conformance evidence until G1; they are not permission to widen Kotlin semantics during V1.
 
 - [ ] **M10.5-01 — Refresh the Python parity baseline and differential harness.** PR #77 is the focused candidate as retained revision-4 compatibility evidence. Completion requires fresh independent validation and integration; any future baseline refresh must also be reconciled with the Core gate before semantic ownership changes.
 - [ ] **M10.5-02 and later Kotlin work.** Blocked until M10.5-01 is durably integrated, and now additionally blocked on the Core gate for semantics-dependent changes. PR #88's integrated TypeConstruction slice is retained as bounded evidence; generic Core TypeRef adaptation is explicitly deferred until after G1.

@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-from tools.core_bootstrap import TypeRef
+from tools.core_bootstrap import TypeRef, projection_text
 from tools.core_semantics import (
     CoreContractError,
     infer_expression_type,
@@ -14,6 +14,8 @@ from tools.core_semantics import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+CORE = (ROOT / "spec" / "core.aidl").read_text(encoding="utf-8")
+PROJECTION = (ROOT / "spec" / "core-registry-v1.json").read_text(encoding="utf-8")
 DOMAIN = (ROOT / "spec" / "core.domain.aidl").read_text(encoding="utf-8")
 
 
@@ -66,6 +68,116 @@ class CoreSemanticsTest(unittest.TestCase):
         self.assertEqual(registry.combinators["ref"].behavior, "declaration-ref-kind")
         self.assertIn("primary", registry.modifiers)
         self.assertEqual(registry_digest(registry), registry_digest(self.registry()))
+
+    def test_loader_requires_exact_core_projection(self) -> None:
+        self.assertEqual(PROJECTION, projection_text(CORE))
+        with self.assertRaisesRegex(CoreContractError, "Core projection drift"):
+            load_semantic_registry(
+                DOMAIN,
+                core_source=CORE,
+                core_projection=PROJECTION + " ",
+            )
+
+    def test_core_owned_required_and_optional_meta_fields_drive_loading(self) -> None:
+        sparse = """
+module aidl.test.sparse
+import aidl.core
+
+declaration sparseModifier(kind: "modifier") {
+  body targets: ["field"]
+  body cardinality: {min: 0}
+}
+
+declaration sparseLanguage(kind: "language") {
+  body namePolicy: "required"
+}
+"""
+        registry = load_semantic_registry(sparse)
+        self.assertEqual(registry.modifiers["sparseModifier"].arguments, ())
+        self.assertIsNone(registry.modifiers["sparseModifier"].cardinality.maximum)
+        self.assertEqual(registry.declarations["sparseLanguage"].slots, ())
+
+        missing = sparse.replace("  body cardinality: {min: 0}\n", "")
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "ModifierDefinition missing required metadata: cardinality",
+        ):
+            load_semantic_registry(missing)
+
+    def test_semantic_category_mapping_is_core_owned(self) -> None:
+        changed_core = CORE.replace(
+            '"modifier": ModifierDefinition',
+            '"modifier": MetaCombinatorDefinition',
+        )
+        changed_projection = projection_text(changed_core)
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "MetaCombinatorDefinition contains undeclared metadata: cardinality, targets",
+        ):
+            load_semantic_registry(
+                DOMAIN,
+                core_source=changed_core,
+                core_projection=changed_projection,
+            )
+
+    def test_undeclared_argument_definition_metadata_fails_closed(self) -> None:
+        invalid = EXTRA_CONTRACTS.replace(
+            '{name: "tag", type: string, cardinality: {min: 0, max: 1}}',
+            '{name: "tag", type: string, cardinality: {min: 0, max: 1}, extra: true}',
+        )
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "ArgumentDefinition contains undeclared metadata: extra",
+        ):
+            load_semantic_registry(invalid)
+
+    def test_undeclared_modifier_definition_metadata_fails_closed(self) -> None:
+        invalid = DOMAIN.replace(
+            '  body cardinality: {min: 0, max: 1}\n}',
+            '  body cardinality: {min: 0, max: 1}\n  body extra: true\n}',
+            1,
+        )
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "ModifierDefinition contains undeclared metadata: extra",
+        ):
+            load_semantic_registry(invalid)
+
+    def test_undeclared_body_slot_definition_metadata_fails_closed(self) -> None:
+        invalid = DOMAIN.replace(
+            '      ordered: true,\n      uniqueByName: true,',
+            '      order: 0,\n      ordered: true,\n      uniqueByName: true,',
+            1,
+        )
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "BodySlotDefinition contains undeclared metadata: order",
+        ):
+            load_semantic_registry(invalid)
+
+    def test_undeclared_declaration_definition_metadata_fails_closed(self) -> None:
+        invalid = EXTRA_CONTRACTS.replace(
+            '  body modifiers: []\n}',
+            '  body modifiers: []\n  body extra: true\n}',
+            1,
+        )
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "DeclarationDefinition contains undeclared metadata: extra",
+        ):
+            load_semantic_registry(invalid)
+
+    def test_undeclared_meta_combinator_metadata_fails_closed(self) -> None:
+        invalid = DOMAIN.replace(
+            '  body arguments: {min: 2, max: null}\n}',
+            '  body arguments: {min: 2, max: null}\n  body extra: true\n}',
+            1,
+        )
+        with self.assertRaisesRegex(
+            CoreContractError,
+            "MetaCombinatorDefinition contains undeclared metadata: extra",
+        ):
+            load_semantic_registry(invalid)
 
     def test_valid_entity_field_modifiers_ref_and_invariant(self) -> None:
         source = """
@@ -129,14 +241,6 @@ entity E {
 }
 """
         self.assertIn("CORE-S007", self.codes(reversed_source))
-
-        undeclared = DOMAIN.replace(
-            '      ordered: true,\n      uniqueByName: true,',
-            '      order: 0,\n      ordered: true,\n      uniqueByName: true,',
-            1,
-        )
-        with self.assertRaisesRegex(CoreContractError, "undeclared metadata: order"):
-            load_semantic_registry(undeclared)
 
     def test_modifier_allowlist_targets_and_cardinality(self) -> None:
         source = """
