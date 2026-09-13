@@ -11,6 +11,11 @@
     "compatibility_binding": "spec/core.compatibility.aidl",
     "revision4_role": "core-authorized-compatibility-evidence"
   },
+  "core_authority_bindings": [
+    "spec/core.aidl",
+    "spec/core.authority.aidl",
+    "spec/core.compatibility.aidl"
+  ],
   "runner_inputs": [
     "source",
     "config",
@@ -43,9 +48,6 @@
     "semantic_allowlists": []
   },
   "normative_bindings": [
-    "spec/core.aidl",
-    "spec/core.authority.aidl",
-    "spec/core.compatibility.aidl",
     "spec/language-surface-v1.json",
     "spec/ir.schema.json",
     "spec/profile-registry.json",
