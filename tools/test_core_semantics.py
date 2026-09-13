@@ -26,6 +26,12 @@ class CoreSemanticsTest(unittest.TestCase):
 
     def test_registry_is_direct_core_derived_and_deterministic(self) -> None:
         registry = self.registry()
+        self.assertIn("declaration", registry.declarations)
+        self.assertIn("type", registry.declarations)
+        self.assertEqual(
+            registry.declarations["declaration"].name_policy,
+            registry.declarations["type"].name_policy,
+        )
         self.assertIn("entity", registry.declarations)
         self.assertIn("enum", registry.declarations)
         self.assertIn("query", registry.declarations)
@@ -48,7 +54,7 @@ class CoreSemanticsTest(unittest.TestCase):
         with self.assertRaisesRegex(CoreContractError, "legacy Definition-object semantic modules"):
             load_semantic_registry('declaration old(kind: "language") {}\n')
 
-    def test_valid_entity_uses_named_symbol_typerefs_and_modifiers(self) -> None:
+    def test_valid_entity_uses_named_declaration_typerefs_and_modifiers(self) -> None:
         source = """
 enum LocalState {
   case READY:
@@ -56,32 +62,68 @@ enum LocalState {
 entity Parent {
   field active: bool @primary
   field state: LocalState
+  field declarationKind: entity
   invariant: active
 }
 
 entity Child {
   field parent: ref<Parent> @unique
   field tags: list<string>
+  field parentType: Parent
 }
 """
         self.assertEqual(validate_source(source, self.registry()), ())
 
-    def test_query_args_and_result_use_same_generic_named_symbol_rule(self) -> None:
+    def test_query_args_result_and_query_identity_use_same_named_symbol_rule(self) -> None:
         source = """
 type LocalId {}
-type Page {}
+declaration Page {}
 query MyQuery(id: LocalId) -> Page<MyQuery> {
+}
+entity Holder {
+  field queryType: MyQuery
 }
 """
         self.assertEqual(validate_source(source, self.registry()), ())
 
-    def test_void_args_and_result_fail_closed(self) -> None:
-        explicit_empty_args = """
+    def test_type_and_declaration_surface_spellings_share_one_meta_category(self) -> None:
+        source = """
+type AliasSpelling {}
+declaration DeclarationSpelling {}
+entity E {
+  field left: AliasSpelling
+  field right: DeclarationSpelling
+  field kind: declaration
+}
+"""
+        self.assertEqual(validate_source(source, self.registry()), ())
+
+    def test_absent_and_explicit_empty_args_share_closed_zero_parameter_semantics(self) -> None:
+        absent = """
+enum V {
+  case A:
+}
+"""
+        explicit_empty = """
 enum V() {
   case A:
 }
 """
-        self.assertIn("CORE-S035", self.codes(explicit_empty_args))
+        nonempty = """
+enum V(value: string) {
+  case A:
+}
+"""
+        self.assertEqual(validate_source(absent, self.registry()), ())
+        self.assertEqual(validate_source(explicit_empty, self.registry()), ())
+        self.assertIn("CORE-S035", self.codes(nonempty))
+
+    def test_specialized_result_is_required_and_unexpected_result_fails_closed(self) -> None:
+        missing_result = """
+query Q() {
+}
+"""
+        self.assertIn("CORE-S036", self.codes(missing_result))
         unexpected_result = """
 enum V -> string {
   case A:
