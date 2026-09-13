@@ -14,7 +14,7 @@
     "body-entry-framing",
     "modifier-call-tokenization",
     "finite-structural-meta-combinators",
-    "declaration-argument-presence-framing",
+    "declaration-argument-syntax-framing",
     "declaration-result-presence-framing"
   ],
   "directives": {
@@ -38,10 +38,18 @@
     {"name": "modifier", "shape": "modifier(...)"}
   ],
   "argumentAndResultRule": {
-    "argumentsAbsent": "void-not-present",
-    "argumentsPresentEmpty": "present-empty",
-    "resultAbsent": "void-not-present",
+    "argsCombinator": "declares-an-open-parameter-set",
+    "explicitInstanceSignature": "closed-fixed-parameter-set",
+    "argumentsAbsent": "same-closed-zero-parameter-model-as-explicit-empty-signature",
+    "argumentsPresentEmpty": "same-closed-zero-parameter-model-as-absent-signature",
+    "resultAbsent": "no-result-position-permitted-by-specialized-kind",
     "resultMechanism": "only-the-existing-arrow-result-position"
+  },
+  "declarationTypeSelfSimilarity": {
+    "centralMetaClass": "declaration",
+    "typeSurface": "direct-core-authored-alias-of-declaration",
+    "everyVisibleNamedDeclarationIsTypeRefAddressable": true,
+    "hostOwnsSeparateTypeHierarchy": false
   },
   "typeIdentityRule": {
     "instanceRule": "a TypeRef base resolves to one visible named declaration symbol; no declaration-kind producer capability participates",
@@ -65,8 +73,9 @@
     "duplicate-or-ambiguous-bootstrap-import-binding",
     "duplicate-or-ambiguous-named-bootstrap-declaration-binding",
     "undefined-declaration-kind-contract",
-    "arguments-present-for-void-args-kind",
-    "result-present-for-void-result-kind",
+    "nonempty-arguments-for-closed-zero-parameter-kind",
+    "missing-required-result-for-specialized-result-kind",
+    "result-present-for-no-result-kind",
     "unresolved-or-ambiguous-type-symbol",
     "unclosed-or-unbalanced-kernel-shape"
   ],
@@ -75,12 +84,14 @@
     "generatedMetaIrOrRegistryIsAuthorityInput": false,
     "generatedMetaIrOrRegistryRole": "deterministic-derived-output-only",
     "concreteDeclarationKindCatalogOwnedByHost": false,
-    "producerCapabilitySystemOwnedByHost": false
+    "producerCapabilitySystemOwnedByHost": false,
+    "separateHostTypeHierarchy": false
   },
   "excludes": [
     "concrete-declaration-kind-catalog",
     "producer-carrier-capability-system",
     "type-position-marker",
+    "separate-declaration-vs-type-class-worlds",
     "domain-declaration-catalog",
     "concrete-category-to-schema-map",
     "name-policy-values",
