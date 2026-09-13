@@ -1,0 +1,3 @@
+module=parity.canonical
+imports=parity.shared.Types
+declarations=enum:Status:true,value:PetInput:true,entity:Pet:true
