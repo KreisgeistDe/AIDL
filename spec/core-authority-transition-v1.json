@@ -1,20 +1,30 @@
 {
   "schemaVersion": 1,
-  "phase": "V1",
+  "phase": "G1",
   "completedPhases": [
     "D0",
     "I1",
-    "I2"
+    "I2",
+    "V1"
   ],
   "coreSource": {
     "path": "spec/core.aidl",
-    "role": "normative-source-for-bootstrap-core-path",
-    "projectWideAuthorityFlipComplete": false
+    "role": "normative-project-wide-semantic-authority",
+    "projectWideAuthorityFlipComplete": true
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
     "role": "ordinary-aidl-module-importing-core",
     "semanticValidation": "tools/core_semantics.py"
+  },
+  "coreAuthority": {
+    "path": "spec/core.authority.aidl",
+    "role": "core-authored-compatibility-projection-contract"
+  },
+  "coreCompatibility": {
+    "path": "spec/core.compatibility.aidl",
+    "role": "core-authored-exact-compatibility-binding",
+    "productionGate": "tools/core_authority.py"
   },
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
@@ -32,12 +42,17 @@
   },
   "revision4": {
     "path": "spec/language-surface-v1.json",
-    "role": "compatibility-and-migration-evidence",
+    "role": "core-authorized-compatibility-and-migration-projection",
     "permanentSemanticAuthority": false,
-    "remainsProductionCompatibilityOracleUntilG1": true
+    "remainsProductionCompatibilityOracleUntilG1": false,
+    "productionUseRequiresCoreAuthorization": true,
+    "authorityBinding": "spec/core.compatibility.aidl"
+  },
+  "candidateState": {
+    "g1ImplementedOnCandidate": true,
+    "integratedOnMain": false
   },
   "blockedUntilSeparatePhases": [
-    "G1-project-wide-authority-flip",
     "semantics-dependent-future-M10.5"
   ]
 }
