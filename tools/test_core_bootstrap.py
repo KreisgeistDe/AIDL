@@ -143,7 +143,8 @@ class CoreBootstrapTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(transition["phase"], "I1")
+        self.assertEqual(transition["phase"], "I2")
+        self.assertEqual(transition["completedPhases"], ["D0", "I1"])
         self.assertFalse(transition["revision4"]["permanentSemanticAuthority"])
         self.assertTrue(
             transition["revision4"]["remainsProductionCompatibilityOracleUntilG1"]
