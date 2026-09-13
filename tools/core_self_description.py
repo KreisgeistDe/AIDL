@@ -473,7 +473,7 @@ def _semantic_metadata(declaration: Declaration) -> dict[str, Any]:
 
 
 def _runtime_type(type_ref: TypeRef | None) -> dict[str, Any] | None:
-    if type_ref is None:
+    if type_ref is None or type_ref.name == "identifier":
         return None
     if type_ref.name == "type":
         return TypeRef("TypeRef").to_json()
