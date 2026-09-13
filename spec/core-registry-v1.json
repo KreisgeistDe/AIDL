@@ -1,0 +1,644 @@
+{
+  "declarations": [
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "ordered"
+            }
+          ],
+          "name": "values",
+          "value": [
+            "required",
+            "optional",
+            "forbidden"
+          ]
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "NamePolicy",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "min",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "int",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "max",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "int",
+              "optional": true
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "optional",
+          "value": {
+            "max": 1,
+            "min": 0
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "required",
+          "value": {
+            "max": 1,
+            "min": 1
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "variadic",
+          "value": {
+            "max": null,
+            "min": 0
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "Cardinality",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "name",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "arguments",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "TypeRef",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "optional",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "bool",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "multiline-v2",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "ordered"
+            }
+          ],
+          "name": "examples",
+          "value": [
+            "ref<entity>",
+            "expression<bool>",
+            "range<int>",
+            "list<ref<entity>>?"
+          ]
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "TypeRef",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "name",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "type",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "TypeRef",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "cardinality",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "Cardinality",
+              "optional": false
+            }
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "ArgumentDefinition",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "name",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "targets",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "string",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "arguments",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "ArgumentDefinition",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "cardinality",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "Cardinality",
+              "optional": false
+            }
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "ModifierDefinition",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "bodyType",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "namePolicy",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "NamePolicy",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "valueType",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "TypeRef",
+              "optional": true
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "cardinality",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "Cardinality",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "ordered",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "bool",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "uniqueByName",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "bool",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "modifiers",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "ModifierDefinition",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "BodySlotDefinition",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "meta"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "kind",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "string",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "namePolicy",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "NamePolicy",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "arguments",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "ArgumentDefinition",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "result",
+          "value": {
+            "$typeRef": {
+              "arguments": [],
+              "name": "TypeRef",
+              "optional": true
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "slots",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "BodySlotDefinition",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "modifiers",
+          "value": {
+            "$typeRef": {
+              "arguments": [
+                {
+                  "arguments": [],
+                  "name": "ModifierDefinition",
+                  "optional": false
+                }
+              ],
+              "name": "list",
+              "optional": false
+            }
+          }
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "DeclarationDefinition",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "bootstrap"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "required"
+            }
+          ],
+          "name": "namePolicy",
+          "value": "required"
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "framing",
+          "value": "[export] <kind> [identifier] [(named-args)] [-> <typeRef>] { <body-entries>* }"
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "declaration",
+      "result": null
+    },
+    {
+      "arguments": {
+        "kind": "bootstrap"
+      },
+      "body": [
+        {
+          "bodyType": "body",
+          "form": "multiline-v1",
+          "modifiers": [
+            {
+              "arguments": {},
+              "name": "ordered"
+            }
+          ],
+          "name": "forms",
+          "value": [
+            "inline",
+            "multiline-v1",
+            "multiline-v2"
+          ]
+        },
+        {
+          "bodyType": "body",
+          "form": "inline",
+          "modifiers": [],
+          "name": "modifierBoundary",
+          "value": "@"
+        }
+      ],
+      "exported": false,
+      "kind": "declaration",
+      "name": "body",
+      "result": null
+    }
+  ],
+  "kernelVersion": 1,
+  "schemaVersion": 1,
+  "sourceModule": "aidl.core",
+  "sourceSha256": "085470155b35e236da26a935c127dc9a4fd190260270335c10be45a61d51d72f"
+}
