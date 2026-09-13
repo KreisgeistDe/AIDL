@@ -8,6 +8,6 @@ package de.kreisgeist.aidl.compiler.contract
  * process, transport, or protocol semantics.
  */
 object CommonCompilerBoundary {
-    fun deterministicContractSnapshot(): String =
-        DeterministicJson.objectOf(ParityContract.contractSnapshot())
+    fun deterministicContractSnapshot(contract: ParityContract = ParityContract): String =
+        DeterministicJson.objectOf(contract.contractSnapshot())
 }
