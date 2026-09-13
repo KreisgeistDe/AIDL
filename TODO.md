@@ -78,7 +78,7 @@ The former execution order `M10.1 -> M10.2 -> M10.3 -> M10.5` was interrupted by
 7. [M10.5 — Kotlin Compiler-Core Migration Gate](backlog/m10-5-kotlin-compiler-migration.md)
 8. [M11 — Production language server and compiler service](backlog/m11-compiler-service.md)
 9. [M12–M14 — Runtime vertical slices](backlog/m12-m14-runtime-vertical-slices.md)
-10. [M15–M16 — Ecosystem and productivity improvements after the core is stable](backlog/m15-m16-ecosystem-agents.md)
+10. [M15–M16 — Ecosystem readiness and agent construction](backlog/m15-m16-ecosystem-agents.md)
 11. [M16.5 — Language Surface Normalization Gate](backlog/m16-5-language-surface-normalization.md)
 12. [M17–M21 — Full specified-language coverage](backlog/m17-m21-full-language-coverage.md)
 13. [Specification-to-roadmap gap matrix](backlog/spec-roadmap-gap-matrix.md)
