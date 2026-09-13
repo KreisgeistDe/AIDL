@@ -1,0 +1,3 @@
+module=parity.legacy
+imports=
+declarations=entity:Pet:true
