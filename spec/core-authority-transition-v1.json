@@ -1,10 +1,19 @@
 {
   "schemaVersion": 1,
-  "phase": "I1",
+  "phase": "I2",
+  "completedPhases": [
+    "D0",
+    "I1"
+  ],
   "coreSource": {
     "path": "spec/core.aidl",
     "role": "normative-source-for-bootstrap-core-path",
     "projectWideAuthorityFlipComplete": false
+  },
+  "coreDomain": {
+    "path": "spec/core.domain.aidl",
+    "role": "ordinary-aidl-module-importing-core",
+    "semanticValidation": "tools/core_semantics.py"
   },
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
@@ -15,6 +24,11 @@
     "role": "derived-non-normative",
     "driftCheck": "tools/test_core_bootstrap.py"
   },
+  "compatibilityBridge": {
+    "path": "tools/core_compat.py",
+    "role": "revision-4-to-core-normalization-evidence",
+    "semanticHashEvidence": "tools/test_core_compat.py"
+  },
   "revision4": {
     "path": "spec/language-surface-v1.json",
     "role": "compatibility-and-migration-evidence",
@@ -22,7 +36,6 @@
     "remainsProductionCompatibilityOracleUntilG1": true
   },
   "blockedUntilSeparatePhases": [
-    "I2-core-domain-semantic-migration",
     "V1-independent-broad-validation",
     "G1-project-wide-authority-flip",
     "semantics-dependent-future-M10.5"
