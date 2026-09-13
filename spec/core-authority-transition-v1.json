@@ -29,7 +29,7 @@
     "path": "spec/core.domain.aidl",
     "role": "compatibility-shell-no-definition-object-authority",
     "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-complete-candidate"
+    "migrationToDirectSelfDescription": "p3-integrated"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
@@ -62,7 +62,7 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "p3-implemented-pending-independent-validation-and-integration",
+    "status": "p3-integrated-p4-frozen",
     "p1": {
       "id": "bootstrap-boundary-architecture-contract",
       "status": "integrated",
@@ -82,7 +82,11 @@
     },
     "p3": {
       "id": "semantic-loader-meta-ir-compat-migration",
-      "status": "implemented",
+      "status": "integrated",
+      "implementationPr": 102,
+      "implementationHead": "4992c896cf9818ab51c6ade60fd2a58c657461fe",
+      "mainCommit": "ca87cdc2ef0ce6e00808512897144ea99ef59293",
+      "independentlyValidated": true,
       "semanticAuthority": "spec/core-self-description-v1.aidl",
       "derivedRuntimeMetaIr": "spec/core-meta-ir-v1.json",
       "legacyDefinitionObjectRuntimeAuthority": false,
@@ -102,8 +106,8 @@
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "CORE-SELF-DESCRIPTION-P3-VALIDATION",
-    "status": "pending-independent-validation",
-    "reason": "P2 is integrated and P3 has migrated semantic loading and compatibility authorization to direct self-described Core plus exact derived non-authoritative meta-IR. Independent exact-head validation and integration are required before P4 or semantics-dependent Kotlin work resumes."
+    "id": "CORE-SELF-DESCRIPTION-P4",
+    "status": "frozen-pending-explicit-dispatch",
+    "reason": "P3 is independently validated and integrated. P4, PR #99 and semantics-dependent M10.5-03+ remain frozen until an explicit authorized dispatch resumes downstream work."
   }
 }
