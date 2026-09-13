@@ -29,6 +29,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "source",
@@ -102,9 +103,26 @@
         "name": "any",
         "optional": false
       },
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "body",
+          "cardinality": [
+            0,
+            null
+          ],
+          "modifiers": [],
+          "namePolicy": "required",
+          "ordered": true,
+          "uniqueByName": true,
+          "valueType": {
+            "arguments": [],
+            "name": "any",
+            "optional": false
+          }
+        },
+        {
+          "bodyType": "semantic",
           "cardinality": [
             0,
             null
@@ -126,6 +144,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "field",
@@ -175,6 +194,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "case",
@@ -212,6 +232,7 @@
         "name": "TypeRef",
         "optional": false
       },
+      "resultRequired": true,
       "slots": [
         {
           "bodyType": "field",
@@ -230,44 +251,10 @@
           }
         }
       ]
-    },
-    "type": {
-      "arguments": [
-        {
-          "cardinality": [
-            0,
-            null
-          ],
-          "name": "*",
-          "type": {
-            "arguments": [],
-            "name": "any",
-            "optional": false
-          }
-        }
-      ],
-      "modifiers": [],
-      "namePolicy": "required",
-      "result": null,
-      "slots": [
-        {
-          "bodyType": "semantic",
-          "cardinality": [
-            0,
-            null
-          ],
-          "modifiers": [],
-          "namePolicy": "required",
-          "ordered": true,
-          "uniqueByName": true,
-          "valueType": {
-            "arguments": [],
-            "name": "any",
-            "optional": false
-          }
-        }
-      ]
     }
+  },
+  "kindAliases": {
+    "type": "declaration"
   },
   "modifiers": {
     "primary": {
@@ -300,18 +287,25 @@
     "TypeRef",
     "bool",
     "choice",
+    "compatibilityProjection",
+    "declaration",
+    "declarationAliasExample",
+    "entity",
+    "enum",
     "expression",
     "int",
     "json",
     "list",
     "myQuery",
+    "query",
     "range",
     "ref",
     "string",
+    "type",
     "uuid"
   ],
   "role": "derived-non-authoritative-runtime-meta-ir",
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "source": "spec/core-self-description-v1.aidl",
-  "sourceSha256": "3302301e8478df3921c055327a19454fbea59eb6a98f45c0c332e5ce9c6636ad"
+  "sourceSha256": "b6e13a892b08c0d04a6a624adffecbce05a3054199c8e80cc7f30b8786860caa"
 }
