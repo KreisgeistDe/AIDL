@@ -17,9 +17,9 @@
   "source_rules": [
     {
       "id": "core-authority-transition-source",
-      "pattern": "^spec/core\\.aidl$",
+      "pattern": "^spec/core(?:\\.domain)?\\.aidl$",
       "class": "canonical-but-not-yet-admitted",
-      "note": "Phase I1 Core source is normative for the isolated Bootstrap/Core path but is not production-admitted and does not complete the G1 project-wide authority flip."
+      "note": "Core transition sources are normative for the isolated Bootstrap/Core path through I2 but are not production-admitted and do not complete the G1 project-wide authority flip."
     },
     {
       "id": "reference-app-sources",
