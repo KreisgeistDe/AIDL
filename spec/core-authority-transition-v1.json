@@ -71,12 +71,19 @@
       "integratedOnMain": true,
       "mainCommit": "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9"
     },
+    "statusReconciliation": {
+      "implementationPr": 95,
+      "implementationHead": "2a26b1deff1baa5504e5e714222e8726181c7d5a",
+      "independentlyValidated": true,
+      "integratedOnMain": true,
+      "mainCommit": "3fa5c969338d1f0dc6b9bc573e70c7004f53aceb"
+    },
     "requiresPostG1CurrentMainRefreshRevalidation": false,
     "laterSemanticKotlinBlockedUntilComplete": false
   },
   "nextAction": {
     "id": "M10.5-02",
-    "status": "blocked-pending-gate01-status-reconciliation-integration",
-    "reason": "M10.5-01 is complete, but this durable status correction requires fresh independent validation and integration before later Kotlin semantic work may begin."
+    "status": "dependency-ready",
+    "reason": "M10.5-01 and its post-integration durable-state reconciliation are independently validated and integrated; M10.5-02 is the next roadmap action."
   }
 }
