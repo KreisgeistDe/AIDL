@@ -12,6 +12,10 @@ class ParityContractTest {
     fun exactRunnerInputsAndAuthoritiesAreStable() {
         assertEquals(listOf("source", "config", "profile"), ParityContract.runnerInputs)
         assertEquals("python", ParityContract.referenceImplementation)
+        assertEquals(
+            listOf("spec/core.aidl", "spec/core.authority.aidl", "spec/core.compatibility.aidl"),
+            ParityContract.coreAuthorityBindings,
+        )
         assertEquals(6, ParityContract.normativeBindings.size)
         assertTrue(ParityContract.semanticAllowlists.isEmpty())
     }
@@ -63,11 +67,12 @@ class ParityContractTest {
     }
 
     @Test
-    fun contractSnapshotIsDeterministicAndNonNormative() {
-        val first = DeterministicJson.objectOf(ParityContract.contractSnapshot())
-        val second = DeterministicJson.objectOf(ParityContract.contractSnapshot())
+    fun commonBoundaryIsDeterministicAndNonNormative() {
+        val first = CommonCompilerBoundary.deterministicContractSnapshot()
+        val second = CommonCompilerBoundary.deterministicContractSnapshot()
         assertEquals(first, second)
         assertTrue(first.contains("\"reference_implementation\":\"python\""))
         assertTrue(first.contains("\"semantic_allowlists\":\"0\""))
+        assertTrue(first.contains("\"core_authority_bindings\":\"spec/core.aidl,spec/core.authority.aidl,spec/core.compatibility.aidl\""))
     }
 }
