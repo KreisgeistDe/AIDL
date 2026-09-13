@@ -4,6 +4,7 @@ import json
 import unittest
 from pathlib import Path
 
+from tools.core_bootstrap import BootstrapSyntaxError
 from tools.core_self_description import (
     CoreSelfDescriptionError,
     check_semantic_meta_ir,
@@ -42,17 +43,8 @@ class CoreSelfDescriptionTest(unittest.TestCase):
         self.assertNotIn("type", model.contracts)
         self.assertEqual(model.aliases, {"type": "declaration"})
         for symbol in (
-            "declaration",
-            "type",
-            "enum",
-            "entity",
-            "query",
-            "string",
-            "bool",
-            "int",
-            "NamePolicy",
-            "CardinalityLabel",
-            "myQuery",
+            "declaration", "type", "enum", "entity", "query", "string", "bool",
+            "int", "NamePolicy", "CardinalityLabel", "myQuery",
         ):
             self.assertIn(symbol, model.symbols)
         base = model.contracts["declaration"]
@@ -88,9 +80,10 @@ class CoreSelfDescriptionTest(unittest.TestCase):
         model = load_self_described_core()
         self.assertEqual(model.aliases["type"], "declaration")
 
-    def test_absent_and_explicit_empty_args_are_same_closed_zero_parameter_model(self) -> None:
+    def test_absent_args_are_closed_zero_and_explicit_empty_args_are_invalid(self) -> None:
         explicit_empty = CORE.replace("enum NamePolicy {", "enum NamePolicy() {")
-        compile_self_described_core(explicit_empty)
+        with self.assertRaisesRegex(BootstrapSyntaxError, "empty declaration argument list"):
+            compile_self_described_core(explicit_empty)
         with self.assertRaisesRegex(CoreSelfDescriptionError, "closed zero-parameter"):
             compile_self_described_core(
                 CORE.replace("enum NamePolicy {", "enum NamePolicy(value: string) {")
@@ -102,8 +95,8 @@ class CoreSelfDescriptionTest(unittest.TestCase):
 
     def test_specialized_result_contract_is_required(self) -> None:
         without_result = CORE.replace(
-            "query myQuery(id: Id) -> Page<myQuery> {",
-            "query myQuery(id: Id) {",
+            "query myQuery(id: Id) -> Page<myQuery> {}",
+            "query myQuery(id: Id) {}",
         )
         with self.assertRaisesRegex(CoreSelfDescriptionError, "requires a result TypeRef"):
             compile_self_described_core(without_result)
@@ -111,7 +104,7 @@ class CoreSelfDescriptionTest(unittest.TestCase):
     def test_named_symbol_typeref_resolution_is_generic_and_fails_closed(self) -> None:
         extended = CORE + """
 
-declaration widget(name: name(required)) {
+declaration widget(name: any = name(required)) {
   body value: body(type, name(required), cardinal(1, 1))
 }
 widget Demo {
@@ -133,22 +126,17 @@ entity UsesDeclarations {
 
     def test_type_alias_contract_must_match_central_declaration_contract(self) -> None:
         drifted = CORE.replace(
-            "declaration type(name: name(required), args: args(any, cardinal(0, many))) -> any {",
-            "declaration type(name: name(required)) -> any {",
+            "declaration type(name: any = name(required), args: any = args(any, cardinal(0, many))) -> any {",
+            "declaration type(name: any = name(required)) -> any {",
         )
         with self.assertRaisesRegex(CoreSelfDescriptionError, "alias contract must exactly match"):
             compile_self_described_core(drifted)
 
     def test_no_definition_object_or_obsolete_carrier_meta_model_is_normative(self) -> None:
         for fragment in (
-            "ArgumentDefinition",
-            "ModifierDefinition",
-            "BodySlotDefinition",
-            "DeclarationDefinition",
-            "MetaCombinatorDefinition",
-            "SemanticMetaModel",
-            "produces(type)",
-            "type-position",
+            "ArgumentDefinition", "ModifierDefinition", "BodySlotDefinition",
+            "DeclarationDefinition", "MetaCombinatorDefinition", "SemanticMetaModel",
+            "produces(type)", "type-position",
         ):
             self.assertNotIn(fragment, CORE)
 
