@@ -8,7 +8,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 
 from tools.aidl_parser import parse_text
 from tools.compiler_ast import compiler_document_from_ast
-from tools.compiler_diagnostics import load_compiler_analysis
+from tools.compiler_diagnostics import CompilerAnalysis, collect_compiler_diagnostics
 from tools.compiler_ir import build_canonical_ir
 from tools.compiler_project import compiler_project_from_documents
 from tools.compiler_resolution import _reference_candidates
@@ -17,8 +17,8 @@ from tools.ir_identity import IrIdentityError, declaration_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 PARITY = ROOT / "compiler" / "kotlin" / "parity"
-DOMAIN_REL = Path("compiler/kotlin/parity/canonical-ir-domain.aidl")
-ENVELOPE_REL = Path("compiler/kotlin/parity/canonical-ir-envelope.aidl")
+DOMAIN_REL = Path("compiler/kotlin/parity/canonical-ir-domain.source")
+ENVELOPE_REL = Path("compiler/kotlin/parity/canonical-ir-envelope.source")
 MISSING_MODULE_REL = Path("compiler/kotlin/parity/canonical-ir-domain-missing-module.source")
 SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8"))
 DOMAIN_MODULE = "parity.ir.domain"
@@ -93,16 +93,30 @@ def _assert_schema_valid(document: dict) -> None:
         raise AssertionError("\n".join(error.message for error in errors))
 
 
+def _analysis_from_shared_sources() -> CompilerAnalysis:
+    documents = []
+    parser_diagnostics = {}
+    for source_path in (DOMAIN_REL, ENVELOPE_REL):
+        source = (ROOT / source_path).read_text(encoding="utf-8")
+        program, diagnostics, _tokens = parse_text(source)
+        documents.append(compiler_document_from_ast(source_path, program))
+        parser_diagnostics[source_path] = diagnostics
+    project = compiler_project_from_documents(documents)
+    return CompilerAnalysis(
+        project=project,
+        diagnostics=collect_compiler_diagnostics(project, parser_diagnostics),
+    )
+
+
 def _positive_document() -> dict:
-    analysis = load_compiler_analysis([DOMAIN_REL, ENVELOPE_REL])
-    if analysis.diagnostics:
-        errors = [
-            diagnostic.to_json()
-            for diagnostic in analysis.diagnostics
-            if diagnostic.severity.value == "error"
-        ]
-        if errors:
-            raise AssertionError(errors)
+    analysis = _analysis_from_shared_sources()
+    errors = [
+        diagnostic.to_json()
+        for diagnostic in analysis.diagnostics
+        if diagnostic.severity.value == "error"
+    ]
+    if errors:
+        raise AssertionError(errors)
 
     domain_document = next(
         document
