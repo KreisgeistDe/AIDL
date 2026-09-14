@@ -5,7 +5,7 @@ from tools.aidl_parser import parse_text
 from tools.compiler_ast import compiler_document_from_ast
 from tools.compiler_core_materialization import collect_core_materialization_issues
 from tools.compiler_project import compiler_project_from_documents
-from tools.compiler_resolution import resolve_project_reference
+from tools.compiler_resolution import _reference_candidates, resolve_project_reference
 from tools.compiler_typecheck import parse_type
 
 
@@ -77,11 +77,13 @@ def oracle_signature() -> str:
             f"got {recursion_issues}"
         )
 
-    unsupported = _resolution(project, "myQuery")
+    consumer = project.documents[0]
+    query_candidates = _reference_candidates(project, consumer, "myQuery")
+    if len(query_candidates) != 1 or query_candidates[0].declaration.kind != "query":
+        raise AssertionError(f"expected one query symbol candidate for myQuery, got {query_candidates}")
+
     missing = _resolution(project, "Missing")
     ambiguous = _resolution(project, "Duplicate")
-    if unsupported.status != "resolved":
-        raise AssertionError(f"expected myQuery symbol identity to resolve, got {unsupported.status}")
     if missing.status != "unresolved":
         raise AssertionError(f"expected Missing to remain unresolved, got {missing.status}")
     if ambiguous.status != "ambiguous":
