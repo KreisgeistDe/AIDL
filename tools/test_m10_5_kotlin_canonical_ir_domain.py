@@ -20,6 +20,7 @@ PARITY = ROOT / "compiler" / "kotlin" / "parity"
 DOMAIN_REL = Path("compiler/kotlin/parity/canonical-ir-domain.source")
 ENVELOPE_REL = Path("compiler/kotlin/parity/canonical-ir-envelope.source")
 MISSING_MODULE_REL = Path("compiler/kotlin/parity/canonical-ir-domain-missing-module.source")
+DEFAULT_REL = Path("compiler/kotlin/parity/canonical-ir-domain-default.source")
 SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8"))
 DOMAIN_MODULE = "parity.ir.domain"
 
@@ -152,6 +153,22 @@ def _missing_module_rejected() -> bool:
     raise AssertionError("missing-module declaration unexpectedly gained canonical IR identity")
 
 
+def _field_default_rejected() -> bool:
+    source = (ROOT / DEFAULT_REL).read_text(encoding="utf-8")
+    program, parser_diagnostics, _tokens = parse_text(source)
+    document = compiler_document_from_ast(DEFAULT_REL, program)
+    project = compiler_project_from_documents([document])
+    diagnostics = collect_compiler_diagnostics(project, {DEFAULT_REL: parser_diagnostics})
+    matching = [
+        diagnostic
+        for diagnostic in diagnostics
+        if diagnostic.code.value == "AIDL-T005" and "default" in diagnostic.message
+    ]
+    if len(matching) != 1:
+        raise AssertionError([diagnostic.to_json() for diagnostic in diagnostics])
+    return True
+
+
 def oracle_signature() -> str:
     document = _positive_document()
     domain_declarations = [
@@ -172,6 +189,7 @@ def oracle_signature() -> str:
     )
     lines.extend(_source_entry_signature(entry) for entry in source_entries)
     lines.append(f"negative|missing-module|rejected={str(_missing_module_rejected()).lower()}")
+    lines.append(f"negative|field-default|rejected={str(_field_default_rejected()).lower()}")
     return "\n".join(lines)
 
 
@@ -193,6 +211,9 @@ class KotlinCanonicalIrDomainParityTest(unittest.TestCase):
 
     def test_missing_module_boundary_fails_closed_before_ir_identity(self) -> None:
         self.assertTrue(_missing_module_rejected())
+
+    def test_field_default_boundary_matches_full_python_compiler_rejection(self) -> None:
+        self.assertTrue(_field_default_rejected())
 
 
 if __name__ == "__main__":
