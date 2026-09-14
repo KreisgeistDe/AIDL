@@ -11,6 +11,7 @@ class MaterializationChecksParityTest {
                 module demo.consumer
                 import demo.shared.*
                 entity Holder {}
+                query myQuery(id: PublicEntity) -> PublicEntity {}
             """.trimIndent(),
             "provider-a" to """
                 module demo.shared
@@ -31,9 +32,12 @@ class MaterializationChecksParityTest {
             "string",
             "PublicEntity",
             "[PublicEntity]?",
+            "myQuery",
             "PublicEntity<PublicEnum>",
             "Page<PublicEntity>",
             "Page<myQuery>",
+            "Page<Missing>",
+            "Page<Duplicate>",
             "Duplicate",
             "Missing",
         ).joinToString("\n") { type ->
@@ -48,14 +52,25 @@ class MaterializationChecksParityTest {
             string|MATERIALIZABLE|
             PublicEntity|MATERIALIZABLE|
             [PublicEntity]?|MATERIALIZABLE|
+            myQuery|REJECTED|AIDL-T005
             PublicEntity<PublicEnum>|REJECTED|AIDL-T005
             Page<PublicEntity>|MATERIALIZABLE|
             Page<myQuery>|OUTSIDE_SLICE|
+            Page<Missing>|UNRESOLVED|AIDL-T001
+            Page<Duplicate>|AMBIGUOUS|CORE-S023
             Duplicate|AMBIGUOUS|CORE-S023
             Missing|UNRESOLVED|AIDL-T001
         """.trimIndent()
         assertEquals(expected, signature())
         assertEquals(signature(), signature())
+    }
+
+    @Test
+    fun resolvedNonMaterializableDeclarationKindIsRejectedWithoutInvalidatingTypeRefIdentity() {
+        assertEquals(
+            ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005"),
+            ProjectedMaterializationChecker.check("consumer", "myQuery", resolver()),
+        )
     }
 
     @Test
@@ -93,6 +108,29 @@ class MaterializationChecksParityTest {
     }
 
     @Test
+    fun nestedStandardGenericResolutionPreservesFailClosedDiagnostics() {
+        val resolver = resolver()
+        assertEquals(
+            ProjectedMaterializationCheck(ProjectedMaterializationStatus.UNRESOLVED, "AIDL-T001"),
+            ProjectedMaterializationChecker.check("consumer", "Page<Missing>", resolver),
+        )
+        assertEquals(
+            ProjectedMaterializationCheck(ProjectedMaterializationStatus.AMBIGUOUS, "CORE-S023"),
+            ProjectedMaterializationChecker.check("consumer", "Page<Duplicate>", resolver),
+        )
+    }
+
+    @Test
+    fun bindingCoreValidGenericRemainsOutsideHistoricalBoundedSlice() {
+        val resolver = resolver()
+        val first = ProjectedMaterializationChecker.check("consumer", "Page<myQuery>", resolver)
+        val second = ProjectedMaterializationChecker.check("consumer", "Page<myQuery>", resolver)
+        assertEquals(ProjectedMaterializationStatus.OUTSIDE_SLICE, first.status)
+        assertEquals(null, first.diagnosticCode)
+        assertEquals(first, second)
+    }
+
+    @Test
     fun malformedGenericShapesStayOutsideBoundedSlice() {
         val resolver = resolver()
         for (type in listOf(
@@ -112,14 +150,11 @@ class MaterializationChecksParityTest {
     }
 
     @Test
-    fun unresolvedAmbiguousAndInvalidNestedStandardArgumentsStayOutsideSlice() {
-        val resolver = resolver()
-        for (type in listOf("Page<Missing>", "Page<Duplicate>", "Page<bad-name>")) {
-            assertEquals(
-                ProjectedMaterializationStatus.OUTSIDE_SLICE,
-                ProjectedMaterializationChecker.check("consumer", type, resolver).status,
-            )
-        }
+    fun invalidNestedStandardArgumentStaysOutsideSlice() {
+        assertEquals(
+            ProjectedMaterializationStatus.OUTSIDE_SLICE,
+            ProjectedMaterializationChecker.check("consumer", "Page<bad-name>", resolver()).status,
+        )
     }
 
     @Test
