@@ -20,6 +20,20 @@ class CanonicalIrDomainDifferentialParityTest {
         fail("cannot locate compiler/kotlin/parity")
     }
 
+    private fun fieldDefaultRejected(): Boolean {
+        val filename = "canonical-ir-domain-default.source"
+        val source = Files.readString(parityRoot().resolve(filename))
+        val error = assertFailsWith<CanonicalIrDomainSliceException> {
+            CanonicalIrDomainSliceProjector.project(
+                sourceId = "canonical-ir-domain-default",
+                path = "compiler/kotlin/parity/$filename",
+                source = source,
+            )
+        }
+        assertTrue(error.message.orEmpty().contains("default is not represented"))
+        return true
+    }
+
     private fun positiveSignature(): String {
         val root = parityRoot()
         val filename = "canonical-ir-domain.source"
@@ -29,7 +43,11 @@ class CanonicalIrDomainDifferentialParityTest {
             path = "compiler/kotlin/parity/$filename",
             source = source,
         )
-        return "schema=valid\n${slice.stableSignature()}\nnegative|missing-module|rejected=true"
+        return buildString {
+            append("schema=valid\n").append(slice.stableSignature())
+            append("\nnegative|missing-module|rejected=true")
+            append("\nnegative|field-default|rejected=").append(fieldDefaultRejected())
+        }
     }
 
     private fun reject(source: String): CanonicalIrDomainSliceException =
@@ -45,21 +63,8 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
-    fun sharedFixtureExercisesAcceptedFieldDefaultWithoutChangingCanonicalFieldFacts() {
-        val root = parityRoot()
-        val filename = "canonical-ir-domain.source"
-        val source = Files.readString(root.resolve(filename))
-        assertTrue(source.contains("name: string required default \"anonymous\""))
-        val slice = CanonicalIrDomainSliceProjector.project(
-            sourceId = "canonical-ir-domain",
-            path = "compiler/kotlin/parity/$filename",
-            source = source,
-        )
-        val petInputName = slice.declarations[1].fields[0]
-        assertEquals(
-            "name=scalar:string|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none",
-            petInputName.stableSignature(),
-        )
+    fun sharedFieldDefaultFixtureFailsClosedLikePythonCanonicalIrBoundary() {
+        assertTrue(fieldDefaultRejected())
     }
 
     @Test
@@ -254,8 +259,8 @@ class CanonicalIrDomainDifferentialParityTest {
         reject("module p\nexport value V { name: string required weird }\n")
         reject("module p\nexport value V { name: string onDelete }\n")
         reject("module p\nexport value V { name: string onDelete explode }\n")
-        val missingDefault = reject("module p\nexport value V { name: string default }\n")
-        assertTrue(missingDefault.message.orEmpty().contains("default value"))
+        val defaultError = reject("module p\nexport value V { name: string default \"x\" }\n")
+        assertTrue(defaultError.message.orEmpty().contains("default is not represented"))
     }
 
     @Test
