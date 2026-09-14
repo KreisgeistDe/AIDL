@@ -55,8 +55,7 @@ def _project():
 
 def _resolution(project, reference: str):
     document = project.documents[0]
-    marker = f": {reference}"
-    offset = CONSUMER_SOURCE.index(marker) + 2
+    offset = CONSUMER_SOURCE.index(reference)
     source_texts = {
         document.source_path.absolute().resolve(strict=False): CONSUMER_SOURCE,
     }
