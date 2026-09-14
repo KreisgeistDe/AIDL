@@ -16,11 +16,13 @@ data class ProjectedAssignmentCheck(
 /**
  * Bounded M10.5-03 type-checking parity for operation default literals.
  *
- * This mirrors only the current Python compatibility/conformance observable:
- * null is assignable only to nullable types; non-null scalar literals require an
- * exact scalar match except that int is assignable to decimal. Direct Core remains
- * semantic authority. Resolution ambiguity fails closed with CORE-S023, and shapes
- * outside this deliberately small slice are not promoted to Kotlin support.
+ * This mirrors only the current Python compatibility/conformance observable for
+ * scalar default assignment: exact bool/int/decimal/string matches plus implicit
+ * int-to-decimal assignment. The current compatibility path classifies null defaults,
+ * including nullable syntax, as AIDL-T002; this parity evidence does not redefine
+ * direct-Core nullability semantics. Direct Core remains semantic authority.
+ * Resolution ambiguity fails closed with CORE-S023, and shapes outside this
+ * deliberately small slice are not promoted to Kotlin support.
  */
 object ProjectedTypeChecker {
     private val scalarNames = setOf("bool", "decimal", "int", "string")
@@ -51,11 +53,7 @@ object ProjectedTypeChecker {
 
         val literalKind = literalKind(literalSource)
         if (literalKind == "null") {
-            return if (type.nullable) {
-                ProjectedAssignmentCheck(ProjectedAssignmentStatus.ASSIGNABLE)
-            } else {
-                ProjectedAssignmentCheck(ProjectedAssignmentStatus.TYPE_MISMATCH, "AIDL-T002")
-            }
+            return ProjectedAssignmentCheck(ProjectedAssignmentStatus.TYPE_MISMATCH, "AIDL-T002")
         }
         if (literalKind == null) {
             return ProjectedAssignmentCheck(ProjectedAssignmentStatus.OUTSIDE_SLICE)
