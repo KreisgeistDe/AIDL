@@ -112,6 +112,18 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
+    fun emptyDomainModuleProducesEmptyBoundedSlice() {
+        val slice = CanonicalIrDomainSliceProjector.project(
+            "empty",
+            "empty.aidl",
+            "module parity.empty\n",
+        )
+        assertTrue(slice.declarations.isEmpty())
+        assertTrue(slice.sourceEntries.isEmpty())
+        assertEquals("", slice.stableSignature())
+    }
+
+    @Test
     fun stableModelSignaturesCoverParameterizedAndNonDomainBranches() {
         val named = CanonicalIrNamedType(
             declarationId = "p.Box@1",
@@ -137,6 +149,15 @@ class CanonicalIrDomainDifferentialParityTest {
         reject("module p\nimport q.Type\nexport value V { name: string }\n")
         reject("module p\nexport value V { name: string }\nexport value V { name: string }\n")
         reject("module p\nexport entity E { name: string }\n")
+    }
+
+    @Test
+    fun boundedSliceRejectsNonOwnedDeclarationsAndTypeTargets() {
+        reject("module p\napp A {}\n")
+        val targetError = reject(
+            "module p\napp A {}\nexport value V { other: A }\n",
+        )
+        assertTrue(targetError.message.orEmpty().contains("unsupported bounded type target"))
     }
 
     @Test
