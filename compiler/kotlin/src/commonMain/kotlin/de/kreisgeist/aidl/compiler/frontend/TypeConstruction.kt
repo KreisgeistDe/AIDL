@@ -192,9 +192,6 @@ object ProjectedTypeConstructor {
         )
     }.sortedWith(
         compareBy<ProjectedTypeDiagnostic> { it.location.offset }
-            .thenBy { it.phase }
-            .thenBy { it.severity.ordinal }
-            .thenBy { it.code }
             .thenBy { it.message },
     )
 
