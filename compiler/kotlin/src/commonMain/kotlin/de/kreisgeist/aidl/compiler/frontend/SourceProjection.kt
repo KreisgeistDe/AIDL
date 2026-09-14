@@ -10,15 +10,15 @@ data class ProjectedDeclaration(
     val name: String,
     val exported: Boolean,
     val bodyTokens: List<String>,
-    val offset: Int,
+    val offset: Int = -1,
 )
 
 data class SourceProjection(
-    val sourceId: String,
-    val path: String,
     val module: String?,
     val imports: List<String>,
     val declarations: List<ProjectedDeclaration>,
+    val sourceId: String = "inline",
+    val path: String = "inline.aidl",
 ) {
     fun stableSignature(): String = buildString {
         append("module=").append(module ?: "")
@@ -127,7 +127,13 @@ object AidlSourceProjector {
                 }
             }
         }
-        return SourceProjection(sourceId, path, module, imports.toList(), declarations.toList())
+        return SourceProjection(
+            module = module,
+            imports = imports.toList(),
+            declarations = declarations.toList(),
+            sourceId = sourceId,
+            path = path,
+        )
     }
 
     private fun lex(source: String): List<Token> {
