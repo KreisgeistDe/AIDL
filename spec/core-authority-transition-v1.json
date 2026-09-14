@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "phase": "binding-core-ebnf-implementation-in-progress",
+  "phase": "binding-core-ebnf-correction-integrated",
   "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
   "coreSource": {
     "path": "spec/core.aidl",
@@ -40,7 +40,7 @@
     "path": "spec/core.domain.aidl",
     "role": "compatibility-shell-no-definition-object-authority",
     "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-integrated-binding-ebnf-correction-active"
+    "migrationToDirectSelfDescription": "p3-integrated-binding-ebnf-correction-complete"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
@@ -77,7 +77,7 @@
   },
   "authorityCorrection": {
     "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "binding-core-ebnf-candidate-p4-frozen",
+    "status": "binding-core-ebnf-reviewed-and-integrated",
     "historicalP1": {
       "implementationPr": 100,
       "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
@@ -103,7 +103,11 @@
     },
     "semanticCorrection": {
       "id": "binding-core-ebnf",
-      "status": "implementation-candidate",
+      "status": "reviewed-and-integrated",
+      "implementationPr": 104,
+      "reviewedHead": "9efde375636bb7deed1c901842087169cb5b2763",
+      "mainCommit": "363f2a7a20f75d9fa7f46aea19e015bcdf121c33",
+      "independentlyValidated": true,
       "producesRemoved": true,
       "typePositionRemoved": true,
       "typeIsAliasOfDeclaration": true,
@@ -125,19 +129,19 @@
     },
     "p4": {
       "id": "downstream-surfaces-and-kotlin-parity-rebase",
-      "status": "frozen"
+      "status": "frozen-by-downstream-roadmap-gates"
     },
-    "semanticsDependentKotlinFrozen": true,
-    "frozenKotlinWorkIncludes": ["M10.5-03+", "PR-99"]
+    "semanticsDependentKotlinFrozen": false,
+    "frozenKotlinWorkIncludes": []
   },
   "nextGate": {
-    "id": "BINDING-CORE-EBNF",
-    "status": "implementation-pending-independent-architecture-and-exact-head-validation",
+    "id": "M10.5-03",
+    "status": "closure-audit-pending",
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "BINDING-CORE-EBNF-INDEPENDENT-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
-    "status": "pending-independent-validation",
-    "reason": "Validate the exact binding EBNF implementation, including rejection of declaration (), generic and nullable TypeRefs, fixed/open args, expression/layout/string behavior, generic named-declaration TypeRef identity, deterministic derived meta-IR, and the continued P4/PR-99/M10.5-03+ freeze. Do not merge during review."
+    "id": "M10.5-03-GATE-03-CLOSURE-AUDIT",
+    "status": "pending-independent-closure-audit",
+    "reason": "The binding Core EBNF correction was independently reviewed at PR #104 head 9efde375636bb7deed1c901842087169cb5b2763 and serially integrated as main commit 363f2a7a20f75d9fa7f46aea19e015bcdf121c33. Remaining sequencing is governed by the M10.5 Gate-03 closure audit; this status update does not close Gate 03 or authorize M10.5-04+."
   }
 }
