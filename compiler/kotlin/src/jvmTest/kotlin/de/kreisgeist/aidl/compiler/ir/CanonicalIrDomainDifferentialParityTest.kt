@@ -19,7 +19,7 @@ class CanonicalIrDomainDifferentialParityTest {
 
     private fun positiveSignature(): String {
         val root = parityRoot()
-        val filename = "canonical-ir-domain.aidl"
+        val filename = "canonical-ir-domain.source"
         val source = Files.readString(root.resolve(filename))
         val slice = CanonicalIrDomainSliceProjector.project(
             sourceId = "canonical-ir-domain",
