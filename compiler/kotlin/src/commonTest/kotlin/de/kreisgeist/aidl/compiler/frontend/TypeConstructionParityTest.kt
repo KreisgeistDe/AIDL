@@ -149,15 +149,17 @@ class TypeConstructionParityTest {
                 typeSource = "string",
             ),
         )
-        assertFailsWith<IllegalArgumentException> {
-            ProjectedTypeConstructor.diagnosticAt(
-                sourcePath = "resolution-consumer.source",
-                sourceText = consumerSource,
-                diagnosticOffset = consumerSource.length + 1,
-                subjectKind = "entity",
-                subjectName = "Local",
-                typeSource = "string??",
-            )
+        for (invalidOffset in listOf(-1, consumerSource.length + 1)) {
+            assertFailsWith<IllegalArgumentException> {
+                ProjectedTypeConstructor.diagnosticAt(
+                    sourcePath = "resolution-consumer.source",
+                    sourceText = consumerSource,
+                    diagnosticOffset = invalidOffset,
+                    subjectKind = "entity",
+                    subjectName = "Local",
+                    typeSource = "string??",
+                )
+            }
         }
     }
 }
