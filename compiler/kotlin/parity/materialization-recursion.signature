@@ -1,0 +1,5 @@
+accepted|[[PublicEntity?]?]?|MATERIALIZABLE|||||
+recursive|[RecursiveValue?]?|MATERIALIZABLE|||||
+unsupported|[[myQuery?]?]?|OUTSIDE_SLICE|||||
+missing|[Missing?]?|UNRESOLVED|AIDL-T001||||
+ambiguous|[Duplicate?]?|AMBIGUOUS|CORE-S023||||

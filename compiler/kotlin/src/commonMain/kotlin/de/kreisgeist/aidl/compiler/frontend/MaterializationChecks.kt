@@ -21,6 +21,12 @@ data class ProjectedMaterializationCheck(
     val location: ProjectedSourceLocation? = null,
 )
 
+internal data class ProjectedFieldMaterializationCheck(
+    val fieldName: String,
+    val typeSource: String,
+    val check: ProjectedMaterializationCheck,
+)
+
 /**
  * Bounded M10.5-03 materialization-boundary parity over the integrated type/resolution surface.
  *
@@ -109,6 +115,59 @@ object ProjectedMaterializationChecker {
             sourcePath = sourceId,
             location = sourceLocation(sourceText, diagnosticOffset),
         )
+    }
+
+    /**
+     * Bounded value/entity field traversal over the already-projected declaration body.
+     *
+     * SourceProjection owns lexical declaration boundaries; this layer only extracts ordered
+     * `field name: TypeRef` facts from its deterministic body token stream and delegates every
+     * TypeRef to the existing materialization/type/resolution boundary. Current Python
+     * materialization does not own AIDL-T005 for value/entity field clauses, so a resolved field
+     * shape that the generic checker would reject remains OUTSIDE_SLICE here, with no invented
+     * materialization location. Resolver-owned unresolved/ambiguous classifications are preserved.
+     */
+    internal fun checkProjectedFields(
+        sourceId: String,
+        declaration: ProjectedDeclaration,
+        resolver: ProjectNameResolver,
+    ): List<ProjectedFieldMaterializationCheck> {
+        require(declaration.kind == "value" || declaration.kind == "entity") {
+            "field materialization traversal is bounded to value/entity declarations"
+        }
+        return projectedFields(declaration.bodyTokens).map { (fieldName, typeSource) ->
+            val raw = check(sourceId, typeSource, resolver)
+            val bounded = if (raw.status == ProjectedMaterializationStatus.REJECTED) {
+                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+            } else {
+                raw
+            }
+            ProjectedFieldMaterializationCheck(fieldName, typeSource, bounded)
+        }
+    }
+
+    private fun projectedFields(tokens: List<String>): List<Pair<String, String>> {
+        val result = mutableListOf<Pair<String, String>>()
+        var index = 0
+        while (index < tokens.size) {
+            if (tokens[index] != "field") {
+                index += 1
+                continue
+            }
+            require(index + 3 < tokens.size && tokens[index + 2] == ":") {
+                "projected field tokens are malformed"
+            }
+            val name = tokens[index + 1]
+            index += 3
+            val typeTokens = mutableListOf<String>()
+            while (index < tokens.size && tokens[index] != "field") {
+                typeTokens += tokens[index]
+                index += 1
+            }
+            require(typeTokens.isNotEmpty()) { "projected field '$name' has no type" }
+            result += name to typeTokens.joinToString("")
+        }
+        return result
     }
 
     private fun sourceLocation(source: String, offset: Int): ProjectedSourceLocation {
