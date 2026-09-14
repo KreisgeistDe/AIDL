@@ -334,31 +334,7 @@ object CanonicalIrDomainSliceProjector {
         if (start >= tokens.size) {
             throw CanonicalIrDomainSliceException("field '$fieldName' lacks default value")
         }
-        val token = tokens[start]
-        val startsNextField = token == "field" || tokens.getOrNull(start + 1) == ":"
-        if (token in fieldModifiers || startsNextField) {
-            throw CanonicalIrDomainSliceException("field '$fieldName' lacks default value")
-        }
-        val closing = when (token) {
-            "[" -> "]"
-            "(" -> ")"
-            "{" -> "}"
-            else -> null
-        }
-        if (closing == null) return start + 1
-
-        var depth = 0
-        var index = start
-        while (index < tokens.size) {
-            when (tokens[index]) {
-                token -> depth += 1
-                closing -> depth -= 1
-            }
-            index += 1
-            if (depth == 0) return index
-            if (depth < 0) break
-        }
-        throw CanonicalIrDomainSliceException("field '$fieldName' has unbalanced default value")
+        return start + 1
     }
 
     private fun typeRef(
