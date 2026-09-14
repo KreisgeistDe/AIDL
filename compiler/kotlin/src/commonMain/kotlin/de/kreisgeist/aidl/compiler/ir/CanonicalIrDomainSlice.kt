@@ -2,6 +2,7 @@ package de.kreisgeist.aidl.compiler.ir
 
 import de.kreisgeist.aidl.compiler.frontend.AidlSourceProjector
 import de.kreisgeist.aidl.compiler.frontend.ProjectedDeclaration
+import de.kreisgeist.aidl.compiler.frontend.SourceProjection
 
 class CanonicalIrDomainSliceException(message: String) : IllegalArgumentException(message)
 
@@ -133,8 +134,10 @@ object CanonicalIrDomainSliceProjector {
         "immutable", "default", "onDelete",
     )
 
-    fun project(sourceId: String, path: String, source: String): CanonicalIrDomainSlice {
-        val projection = AidlSourceProjector.project(sourceId, path, source)
+    fun project(sourceId: String, path: String, source: String): CanonicalIrDomainSlice =
+        project(AidlSourceProjector.project(sourceId, path, source), source)
+
+    internal fun project(projection: SourceProjection, source: String): CanonicalIrDomainSlice {
         val module = projection.module
             ?: throw CanonicalIrDomainSliceException("canonical IR domain slice requires module")
         if (projection.imports.isNotEmpty()) {
@@ -158,7 +161,7 @@ object CanonicalIrDomainSliceProjector {
                 nodePath = "/declarations/$index",
                 originalDeclarationId = id,
                 span = CanonicalIrSourceSpan(
-                    file = path,
+                    file = projection.path,
                     startLine = position(source, declaration.offset).first,
                     startColumn = position(source, declaration.offset).second,
                     endLine = position(source, declaration.endOffset).first,
