@@ -9,7 +9,8 @@ object ParityContract {
     val runnerInputs: List<String> = listOf("source", "config", "profile")
 
     val coreAuthorityBindings: List<String> = listOf(
-        "spec/core.aidl",
+        "spec/bootstrap-kernel-v1.json",
+        "spec/core-self-description-v1.aidl",
         "spec/core.authority.aidl",
         "spec/core.compatibility.aidl",
     )

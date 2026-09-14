@@ -1,31 +1,35 @@
 module aidl.core.self
 
-// P3 normative direct self-description. The finite host understands only the
-// structural meta-combinators; concrete declaration kinds are declared here.
-declaration declaration(name: name(required), args: args(cardinal(0, many))) {
-  body body: body(name(required), cardinal(0, many))
+declaration declaration(name: any = name(required), args: any = args(any, cardinal(0, many))) -> any {
+  body body: body(any, name(required), cardinal(0, many))
+  body semantic: body(any, name(required), cardinal(0, many))
 }
 
-declaration type(name: name(required), args: args(cardinal(0, many)), produces: produces(type)) {
-  body semantic: body(name(required), cardinal(0, many))
+declaration type(name: any = name(required), args: any = args(any, cardinal(0, many))) -> any {
+  body body: body(any, name(required), cardinal(0, many))
+  body semantic: body(any, name(required), cardinal(0, many))
+  semantic alias: "declaration"
 }
 
-declaration enum(name: name(required), produces: produces(type)) {
-  body case: body(name(required), cardinal(1, many))
+declaration enum(name: any = name(required)) {
+  body case: body(identifier, name(required), cardinal(1, many))
 }
 
-declaration entity(name: name(required)) {
-  body field: body(type-position, "choice<TypeRef, ref<entity>>", name(required), cardinal(0, many), modifier(unique, cardinal(0, 1)), modifier(primary, cardinal(0, 1)))
-  body invariant: body(type-position, "expression<bool>", name(optional), cardinal(0, many))
+declaration entity(name: any = name(required)) {
+  body field: body(type, name(required), cardinal(0, many), modifier(unique, cardinal(0, 1)), modifier(primary, cardinal(0, 1)))
+  body invariant: body("expression<bool>", name(optional), cardinal(0, many))
 }
 
-declaration compatibilityProjection(name: name(required)) {
+declaration query(name: any = name(required), args: any = args(type, cardinal(0, many))) -> type {
+  body field: body(type, name(required), cardinal(0, many))
+}
+
+declaration compatibilityProjection(name: any = name(required)) {
   body source: body(string, name(forbidden), cardinal(1, 1))
   body gitBlobSha1: body(string, name(forbidden), cardinal(1, 1))
   body role: body(string, name(forbidden), cardinal(1, 1))
 }
 
-// Visible base and generic carrier names originate from AIDL definitions.
 type string {}
 type bool {}
 type int {}
@@ -34,6 +38,8 @@ type list {}
 type range {}
 type json {}
 type TypeRef {}
+type Id {}
+type Page {}
 
 type choice {
   semantic behavior: "choice"
@@ -52,23 +58,23 @@ type expression {
   semantic maxArgs: 1
 }
 
-// enum is not a host special case. Its declaration-kind contract produces(type),
-// therefore every named enum instance is a valid type carrier by the same rule.
 enum NamePolicy {
-  case REQUIRED:
-  case OPTIONAL:
-  case FORBIDDEN:
+  case REQUIRED
+  case OPTIONAL
+  case FORBIDDEN
 }
 
 enum CardinalityLabel {
-  case OPTIONAL:
-  case REQUIRED:
-  case MANY:
+  case OPTIONAL
+  case REQUIRED
+  case MANY
 }
 
-// Direct self-described proof: the host has no concrete knowledge of entity.
 entity CoreEntityExample {
   field id: string @primary
   field state: NamePolicy
+  field declarationKind: entity
   invariant: bool
 }
+
+query myQuery(id: Id) -> Page<myQuery> {}

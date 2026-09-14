@@ -13,7 +13,12 @@ class ParityContractTest {
         assertEquals(listOf("source", "config", "profile"), ParityContract.runnerInputs)
         assertEquals("python", ParityContract.referenceImplementation)
         assertEquals(
-            listOf("spec/core.aidl", "spec/core.authority.aidl", "spec/core.compatibility.aidl"),
+            listOf(
+                "spec/bootstrap-kernel-v1.json",
+                "spec/core-self-description-v1.aidl",
+                "spec/core.authority.aidl",
+                "spec/core.compatibility.aidl",
+            ),
             ParityContract.coreAuthorityBindings,
         )
         assertEquals(6, ParityContract.normativeBindings.size)
@@ -73,6 +78,10 @@ class ParityContractTest {
         assertEquals(first, second)
         assertTrue(first.contains("\"reference_implementation\":\"python\""))
         assertTrue(first.contains("\"semantic_allowlists\":\"0\""))
-        assertTrue(first.contains("\"core_authority_bindings\":\"spec/core.aidl,spec/core.authority.aidl,spec/core.compatibility.aidl\""))
+        assertTrue(
+            first.contains(
+                "\"core_authority_bindings\":\"spec/bootstrap-kernel-v1.json,spec/core-self-description-v1.aidl,spec/core.authority.aidl,spec/core.compatibility.aidl\"",
+            ),
+        )
     }
 }

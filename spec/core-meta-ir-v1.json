@@ -29,6 +29,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "source",
@@ -81,10 +82,28 @@
       ]
     },
     "declaration": {
-      "arguments": [],
+      "arguments": [
+        {
+          "cardinality": [
+            0,
+            null
+          ],
+          "name": "*",
+          "type": {
+            "arguments": [],
+            "name": "any",
+            "optional": false
+          }
+        }
+      ],
       "modifiers": [],
       "namePolicy": "required",
-      "result": null,
+      "result": {
+        "arguments": [],
+        "name": "any",
+        "optional": false
+      },
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "body",
@@ -96,7 +115,27 @@
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": null
+          "valueType": {
+            "arguments": [],
+            "name": "any",
+            "optional": false
+          }
+        },
+        {
+          "bodyType": "semantic",
+          "cardinality": [
+            0,
+            null
+          ],
+          "modifiers": [],
+          "namePolicy": "required",
+          "ordered": true,
+          "uniqueByName": true,
+          "valueType": {
+            "arguments": [],
+            "name": "any",
+            "optional": false
+          }
         }
       ]
     },
@@ -105,6 +144,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "field",
@@ -120,25 +160,8 @@
           "ordered": true,
           "uniqueByName": true,
           "valueType": {
-            "arguments": [
-              {
-                "arguments": [],
-                "name": "TypeRef",
-                "optional": false
-              },
-              {
-                "arguments": [
-                  {
-                    "arguments": [],
-                    "name": "entity",
-                    "optional": false
-                  }
-                ],
-                "name": "ref",
-                "optional": false
-              }
-            ],
-            "name": "choice",
+            "arguments": [],
+            "name": "TypeRef",
             "optional": false
           }
         },
@@ -171,6 +194,7 @@
       "modifiers": [],
       "namePolicy": "required",
       "result": null,
+      "resultRequired": false,
       "slots": [
         {
           "bodyType": "case",
@@ -186,14 +210,32 @@
         }
       ]
     },
-    "type": {
-      "arguments": [],
+    "query": {
+      "arguments": [
+        {
+          "cardinality": [
+            0,
+            null
+          ],
+          "name": "*",
+          "type": {
+            "arguments": [],
+            "name": "TypeRef",
+            "optional": false
+          }
+        }
+      ],
       "modifiers": [],
       "namePolicy": "required",
-      "result": null,
+      "result": {
+        "arguments": [],
+        "name": "TypeRef",
+        "optional": false
+      },
+      "resultRequired": true,
       "slots": [
         {
-          "bodyType": "semantic",
+          "bodyType": "field",
           "cardinality": [
             0,
             null
@@ -202,10 +244,17 @@
           "namePolicy": "required",
           "ordered": true,
           "uniqueByName": true,
-          "valueType": null
+          "valueType": {
+            "arguments": [],
+            "name": "TypeRef",
+            "optional": false
+          }
         }
       ]
     }
+  },
+  "kindAliases": {
+    "type": "declaration"
   },
   "modifiers": {
     "primary": {
@@ -229,23 +278,33 @@
       ]
     }
   },
-  "role": "derived-non-authoritative-runtime-meta-ir",
-  "schemaVersion": 1,
-  "source": "spec/core-self-description-v1.aidl",
-  "sourceSha256": "1a8ddc2dbd412158009b94908fbca6973014cde5bb209cee45859262850d0269",
-  "typeCarriers": [
+  "predeclaredTypeSymbols": [
     "CardinalityLabel",
+    "CoreEntityExample",
+    "Id",
     "NamePolicy",
+    "Page",
     "TypeRef",
     "bool",
     "choice",
+    "compatibilityProjection",
+    "declaration",
+    "entity",
+    "enum",
     "expression",
     "int",
     "json",
     "list",
+    "myQuery",
+    "query",
     "range",
     "ref",
     "string",
+    "type",
     "uuid"
-  ]
+  ],
+  "role": "derived-non-authoritative-runtime-meta-ir",
+  "schemaVersion": 3,
+  "source": "spec/core-self-description-v1.aidl",
+  "sourceSha256": "465f22f2a436f6948b4ecb5e01419c922bb0537065fd1d6f5556054ca3dedcbc"
 }

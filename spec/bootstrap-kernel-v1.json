@@ -8,74 +8,114 @@
     "delimiters-source-locations-and-source-order",
     "module-import-graph-framing",
     "export-visibility-framing",
-    "uniform-generic-declaration-envelope",
-    "recursive-generic-type-ref-syntax",
-    "primitive-list-object-literals",
-    "body-entry-framing",
+    "universal-declaration-envelope",
+    "generic-parameters",
+    "recursive-generic-nullable-type-ref-syntax",
+    "lists-ranges-and-expression-precedence",
+    "body-entry-framing-and-continuation",
     "modifier-call-tokenization",
     "finite-structural-meta-combinators",
-    "generic-produced-type-carrier-resolution"
+    "declaration-argument-contract-syntax",
+    "declaration-result-presence-framing",
+    "statement-termination",
+    "nested-comments",
+    "normal-and-raw-multiline-string-interpolation"
   ],
   "directives": {
     "module": "compilation-unit-identity-only",
     "import": "dependency-and-initial-scope-edge-only",
     "export": "initial-visibility-framing-only"
   },
-  "declarationEnvelope": "[export] <kind> [<identifier>] [(<named-args>)] [-> <typeRef>] { <body-entries>* }",
+  "declarationEnvelope": "[export] type-reference identifier [generic-parameters] [named-arguments] [-> type-reference] [declaration-body] [statement-end]",
+  "bindingCoreEbnf": {
+    "normative": true,
+    "typeHasDedicatedGrammarRule": false,
+    "emptyDeclarationParenthesesRejected": true,
+    "omittedArgumentsAreClosedZero": true,
+    "openArgumentsUseFreeBinder": true,
+    "bodyValuesAreExpressions": true,
+    "indentationHasMeaning": false,
+    "newlineTerminationOnlyWhenComplete": true,
+    "semicolonAlwaysTerminates": true,
+    "nestedBlockComments": true,
+    "rawMultilineStrings": true,
+    "optionalImmediateEmbeddedLanguageTag": true,
+    "interpolationForms": ["$qualified.name", "${expression}", "$$"],
+    "expressionPrecedenceHighToLow": ["postfix", "unary", "multiplicative", "additive", "comparison", "equality", "logical-and", "logical-or"]
+  },
   "typeRef": {
     "qualifiedNames": true,
     "recursiveGenerics": true,
     "trailingOptionality": true,
-    "semanticMeaningOwnedByHost": false
+    "semanticMeaningOwnedByHost": false,
+    "carrierIdentity": "generic-visible-named-declaration-symbol"
   },
   "metaCombinators": [
     {"name": "name", "shape": "name(...)"},
-    {"name": "args", "shape": "args(...)"},
-    {"name": "body", "shape": "body(...)"},
+    {"name": "args", "shape": "args(<value-type>, cardinal(...))"},
+    {"name": "body", "shape": "body([<value-type>], name(...), cardinal(...), modifier(...)*)"},
     {"name": "cardinal", "shape": "cardinal(...)"},
-    {"name": "modifier", "shape": "modifier(...)"},
-    {"name": "type-position", "shape": "type-position"},
-    {"name": "produces", "shape": "produces(<carrier-space>)"}
+    {"name": "modifier", "shape": "modifier(...)"}
   ],
-  "typeCarrierRule": {
-    "carrierSpace": "type",
-    "producer": "produces(type)",
-    "instanceRule": "a named declaration instance whose declaration-kind contract contains produces(type) is a valid type carrier",
+  "argumentAndResultRule": {
+    "argsCombinator": "declares-an-open-parameter-set",
+    "explicitInstanceSignature": "closed-fixed-parameter-set",
+    "argumentsAbsent": "closed-zero-parameter-model",
+    "argumentsPresentEmpty": "invalid-syntax",
+    "openArgumentSyntax": "identifier?: ...",
+    "resultAbsent": "no-result-position-permitted-by-specialized-kind",
+    "resultMechanism": "only-the-existing-arrow-result-position"
+  },
+  "declarationTypeSelfSimilarity": {
+    "centralMetaClass": "declaration",
+    "typeSurface": "direct-core-authored-alias-of-declaration",
+    "everyVisibleNamedDeclarationIsTypeRefAddressable": true,
+    "hostOwnsSeparateTypeHierarchy": false
+  },
+  "typeIdentityRule": {
+    "instanceRule": "a TypeRef base resolves to one visible named declaration symbol; no declaration-kind producer capability participates",
     "recursiveGenericArgumentsUseSameRule": true,
-    "hostKnowsConcreteProducerKinds": false,
-    "examples": [
-      "type string {}",
-      "enum NamePolicy { case REQUIRED: }"
-    ]
+    "hostKnowsConcreteTypeKinds": false,
+    "unresolvedOrAmbiguousFailsClosed": true
   },
   "modifierCall": {
     "prefix": "@",
-    "namedArgumentsOnly": true
+    "arguments": "positional-or-named-values"
   },
-  "bodyForms": [
-    "inline",
-    "multiline-v1",
-    "multiline-v2"
-  ],
+  "bodyEntry": {
+    "shape": "<body-type> [name] [: value] [modifiers...]",
+    "modifierMayContinueAcrossNewline": true,
+    "valueAfterColonMayContinueAcrossNewline": true
+  },
   "failClosed": [
+    "empty-declaration-parentheses",
     "unknown-bootstrap-meta-combinator",
     "malformed-meta-combinator-shape",
     "duplicate-module-directive",
     "duplicate-or-ambiguous-bootstrap-import-binding",
     "duplicate-or-ambiguous-named-bootstrap-declaration-binding",
     "undefined-declaration-kind-contract",
-    "unresolved-produced-type-carrier",
-    "unclosed-or-unbalanced-kernel-shape"
+    "nonempty-arguments-for-closed-zero-parameter-kind",
+    "missing-required-result-for-specialized-result-kind",
+    "result-present-for-no-result-kind",
+    "unresolved-or-ambiguous-type-symbol",
+    "unclosed-or-unbalanced-kernel-shape",
+    "malformed-string-interpolation",
+    "unterminated-nested-comment"
   ],
   "authorityFirewall": {
     "directAidlDeclarationKindContractsAreNormative": true,
     "generatedMetaIrOrRegistryIsAuthorityInput": false,
     "generatedMetaIrOrRegistryRole": "deterministic-derived-output-only",
-    "temporaryLegacyDefinitionObjectLayerRole": "migration-and-conformance-evidence-only-until-p3-removes-runtime-dependency",
-    "concreteProducerKindCatalogOwnedByHost": false
+    "concreteDeclarationKindCatalogOwnedByHost": false,
+    "producerCapabilitySystemOwnedByHost": false,
+    "separateHostTypeHierarchy": false
   },
   "excludes": [
     "concrete-declaration-kind-catalog",
+    "producer-carrier-capability-system",
+    "type-position-marker",
+    "separate-declaration-vs-type-class-worlds",
     "domain-declaration-catalog",
     "concrete-category-to-schema-map",
     "name-policy-values",
@@ -86,7 +126,6 @@
     "canonical-ir-meaning",
     "domain-validation",
     "reference-kind-validation",
-    "expression-typechecking",
     "production-admission"
   ]
 }
