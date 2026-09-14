@@ -1,0 +1,4 @@
+materialization-rejected|AIDL-T005|consumer.aidl|3:1:42
+resolution-missing|AIDL-T001||
+resolution-ambiguous|CORE-S023||
+type-mismatch|AIDL-T002|consumer.aidl|6:1:137
