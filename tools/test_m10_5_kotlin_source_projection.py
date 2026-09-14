@@ -4,6 +4,7 @@ import unittest
 from tools.aidl_parser import parse_text
 from tools.compiler_ast import compiler_document_from_ast
 from tools.compiler_project import compiler_project_from_documents
+from tools.compiler_resolution import _reference_candidates
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -41,6 +42,11 @@ def _case_signature(case_name: str, filename: str, expected_accepted: bool) -> s
 
     project = compiler_project_from_documents([document])
     projected = project.documents[0]
+    for declaration in projected.declarations:
+        candidates = _reference_candidates(project, projected, declaration.name or "")
+        if len(candidates) != 1 or candidates[0].declaration is not declaration:
+            raise AssertionError((declaration.name, candidates))
+
     module = projected.module.name if projected.module is not None else ""
     imports = ",".join(import_.name or "" for import_ in projected.imports)
     declarations = ",".join(
