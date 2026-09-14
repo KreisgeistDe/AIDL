@@ -2,6 +2,7 @@ package de.kreisgeist.aidl.compiler.frontend
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class TypeCheckingParityTest {
     private fun resolver(): ProjectNameResolver = ProjectNameResolver.fromSources(
@@ -108,5 +109,13 @@ class TypeCheckingParityTest {
         assertEquals(ProjectedAssignmentStatus.OUTSIDE_SLICE, first.status)
         assertEquals(null, first.diagnosticCode)
         assertEquals(first, second)
+    }
+
+    @Test
+    fun unrelatedConstructionErrorsStillFailClosed() {
+        val resolver = resolver()
+        assertFailsWith<ProjectedTypeException> {
+            ProjectedTypeChecker.checkDefault("resolution-consumer", "", "\"unused\"", resolver)
+        }
     }
 }
