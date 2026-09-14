@@ -103,6 +103,41 @@ class MaterializationRecursionParityTest {
     }
 
     @Test
+    fun entityTraversalAndMalformedProjectedFieldsFailClosed() {
+        val entitySource = "entity Holder { field accepted: PublicEntity }"
+        val entity = ProjectedDeclaration(
+            "entity",
+            "Holder",
+            false,
+            listOf("noise", "field", "accepted", ":", "PublicEntity"),
+        )
+        val result = ProjectedMaterializationChecker.checkProjectedFields(
+            sourceId = "consumer.aidl",
+            sourceText = entitySource,
+            declaration = entity,
+            resolver = resolver(),
+        )
+        assertEquals(ProjectedMaterializationStatus.MATERIALIZABLE, result.single().check.status)
+
+        assertFailsWith<IllegalArgumentException> {
+            ProjectedMaterializationChecker.checkProjectedFields(
+                sourceId = "consumer.aidl",
+                sourceText = entitySource,
+                declaration = ProjectedDeclaration("value", "Broken", false, listOf("field", "broken", ":")),
+                resolver = resolver(),
+            )
+        }
+        assertFailsWith<IllegalArgumentException> {
+            ProjectedMaterializationChecker.checkProjectedFields(
+                sourceId = "consumer.aidl",
+                sourceText = entitySource,
+                declaration = ProjectedDeclaration("value", "Broken", false, listOf("field", "missing", ":", "string")),
+                resolver = resolver(),
+            )
+        }
+    }
+
+    @Test
     fun fieldTraversalIsBoundedToValueAndEntityDeclarations() {
         assertFailsWith<IllegalArgumentException> {
             ProjectedMaterializationChecker.checkProjectedFields(
