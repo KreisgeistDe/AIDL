@@ -5,6 +5,7 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.fail
 
@@ -79,6 +80,7 @@ class CanonicalIrDomainDifferentialParityTest {
         assertEquals(listOf("enum", "value", "entity"), slice.declarations.map { it.kind })
         val maybe = slice.declarations[1]
         assertTrue(maybe.fields[0].type is CanonicalIrNullableType)
+        assertFalse(maybe.fields[0].required)
         assertTrue(maybe.fields[1].type is CanonicalIrListType)
         val item = slice.declarations[2]
         assertEquals(listOf("id"), item.identityFields)
@@ -86,6 +88,27 @@ class CanonicalIrDomainDifferentialParityTest {
         assertTrue(item.fields[0].concurrencyToken)
         assertTrue(item.fields[1].sensitive)
         assertEquals("none", item.fields[2].onDelete)
+    }
+
+    @Test
+    fun boundedSliceCoversAllOwnedOnDeleteValuesAndEmptyValueFields() {
+        val source = """
+            module parity.modifiers
+
+            export value Empty {}
+            export entity Item {
+              id: uuid
+              parent: Item? onDelete restrict
+              child: Item? onDelete cascade
+              detached: Item? onDelete setNull
+            }
+        """.trimIndent()
+        val slice = CanonicalIrDomainSliceProjector.project("modifiers", "modifiers.aidl", source)
+        assertTrue(slice.declarations[0].fields.isEmpty())
+        val item = slice.declarations[1]
+        assertEquals(listOf("id"), item.identityFields)
+        assertEquals(listOf("none", "restrict", "cascade", "setNull"), item.fields.map { it.onDelete })
+        assertTrue(item.fields.drop(1).all { !it.required })
     }
 
     @Test
@@ -106,6 +129,7 @@ class CanonicalIrDomainDifferentialParityTest {
             ownerModule = "p",
         )
         assertEquals("other|p.Other@1|p.Other|Other|p", other.stableSignature())
+        assertEquals("", CanonicalIrDomainSlice(emptyList(), emptyList()).stableSignature())
     }
 
     @Test
@@ -113,6 +137,12 @@ class CanonicalIrDomainDifferentialParityTest {
         reject("module p\nimport q.Type\nexport value V { name: string }\n")
         reject("module p\nexport value V { name: string }\nexport value V { name: string }\n")
         reject("module p\nexport entity E { name: string }\n")
+    }
+
+    @Test
+    fun boundedSliceRejectsUnsupportedDeclarationAndTypeTargetKinds() {
+        reject("module p\nexport alias A = string\n")
+        reject("module p\nexport value V { other: A }\nexport alias A = string\n")
     }
 
     @Test
