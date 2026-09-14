@@ -1,5 +1,7 @@
 package de.kreisgeist.aidl.compiler.ir
 
+import de.kreisgeist.aidl.compiler.frontend.ProjectedDeclaration
+import de.kreisgeist.aidl.compiler.frontend.SourceProjection
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -112,6 +114,19 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
+    fun boundedSliceCoversExplicitFieldSeparators() {
+        val source = """
+            module parity.fields
+            export value Pair {
+              field first: string
+              field second: string
+            }
+        """.trimIndent()
+        val slice = CanonicalIrDomainSliceProjector.project("fields", "fields.aidl", source)
+        assertEquals(listOf("first", "second"), slice.declarations.single().fields.map { it.name })
+    }
+
+    @Test
     fun emptyDomainModuleProducesEmptyBoundedSlice() {
         val slice = CanonicalIrDomainSliceProjector.project(
             "empty",
@@ -145,19 +160,63 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
+    fun boundedSourceProjectionBoundaryRejectsNonOwnedDeclarationAndTypeTargetKinds() {
+        val unsupportedDeclaration = SourceProjection(
+            module = "p",
+            imports = emptyList(),
+            declarations = listOf(
+                ProjectedDeclaration("app", "A", true, emptyList(), offset = 0, endOffset = 1),
+            ),
+            path = "boundary.aidl",
+        )
+        val declarationError = assertFailsWith<CanonicalIrDomainSliceException> {
+            CanonicalIrDomainSliceProjector.project(unsupportedDeclaration, "a")
+        }
+        assertTrue(declarationError.message.orEmpty().contains("unsupported canonical IR domain declaration"))
+
+        val unsupportedTarget = SourceProjection(
+            module = "p",
+            imports = emptyList(),
+            declarations = listOf(
+                ProjectedDeclaration(
+                    "value",
+                    "V",
+                    true,
+                    listOf("other", ":", "A"),
+                    offset = 0,
+                    endOffset = 1,
+                ),
+                ProjectedDeclaration("app", "A", true, emptyList(), offset = 2, endOffset = 3),
+            ),
+            path = "boundary.aidl",
+        )
+        val targetError = assertFailsWith<CanonicalIrDomainSliceException> {
+            CanonicalIrDomainSliceProjector.project(unsupportedTarget, "abcd")
+        }
+        assertTrue(targetError.message.orEmpty().contains("unsupported bounded type target"))
+    }
+
+    @Test
+    fun boundedSourceProjectionBoundaryRejectsInvalidSourceOffsets() {
+        val invalidOffset = SourceProjection(
+            module = "p",
+            imports = emptyList(),
+            declarations = listOf(
+                ProjectedDeclaration("value", "V", true, emptyList(), offset = -1, endOffset = 0),
+            ),
+            path = "boundary.aidl",
+        )
+        val error = assertFailsWith<CanonicalIrDomainSliceException> {
+            CanonicalIrDomainSliceProjector.project(invalidOffset, "")
+        }
+        assertTrue(error.message.orEmpty().contains("invalid source offset"))
+    }
+
+    @Test
     fun boundedSliceRejectsImportsDuplicatesAndMissingIdentity() {
         reject("module p\nimport q.Type\nexport value V { name: string }\n")
         reject("module p\nexport value V { name: string }\nexport value V { name: string }\n")
         reject("module p\nexport entity E { name: string }\n")
-    }
-
-    @Test
-    fun boundedSliceRejectsNonOwnedDeclarationsAndTypeTargets() {
-        reject("module p\napp A {}\n")
-        val targetError = reject(
-            "module p\napp A {}\nexport value V { other: A }\n",
-        )
-        assertTrue(targetError.message.orEmpty().contains("unsupported bounded type target"))
     }
 
     @Test
@@ -171,6 +230,7 @@ class CanonicalIrDomainDifferentialParityTest {
     @Test
     fun boundedSliceRejectsMalformedFields() {
         reject("module p\nexport value V { name string }\n")
+        reject("module p\nexport value V { name: required }\n")
         reject("module p\nexport value V { name: [string }\n")
         reject("module p\nexport value V { name: ] }\n")
         reject("module p\nexport value V { name: string required weird }\n")
