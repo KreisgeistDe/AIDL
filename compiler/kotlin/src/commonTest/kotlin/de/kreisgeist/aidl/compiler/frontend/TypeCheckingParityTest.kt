@@ -62,7 +62,7 @@ class TypeCheckingParityTest {
             int|-1|ASSIGNABLE|
             decimal|1|ASSIGNABLE|
             decimal|1.5|ASSIGNABLE|
-            string?|null|ASSIGNABLE|
+            string?|null|TYPE_MISMATCH|AIDL-T002
             string|null|TYPE_MISMATCH|AIDL-T002
             int|true|TYPE_MISMATCH|AIDL-T002
             Duplicate|"x"|AMBIGUOUS|CORE-S023
