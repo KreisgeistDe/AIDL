@@ -2,8 +2,8 @@ from pathlib import Path
 import unittest
 
 from tools.aidl_parser import parse_text
-from tools.compiler_alias_opaque_materialization import collect_alias_opaque_materialization_issues
 from tools.compiler_ast import compiler_document_from_ast
+from tools.compiler_core_materialization import collect_core_materialization_issues
 from tools.compiler_project import compiler_project_from_documents
 from tools.compiler_resolution import _reference_candidates
 from tools.compiler_typecheck import parse_type
@@ -37,14 +37,14 @@ def _project():
     provider_a = _document(
         "provider-a",
         "module demo.shared\n"
-        "export enum PublicEnum {}\n"
+        "export enum PublicEnum { case PUBLIC }\n"
         "export entity PublicEntity {}\n"
         "export entity Duplicate {}\n",
     )
     provider_b = _document(
         "provider-b",
         "module demo.shared\n"
-        "export enum Duplicate {}\n",
+        "export enum Duplicate { case OTHER }\n",
     )
     return compiler_project_from_documents([consumer, provider_a, provider_b])
 
@@ -54,7 +54,7 @@ def oracle_signature() -> str:
     consumer_document = project.documents[0]
     issues = {
         issue.subject_name: issue
-        for issue in collect_alias_opaque_materialization_issues(project)
+        for issue in collect_core_materialization_issues(project)
     }
     expected_project_generic = issues.get("ProjectGenericTarget")
     if expected_project_generic is None or expected_project_generic.code != "AIDL-T005":
