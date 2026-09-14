@@ -32,9 +32,6 @@ def _project():
         "export enum PublicEnum {}\n"
         "export entity PublicEntity {}\n"
         "export value EmptyValue {}\n"
-        "export value SecretValue {\n"
-        "  field secret: string sensitive\n"
-        "}\n"
         "export entity Duplicate {}\n",
     )
     provider_b = _document(
@@ -54,7 +51,14 @@ def oracle_signature() -> str:
     )
     consumer_document = project.documents[0]
     lines = []
-    for type_source in ("string", "[uuid]?", "PublicEnum", "PublicEntity", "EmptyValue", "SecretValue"):
+    for type_source in (
+        "string",
+        "[uuid]?",
+        "PublicEnum",
+        "PublicEntity",
+        "EmptyValue",
+        "ref PublicEntity",
+    ):
         serializable = _serial(project, consumer_item, parse_type(type_source), set())
         status = "SERIALIZABLE" if serializable else "NOT_SERIALIZABLE"
         diagnostic = "" if serializable else "AIDL-T004"
