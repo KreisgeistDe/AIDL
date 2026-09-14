@@ -1,0 +1,11 @@
+string|ACCEPT|RESOLVED|
+[uuid]?|ACCEPT|RESOLVED|
+Public?|ACCEPT|RESOLVED|demo.shared.Public@resolution-provider-a#0
+demo.shared.Public|ACCEPT|RESOLVED|demo.shared.Public@resolution-provider-a#0
+Local|ACCEPT|RESOLVED|demo.consumer.Local@resolution-consumer#0
+Duplicate|ACCEPT|AMBIGUOUS|demo.shared.Duplicate@resolution-provider-a#2,demo.shared.Duplicate@resolution-provider-b#0
+Missing|ACCEPT|UNRESOLVED|
+<blank>|REJECT||
+string??|REJECT||
+[string|REJECT||
+string]|REJECT||
