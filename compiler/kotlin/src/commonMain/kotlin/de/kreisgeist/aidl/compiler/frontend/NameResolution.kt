@@ -97,13 +97,8 @@ class ProjectNameResolver private constructor(
             )
         }
 
-        /** Compose resolution from an already-projected bounded source model without reparsing it. */
-        fun fromProjectedDocuments(documents: List<ProjectedDocument>): ProjectNameResolver {
-            require(documents.map { it.sourceId }.distinct().size == documents.size) {
-                "sourceId values must be unique"
-            }
-            require(documents.all { it.sourceId.isNotBlank() }) { "sourceId must not be blank" }
-
+        /** Internal composition hook for already-projected bounded source models. */
+        internal fun fromProjectedDocuments(documents: List<ProjectedDocument>): ProjectNameResolver {
             val symbols = buildList {
                 for (document in documents) {
                     val module = document.projection.module
