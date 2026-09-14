@@ -29,6 +29,8 @@ object ProjectedTypeChecker {
     private val integer = Regex("-?[0-9]+")
     private val decimal = Regex("-?[0-9]+\\.[0-9]+")
     private val stringLiteral = Regex("\"(?:[^\"\\\\]|\\\\.)*\"")
+    private const val historicalGenericBoundary =
+        "generic type arguments are outside the bounded revision-4 slice"
 
     fun checkDefault(
         sourceId: String,
@@ -36,7 +38,17 @@ object ProjectedTypeChecker {
         literalSource: String,
         resolver: ProjectNameResolver,
     ): ProjectedAssignmentCheck {
-        val typeCheck = ProjectedTypeConstructor.check(sourceId, typeSource, resolver)
+        val typeCheck = try {
+            ProjectedTypeConstructor.check(sourceId, typeSource, resolver)
+        } catch (error: ProjectedTypeException) {
+            if (error.message == historicalGenericBoundary && ('<' in typeSource || '>' in typeSource)) {
+                // Direct Core admits recursive generic TypeRefs (for example Page<myQuery>).
+                // The consumed TypeConstruction slice predates that binding correction, so its
+                // generic rejection is a bounded-support marker here, not a semantic invalidity.
+                return ProjectedAssignmentCheck(ProjectedAssignmentStatus.OUTSIDE_SLICE)
+            }
+            throw error
+        }
         when (typeCheck.status) {
             ProjectedTypeResolutionStatus.AMBIGUOUS ->
                 return ProjectedAssignmentCheck(ProjectedAssignmentStatus.AMBIGUOUS, "CORE-S023")
