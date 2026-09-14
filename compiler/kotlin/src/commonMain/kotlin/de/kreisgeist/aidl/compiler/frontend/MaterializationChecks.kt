@@ -137,10 +137,7 @@ object ProjectedMaterializationChecker {
         }
         return projectedFields(declaration.bodyTokens).map { (fieldName, typeSource) ->
             val raw = check(sourceId, typeSource, resolver)
-            val bounded = if (
-                raw.status == ProjectedMaterializationStatus.REJECTED &&
-                raw.diagnosticCode == "AIDL-T005"
-            ) {
+            val bounded = if (raw.status == ProjectedMaterializationStatus.REJECTED) {
                 ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
             } else {
                 raw
