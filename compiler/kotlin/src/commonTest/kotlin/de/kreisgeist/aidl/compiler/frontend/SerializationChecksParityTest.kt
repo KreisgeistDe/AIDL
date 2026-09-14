@@ -17,7 +17,6 @@ class SerializationChecksParityTest {
                 export enum PublicEnum {}
                 export entity PublicEntity {}
                 export value EmptyValue {}
-                export value SecretValue { field secret: string sensitive }
                 export value StructuredValue { field name: string }
                 export entity Duplicate {}
             """.trimIndent(),
@@ -28,23 +27,21 @@ class SerializationChecksParityTest {
         ),
     )
 
-    private data class Case(val type: String, val expected: String)
-
     private fun signature(): String {
         val resolver = resolver()
         val cases = listOf(
-            Case("string", "SERIALIZABLE|"),
-            Case("[uuid]?", "SERIALIZABLE|"),
-            Case("PublicEnum", "SERIALIZABLE|"),
-            Case("PublicEntity", "SERIALIZABLE|"),
-            Case("EmptyValue", "SERIALIZABLE|"),
-            Case("SecretValue", "NOT_SERIALIZABLE|AIDL-T004"),
-            Case("Duplicate", "AMBIGUOUS|CORE-S023"),
-            Case("Missing", "UNRESOLVED|AIDL-T001"),
+            "string",
+            "[uuid]?",
+            "PublicEnum",
+            "PublicEntity",
+            "EmptyValue",
+            "ref PublicEntity",
+            "Duplicate",
+            "Missing",
         )
-        return cases.joinToString("\n") { case ->
-            val check = ProjectedSerializationChecker.check("consumer", case.type, resolver)
-            "${case.type}|${check.status}|${check.diagnosticCode.orEmpty()}"
+        return cases.joinToString("\n") { type ->
+            val check = ProjectedSerializationChecker.check("consumer", type, resolver)
+            "$type|${check.status}|${check.diagnosticCode.orEmpty()}"
         }
     }
 
@@ -56,7 +53,7 @@ class SerializationChecksParityTest {
             PublicEnum|SERIALIZABLE|
             PublicEntity|SERIALIZABLE|
             EmptyValue|SERIALIZABLE|
-            SecretValue|NOT_SERIALIZABLE|AIDL-T004
+            ref PublicEntity|NOT_SERIALIZABLE|AIDL-T004
             Duplicate|AMBIGUOUS|CORE-S023
             Missing|UNRESOLVED|AIDL-T001
         """.trimIndent()
@@ -74,6 +71,27 @@ class SerializationChecksParityTest {
         assertEquals(
             ProjectedSerializationStatus.OUTSIDE_SLICE,
             ProjectedSerializationChecker.check("consumer", "Page<myQuery>", resolver).status,
+        )
+    }
+
+    @Test
+    fun refResolutionPreservesFailClosedBoundaries() {
+        val resolver = resolver()
+        assertEquals(
+            ProjectedSerializationCheck(ProjectedSerializationStatus.AMBIGUOUS, "CORE-S023"),
+            ProjectedSerializationChecker.check("consumer", "ref Duplicate", resolver),
+        )
+        assertEquals(
+            ProjectedSerializationCheck(ProjectedSerializationStatus.UNRESOLVED, "AIDL-T001"),
+            ProjectedSerializationChecker.check("consumer", "ref Missing", resolver),
+        )
+        assertEquals(
+            ProjectedSerializationStatus.OUTSIDE_SLICE,
+            ProjectedSerializationChecker.check("consumer", "ref PublicEnum", resolver).status,
+        )
+        assertEquals(
+            ProjectedSerializationStatus.OUTSIDE_SLICE,
+            ProjectedSerializationChecker.check("consumer", "ref bad-name", resolver).status,
         )
     }
 
