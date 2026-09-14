@@ -17,9 +17,9 @@
   "source_rules": [
     {
       "id": "core-authority-transition-source",
-      "pattern": "^spec/core(?:\\.(?:domain|authority|compatibility))?\\.aidl$",
+      "pattern": "^spec/core(?:-self-description-v1|\\.(?:domain|authority|compatibility))?\\.aidl$",
       "class": "canonical-but-not-yet-admitted",
-      "note": "Core gate sources are normative or Core-authored authority/compatibility modules. They are not ordinary production application sources and do not widen parser/runtime admission by themselves."
+      "note": "Core gate and self-description sources are normative transition or Core-authored authority/compatibility modules. They are not ordinary production application sources and do not widen parser/runtime admission by themselves."
     },
     {
       "id": "reference-app-sources",

@@ -5,15 +5,13 @@ import json
 from pathlib import Path
 from typing import Any
 
-from tools.core_bootstrap import parse_source, projection_text
+from tools.core_bootstrap import parse_source
 from tools.core_semantics import CoreContractError, load_semantic_registry, validate_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CORE_PATH = ROOT / "spec" / "core.aidl"
-CORE_PROJECTION_PATH = ROOT / "spec" / "core-registry-v1.json"
-CORE_DOMAIN_PATH = ROOT / "spec" / "core.domain.aidl"
-AUTHORITY_PATH = ROOT / "spec" / "core.authority.aidl"
+DIRECT_CORE_PATH = ROOT / "spec" / "core-self-description-v1.aidl"
+CORE_META_IR_PATH = ROOT / "spec" / "core-meta-ir-v1.json"
 COMPATIBILITY_BINDING_PATH = ROOT / "spec" / "core.compatibility.aidl"
 REVISION4_PATH = ROOT / "spec" / "language-surface-v1.json"
 REVISION4_REPO_PATH = "spec/language-surface-v1.json"
@@ -37,34 +35,15 @@ def _string_slot(declaration: Any, body_type: str) -> str:
     return str(entries[0].value.value)
 
 
-def _binding(
-    *,
-    core_source: str,
-    core_projection: str,
-    domain_source: str,
-    authority_source: str,
-    binding_source: str,
-) -> dict[str, str]:
-    if core_projection != projection_text(core_source):
-        raise CoreAuthorityError(
-            "Core projection drift: spec/core-registry-v1.json does not match normative spec/core.aidl"
-        )
+def _binding(*, direct_source: str, meta_ir_text: str, binding_source: str) -> dict[str, str]:
     try:
-        registry = load_semantic_registry(
-            domain_source,
-            authority_source,
-            core_source=core_source,
-            core_projection=core_projection,
-        )
+        registry = load_semantic_registry(direct_source=direct_source, meta_ir_text=meta_ir_text)
     except CoreContractError as exc:
-        raise CoreAuthorityError(f"invalid Core authority registry: {exc}") from exc
-
+        raise CoreAuthorityError(f"invalid direct Core semantic registry: {exc}") from exc
     diagnostics = validate_source(binding_source, registry)
     if diagnostics:
         first = diagnostics[0]
-        raise CoreAuthorityError(
-            f"invalid Core compatibility binding: {first.code} {first.message}"
-        )
+        raise CoreAuthorityError(f"invalid Core compatibility binding: {first.code} {first.message}")
     program = parse_source(binding_source)
     matches = [
         item
@@ -87,42 +66,21 @@ def assert_revision4_compatibility_authorized(
     contract_path: Path = REVISION4_PATH,
     *,
     contract_bytes: bytes | None = None,
+    direct_source: str | None = None,
+    meta_ir_text: str | None = None,
+    binding_source: str | None = None,
     core_source: str | None = None,
     core_projection: str | None = None,
     domain_source: str | None = None,
     authority_source: str | None = None,
-    binding_source: str | None = None,
 ) -> dict[str, Any]:
-    """Return the revision-4 compatibility JSON only after Core authorizes it exactly."""
-
-    core_source = core_source if core_source is not None else CORE_PATH.read_text(encoding="utf-8")
-    core_projection = (
-        core_projection
-        if core_projection is not None
-        else CORE_PROJECTION_PATH.read_text(encoding="utf-8")
-    )
-    domain_source = (
-        domain_source
-        if domain_source is not None
-        else CORE_DOMAIN_PATH.read_text(encoding="utf-8")
-    )
-    authority_source = (
-        authority_source
-        if authority_source is not None
-        else AUTHORITY_PATH.read_text(encoding="utf-8")
-    )
-    binding_source = (
-        binding_source
-        if binding_source is not None
-        else COMPATIBILITY_BINDING_PATH.read_text(encoding="utf-8")
-    )
-    binding = _binding(
-        core_source=core_source,
-        core_projection=core_projection,
-        domain_source=domain_source,
-        authority_source=authority_source,
-        binding_source=binding_source,
-    )
+    """Return revision-4 JSON only after direct Core authorizes it exactly."""
+    if any(item is not None for item in (core_source, core_projection, domain_source, authority_source)):
+        raise CoreAuthorityError("legacy Definition-object authority inputs are not accepted after P3")
+    direct_source = direct_source if direct_source is not None else DIRECT_CORE_PATH.read_text(encoding="utf-8")
+    meta_ir_text = meta_ir_text if meta_ir_text is not None else CORE_META_IR_PATH.read_text(encoding="utf-8")
+    binding_source = binding_source if binding_source is not None else COMPATIBILITY_BINDING_PATH.read_text(encoding="utf-8")
+    binding = _binding(direct_source=direct_source, meta_ir_text=meta_ir_text, binding_source=binding_source)
     if binding["source"] != REVISION4_REPO_PATH:
         raise CoreAuthorityError(
             f"revision4 compatibility source must be {REVISION4_REPO_PATH!r}, found {binding['source']!r}"
@@ -131,7 +89,6 @@ def assert_revision4_compatibility_authorized(
         raise CoreAuthorityError(
             f"revision4 compatibility role must be 'compatibility-only', found {binding['role']!r}"
         )
-
     content = contract_bytes if contract_bytes is not None else contract_path.read_bytes()
     actual = git_blob_sha1(content)
     expected = binding["gitBlobSha1"]

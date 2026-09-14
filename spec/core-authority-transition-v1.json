@@ -1,26 +1,50 @@
 {
   "schemaVersion": 1,
-  "phase": "complete",
-  "completedPhases": [
-    "D0",
-    "I1",
-    "I2",
-    "V1",
-    "G1"
-  ],
+  "phase": "binding-core-ebnf-implementation-in-progress",
+  "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
   "coreSource": {
     "path": "spec/core.aidl",
-    "role": "normative-project-wide-semantic-authority",
-    "projectWideAuthorityFlipComplete": true
+    "role": "legacy-definition-object-migration-evidence-only",
+    "projectWideAuthorityFlipComplete": true,
+    "directDeclarationKindContractsTarget": false,
+    "permanentAuthorityAfterCorrection": false,
+    "runtimeSemanticAuthority": false
+  },
+  "coreSelfDescription": {
+    "path": "spec/core-self-description-v1.aidl",
+    "role": "normative-direct-self-described-core",
+    "compiler": "tools/core_self_description.py",
+    "usesOnlyFiniteBootstrapMetaCombinators": true,
+    "concreteDeclarationKindCatalogInHost": false,
+    "permanentDefinitionObjectAuthority": false,
+    "centralMetaClass": "declaration",
+    "typeSurface": "direct-core-authored-alias-of-declaration",
+    "argumentAbsence": "closed-zero-parameter-contract",
+    "explicitEmptyDeclarationArguments": "invalid-syntax",
+    "openArgumentSyntax": "identifier?: ...",
+    "returnAbsence": "no-result-position-for-specialized-kind",
+    "returnMechanism": "declaration-arrow-result-only",
+    "typeIdentity": "every-visible-named-declaration-symbol"
+  },
+  "coreMetaIr": {
+    "path": "spec/core-meta-ir-v1.json",
+    "role": "derived-non-authoritative-runtime-meta-ir",
+    "authorityInput": false,
+    "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
+    "runtimeLoader": "tools/core_semantics.py",
+    "schemaVersion": 3,
+    "typeIdentityField": "predeclaredTypeSymbols",
+    "kindAliasField": "kindAliases"
   },
   "coreDomain": {
     "path": "spec/core.domain.aidl",
-    "role": "ordinary-aidl-module-importing-core",
-    "semanticValidation": "tools/core_semantics.py"
+    "role": "compatibility-shell-no-definition-object-authority",
+    "semanticValidation": "tools/core_semantics.py",
+    "migrationToDirectSelfDescription": "p3-integrated-binding-ebnf-correction-active"
   },
   "coreAuthority": {
     "path": "spec/core.authority.aidl",
-    "role": "core-authored-compatibility-projection-contract"
+    "role": "compatibility-shell-contract-moved-to-direct-core"
   },
   "coreCompatibility": {
     "path": "spec/core.compatibility.aidl",
@@ -29,61 +53,91 @@
   },
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
-    "role": "irreducible-host-defined-syntax"
+    "role": "finite-versioned-irreducible-host-bootstrap-contract",
+    "bindingCoreEbnf": true,
+    "concreteDeclarationKindsOwnedByHost": false,
+    "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier"],
+    "producesPresent": false,
+    "typePositionPresent": false,
+    "separateHostTypeHierarchy": false,
+    "typeIdentityRule": "visible named declaration symbol identity"
   },
   "generatedProjection": {
     "path": "spec/core-registry-v1.json",
-    "role": "derived-non-normative",
-    "driftCheck": "tools/test_core_bootstrap.py"
-  },
-  "compatibilityBridge": {
-    "path": "tools/core_compat.py",
-    "role": "revision-4-to-core-normalization-evidence",
-    "semanticHashEvidence": "tools/test_core_compat.py"
+    "role": "legacy-definition-object-migration-evidence-only",
+    "authorityInput": false,
+    "runtimeAuthorityInput": false
   },
   "revision4": {
     "path": "spec/language-surface-v1.json",
     "role": "core-authorized-compatibility-and-migration-projection",
     "permanentSemanticAuthority": false,
-    "remainsProductionCompatibilityOracleUntilG1": false,
     "productionUseRequiresCoreAuthorization": true,
     "authorityBinding": "spec/core.compatibility.aidl"
   },
-  "integrationState": {
-    "g1IntegratedOnMain": true,
-    "mainCommit": "b90c44912d7f82450c2190473035bce14bef828d"
+  "authorityCorrection": {
+    "supersedesPermanentDefinitionObjectAuthorityDesign": true,
+    "status": "binding-core-ebnf-candidate-p4-frozen",
+    "historicalP1": {
+      "implementationPr": 100,
+      "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
+      "obsoleteAssumptionsBeingRemoved": ["produces-carrier-capability", "type-position-marker"]
+    },
+    "historicalP2": {
+      "implementationPr": 101,
+      "mainCommit": "7280f01a2c97b004c79cd0a2e598513bfa183ac0",
+      "obsoleteAssumptionsBeingRemoved": ["produces(type)-type-carrier-rule", "separate-type-kind-semantics"]
+    },
+    "historicalP3": {
+      "implementationPr": 102,
+      "implementationHead": "4992c896cf9818ab51c6ade60fd2a58c657461fe",
+      "mainCommit": "ca87cdc2ef0ce6e00808512897144ea99ef59293",
+      "independentlyValidated": true,
+      "legacyDefinitionObjectRuntimeAuthority": false
+    },
+    "durableStateReconciliation": {
+      "implementationPr": 103,
+      "mainCommit": "bb8fb6ff9eb18429c94e9982a9e8d3e03a7ef48d",
+      "statusFactsRetained": true,
+      "p4NextWordingSupersededByCorrectionGate": true
+    },
+    "semanticCorrection": {
+      "id": "binding-core-ebnf",
+      "status": "implementation-candidate",
+      "producesRemoved": true,
+      "typePositionRemoved": true,
+      "typeIsAliasOfDeclaration": true,
+      "declarationIsTypeObject": true,
+      "allVisibleNamedDeclarationsTypeRefAddressable": true,
+      "argsAbsenceEqualsClosedZeroParameterSet": true,
+      "explicitEmptyDeclarationArgumentsRejected": true,
+      "openArgsUseFreeBinder": true,
+      "nullableGenericTypeRefs": true,
+      "bodyValuesAreExpressions": true,
+      "indentationIsNonSemantic": true,
+      "grammarIncompleteNewlineContinuation": true,
+      "nestedComments": true,
+      "stringInterpolationAndRawMultiline": true,
+      "returnUsesArrowOnly": true,
+      "specializedDeclaredResultIsRequired": true,
+      "typeRefCarrierIdentity": "generic-visible-named-declaration-symbol",
+      "generatedMetaIrAuthority": false
+    },
+    "p4": {
+      "id": "downstream-surfaces-and-kotlin-parity-rebase",
+      "status": "frozen"
+    },
+    "semanticsDependentKotlinFrozen": true,
+    "frozenKotlinWorkIncludes": ["M10.5-03+", "PR-99"]
   },
   "nextGate": {
-    "id": "M10.5-01",
-    "status": "complete",
-    "historicalMergedEvidence": {
-      "pr": 77,
-      "mergeCommit": "1574963eed95a2f80c1cdc47f48a3eaa39df4a4b",
-      "role": "historical-provisional-parity-evidence",
-      "pendingIntegrationTarget": false
-    },
-    "postG1CurrentMainRefresh": {
-      "baselineBaseCommit": "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
-      "manifest": "spec/m10-5-parity-manifest.json",
-      "implementationPr": 94,
-      "implementationHead": "9228f94302c1fbbc6cd5fc0b5fc7af9231071d76",
-      "independentlyValidated": true,
-      "integratedOnMain": true,
-      "mainCommit": "fcfc3fc92e6577270dbf89be22c4ddfac5c187a9"
-    },
-    "statusReconciliation": {
-      "implementationPr": 95,
-      "implementationHead": "2a26b1deff1baa5504e5e714222e8726181c7d5a",
-      "independentlyValidated": true,
-      "integratedOnMain": true,
-      "mainCommit": "3fa5c969338d1f0dc6b9bc573e70c7004f53aceb"
-    },
-    "requiresPostG1CurrentMainRefreshRevalidation": false,
-    "laterSemanticKotlinBlockedUntilComplete": false
+    "id": "BINDING-CORE-EBNF",
+    "status": "implementation-pending-independent-architecture-and-exact-head-validation",
+    "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "M10.5-02",
-    "status": "dependency-ready",
-    "reason": "M10.5-01 and its post-integration durable-state reconciliation are independently validated and integrated; M10.5-02 is the next roadmap action."
+    "id": "BINDING-CORE-EBNF-INDEPENDENT-ARCHITECTURE-AND-EXACT-HEAD-VALIDATION",
+    "status": "pending-independent-validation",
+    "reason": "Validate the exact binding EBNF implementation, including rejection of declaration (), generic and nullable TypeRefs, fixed/open args, expression/layout/string behavior, generic named-declaration TypeRef identity, deterministic derived meta-IR, and the continued P4/PR-99/M10.5-03+ freeze. Do not merge during review."
   }
 }

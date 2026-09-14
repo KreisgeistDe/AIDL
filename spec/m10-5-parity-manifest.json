@@ -6,13 +6,15 @@
   "reference_implementation": "python",
   "baseline_base_commit": "f471fd9c1ee808ff9557d4a9f6bdf8b092d9c2c5",
   "semantic_authority": {
-    "permanent_source": "spec/core.aidl",
+    "permanent_source": "spec/core-self-description-v1.aidl",
+    "bootstrap_contract": "spec/bootstrap-kernel-v1.json",
     "compatibility_contract": "spec/core.authority.aidl",
     "compatibility_binding": "spec/core.compatibility.aidl",
     "revision4_role": "core-authorized-compatibility-evidence"
   },
   "core_authority_bindings": [
-    "spec/core.aidl",
+    "spec/bootstrap-kernel-v1.json",
+    "spec/core-self-description-v1.aidl",
     "spec/core.authority.aidl",
     "spec/core.compatibility.aidl"
   ],
@@ -59,13 +61,18 @@
     {
       "id": "core_authority_and_conformance",
       "evidence": [
+        "spec/bootstrap-kernel-v1.json",
+        "spec/core-self-description-v1.aidl",
+        "spec/core-meta-ir-v1.json",
         "spec/core.domain.aidl",
         "spec/core-registry-v1.json",
         "spec/core-authority-transition-v1.json",
         "tools/core_authority.py",
+        "tools/core_self_description.py",
         "tools/core_semantics.py",
         "tools/test_core_authority.py",
         "tools/test_core_bootstrap.py",
+        "tools/test_core_self_description.py",
         "tools/test_core_semantics.py"
       ]
     },
@@ -142,8 +149,12 @@
     ],
     "core_conformance": [
       "spec/conformance-manifest.json",
+      "spec/bootstrap-kernel-v1.json",
+      "spec/core-self-description-v1.aidl",
+      "spec/core-meta-ir-v1.json",
       "tools/test_core_authority.py",
       "tools/test_core_bootstrap.py",
+      "tools/test_core_self_description.py",
       "tools/test_core_semantics.py"
     ],
     "negative_diagnostics": [

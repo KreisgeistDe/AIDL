@@ -126,7 +126,8 @@ class M105PythonParityBaselineTest(unittest.TestCase):
 
     def test_fingerprint_fails_closed_on_core_authority_compatibility_drift(self) -> None:
         for relative in (
-            "spec/core.aidl",
+            "spec/bootstrap-kernel-v1.json",
+            "spec/core-self-description-v1.aidl",
             "spec/core.authority.aidl",
             "spec/core.compatibility.aidl",
         ):
