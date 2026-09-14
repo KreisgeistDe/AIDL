@@ -2,7 +2,7 @@ schema=valid
 declaration|0|enum|parity.ir.domain.Status@1|parity.ir.domain.Status|Status|parity.ir.domain|values=active,archived
 declaration|1|value|parity.ir.domain.PetInput@1|parity.ir.domain.PetInput|PetInput|parity.ir.domain|fields=name=scalar:string|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none;status=named:parity.ir.domain.Status@1:parity.ir.domain.Status|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none
 declaration|2|entity|parity.ir.domain.Pet@1|parity.ir.domain.Pet|Pet|parity.ir.domain|fields=id=scalar:uuid|required=true|mutable=false|sensitive=false|generated=false|primary=true|concurrencyToken=false|onDelete=none;name=scalar:string|required=true|mutable=true|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none;status=named:parity.ir.domain.Status@1:parity.ir.domain.Status|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none;tags=list<scalar:string>|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none|identityFields=id
-sourceMap|/declarations/0|parity.ir.domain.Status@1|compiler/kotlin/parity/canonical-ir-domain.source:3:8-3:40
-sourceMap|/declarations/1|parity.ir.domain.PetInput@1|compiler/kotlin/parity/canonical-ir-domain.source:5:8-8:2
-sourceMap|/declarations/2|parity.ir.domain.Pet@1|compiler/kotlin/parity/canonical-ir-domain.source:10:8-15:2
+sourceMap|/declarations/0|parity.ir.domain.Status@1|compiler/kotlin/parity/canonical-ir-domain.aidl:3:8-3:40
+sourceMap|/declarations/1|parity.ir.domain.PetInput@1|compiler/kotlin/parity/canonical-ir-domain.aidl:5:8-8:2
+sourceMap|/declarations/2|parity.ir.domain.Pet@1|compiler/kotlin/parity/canonical-ir-domain.aidl:10:8-15:2
 negative|missing-module|rejected=true
