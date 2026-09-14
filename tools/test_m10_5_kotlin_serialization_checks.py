@@ -47,20 +47,21 @@ def _project():
 
 def oracle_signature() -> str:
     project = _project()
-    consumer = next(
+    consumer_item = next(
         item
         for item in project.declaration_names
         if item.fully_qualified_name == "demo.consumer.Holder"
     )
+    consumer_document = project.documents[0]
     lines = []
     for type_source in ("string", "[uuid]?", "PublicEnum", "PublicEntity", "EmptyValue", "SecretValue"):
-        serializable = _serial(project, consumer, parse_type(type_source), set())
+        serializable = _serial(project, consumer_item, parse_type(type_source), set())
         status = "SERIALIZABLE" if serializable else "NOT_SERIALIZABLE"
         diagnostic = "" if serializable else "AIDL-T004"
         lines.append(f"{type_source}|{status}|{diagnostic}")
 
-    duplicate = _reference_candidates(project, consumer, "Duplicate")
-    missing = _reference_candidates(project, consumer, "Missing")
+    duplicate = _reference_candidates(project, consumer_document, "Duplicate")
+    missing = _reference_candidates(project, consumer_document, "Missing")
     if len(duplicate) != 2:
         raise AssertionError(f"expected two Duplicate candidates, got {len(duplicate)}")
     if missing:
