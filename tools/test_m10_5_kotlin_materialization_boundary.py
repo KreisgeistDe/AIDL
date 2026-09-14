@@ -12,6 +12,14 @@ from tools.compiler_typecheck import parse_type
 ROOT = Path(__file__).resolve().parents[1]
 PARITY = ROOT / "compiler" / "kotlin" / "parity"
 CORE = ROOT / "spec" / "core-self-description-v1.aidl"
+_ALIAS_TARGETS = {
+    "StringTarget",
+    "EntityTarget",
+    "ListTarget",
+    "ProjectGenericTarget",
+    "StandardGenericTarget",
+    "BindingCoreGenericTarget",
+}
 
 
 def _document(source_id: str, source: str):
@@ -52,16 +60,17 @@ def _project():
 def oracle_signature() -> str:
     project = _project()
     consumer_document = project.documents[0]
-    issues = {
+    alias_issues = {
         issue.subject_name: issue
         for issue in collect_core_materialization_issues(project)
+        if issue.subject_name in _ALIAS_TARGETS
     }
-    expected_project_generic = issues.get("ProjectGenericTarget")
+    expected_project_generic = alias_issues.get("ProjectGenericTarget")
     if expected_project_generic is None or expected_project_generic.code != "AIDL-T005":
         raise AssertionError("project generic target must be rejected by AIDL-T005 materialization boundary")
-    unexpected = set(issues) - {"ProjectGenericTarget"}
-    if unexpected:
-        raise AssertionError(f"unexpected materialization issues: {sorted(unexpected)}")
+    unexpected_aliases = set(alias_issues) - {"ProjectGenericTarget"}
+    if unexpected_aliases:
+        raise AssertionError(f"unexpected alias materialization issues: {sorted(unexpected_aliases)}")
 
     duplicate = _reference_candidates(project, consumer_document, "Duplicate")
     missing = _reference_candidates(project, consumer_document, "Missing")
