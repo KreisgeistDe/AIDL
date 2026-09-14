@@ -29,6 +29,11 @@ class CanonicalIrDomainDifferentialParityTest {
         return "schema=valid\n${slice.stableSignature()}\nnegative|missing-module|rejected=true"
     }
 
+    private fun reject(source: String): CanonicalIrDomainSliceException =
+        assertFailsWith {
+            CanonicalIrDomainSliceProjector.project("negative", "negative.aidl", source)
+        }
+
     @Test
     fun matchesPinnedRealPythonCanonicalIrDomainSlice() {
         val root = parityRoot()
@@ -61,7 +66,7 @@ class CanonicalIrDomainDifferentialParityTest {
 
             export enum State { open, closed }
             export value Maybe {
-              state: State?
+              field state: State?
               names: [string]
             }
             export entity Item {
@@ -84,52 +89,55 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
-    fun boundedSliceRejectsImportsDuplicatesAndMissingIdentity() {
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "imported",
-                "imported.aidl",
-                "module p\nimport q.Type\nexport value V { name: string }\n",
-            )
-        }
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "duplicate",
-                "duplicate.aidl",
-                "module p\nexport value V { name: string }\nexport value V { name: string }\n",
-            )
-        }
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "identity",
-                "identity.aidl",
-                "module p\nexport entity E { name: string }\n",
-            )
-        }
+    fun stableModelSignaturesCoverParameterizedAndNonDomainBranches() {
+        val named = CanonicalIrNamedType(
+            declarationId = "p.Box@1",
+            fqn = "p.Box",
+            typeArguments = listOf(CanonicalIrScalarType("string")),
+        )
+        assertEquals("named:p.Box@1:p.Box<scalar:string>", named.stableSignature())
+        assertEquals("nullable<scalar:string>", CanonicalIrNullableType(CanonicalIrScalarType("string")).stableSignature())
+        assertEquals("list<scalar:string>", CanonicalIrListType(CanonicalIrScalarType("string")).stableSignature())
+        val other = CanonicalIrDomainDeclaration(
+            kind = "other",
+            declarationId = "p.Other@1",
+            fqn = "p.Other",
+            name = "Other",
+            ownerModule = "p",
+        )
+        assertEquals("other|p.Other@1|p.Other|Other|p", other.stableSignature())
     }
 
     @Test
-    fun boundedSliceRejectsMalformedEnumAndUnsupportedTypes() {
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "enum",
-                "enum.aidl",
-                "module p\nexport enum E { one two }\n",
-            )
-        }
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "unresolved",
-                "unresolved.aidl",
-                "module p\nexport value V { other: Missing }\n",
-            )
-        }
-        assertFailsWith<CanonicalIrDomainSliceException> {
-            CanonicalIrDomainSliceProjector.project(
-                "generic",
-                "generic.aidl",
-                "module p\nexport value V { other: map<string,string> }\n",
-            )
-        }
+    fun boundedSliceRejectsImportsDuplicatesAndMissingIdentity() {
+        reject("module p\nimport q.Type\nexport value V { name: string }\n")
+        reject("module p\nexport value V { name: string }\nexport value V { name: string }\n")
+        reject("module p\nexport entity E { name: string }\n")
+    }
+
+    @Test
+    fun boundedSliceRejectsMalformedEnums() {
+        reject("module p\nexport enum E { one two }\n")
+        reject("module p\nexport enum E { }\n")
+        reject("module p\nexport enum E { , one }\n")
+        reject("module p\nexport enum E { one, }\n")
+    }
+
+    @Test
+    fun boundedSliceRejectsMalformedFields() {
+        reject("module p\nexport value V { name string }\n")
+        reject("module p\nexport value V { name: [string }\n")
+        reject("module p\nexport value V { name: ] }\n")
+        reject("module p\nexport value V { name: string required weird }\n")
+        reject("module p\nexport value V { name: string onDelete }\n")
+        reject("module p\nexport value V { name: string onDelete explode }\n")
+        reject("module p\nexport value V { name: string default \"x\" }\n")
+    }
+
+    @Test
+    fun boundedSliceRejectsUnsupportedTypes() {
+        reject("module p\nexport value V { other: Missing }\n")
+        reject("module p\nexport value V { other: map<string,string> }\n")
+        reject("module p\nexport value V { other: string(1..80) }\n")
     }
 }
