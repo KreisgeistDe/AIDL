@@ -19,7 +19,7 @@ CONSUMER_SOURCE = (
     "value RecursiveValue {\n"
     "  field accepted: [[PublicEntity?]?]?\n"
     "  field recursive: [RecursiveValue?]?\n"
-    "  field rejected: [[myQuery?]?]?\n"
+    "  field unsupported: [[myQuery?]?]?\n"
     "  field missing: [Missing?]?\n"
     "  field ambiguous: [Duplicate?]?\n"
     "}\n"
@@ -72,18 +72,17 @@ def oracle_signature() -> str:
     project = _project()
     issues = collect_core_materialization_issues(project)
     recursion_issues = [issue for issue in issues if issue.subject_name == "RecursiveValue"]
-    rejected = [issue for issue in recursion_issues if issue.code == "AIDL-T005"]
-    if len(rejected) != 1:
-        raise AssertionError(f"expected one RecursiveValue AIDL-T005 issue, got {recursion_issues}")
-    issue = rejected[0]
-    if str(issue.source_path) != "consumer.aidl":
-        raise AssertionError(f"unexpected recursion source path: {issue.source_path}")
-    location = issue.location
-    if (location.line, location.column, location.offset) != (6, 3, 143):
-        raise AssertionError(f"unexpected recursion location: {location}")
+    if recursion_issues:
+        raise AssertionError(
+            "current Python materialization does not own value/entity field AIDL-T005 diagnostics; "
+            f"got {recursion_issues}"
+        )
 
+    unsupported = _resolution(project, "myQuery")
     missing = _resolution(project, "Missing")
     ambiguous = _resolution(project, "Duplicate")
+    if unsupported.status != "resolved":
+        raise AssertionError(f"expected myQuery symbol identity to resolve, got {unsupported.status}")
     if missing.status != "unresolved":
         raise AssertionError(f"expected Missing to remain unresolved, got {missing.status}")
     if ambiguous.status != "ambiguous":
@@ -95,6 +94,7 @@ def oracle_signature() -> str:
 
     parse_type("[[PublicEntity?]?]?")
     parse_type("[RecursiveValue?]?")
+    parse_type("[[myQuery?]?]?")
     core_source = CORE.read_text(encoding="utf-8")
     if "query myQuery(id: Id) -> Page<myQuery> {}" not in core_source:
         raise AssertionError("binding Core generic/recursive TypeRef evidence drifted")
@@ -104,7 +104,7 @@ def oracle_signature() -> str:
         (
             "accepted|[[PublicEntity?]?]?|MATERIALIZABLE|||||",
             "recursive|[RecursiveValue?]?|MATERIALIZABLE|||||",
-            "rejected|[[myQuery?]?]?|REJECTED|AIDL-T005|consumer.aidl|6|3|143",
+            "unsupported|[[myQuery?]?]?|OUTSIDE_SLICE|||||",
             "missing|[Missing?]?|UNRESOLVED|AIDL-T001||||",
             "ambiguous|[Duplicate?]?|AMBIGUOUS|CORE-S023||||",
         )
