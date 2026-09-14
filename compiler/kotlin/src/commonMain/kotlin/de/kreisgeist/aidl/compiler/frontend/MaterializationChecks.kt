@@ -27,7 +27,6 @@ object ProjectedMaterializationChecker {
         "Page", "PageInput", "Cursor", "OperationId", "PrincipalId", "SubjectId",
         "FieldError", "FieldErrors", "ProblemDetails", "Unit",
     )
-    private val materializedKinds = setOf("enum", "value", "entity")
     private val genericHead = Regex("([A-Za-z_][A-Za-z0-9_.]*)\\s*<(.*)>")
 
     fun check(
@@ -41,11 +40,9 @@ object ProjectedMaterializationChecker {
                 ?: return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
             if (shape.first in standardTypes) {
                 val nested = materializationOnly(sourceId, shape.second, resolver)
-                return when (nested.status) {
-                    ProjectedMaterializationStatus.MATERIALIZABLE -> nested
-                    ProjectedMaterializationStatus.REJECTED -> nested
-                    else -> ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-                }
+                if (nested.status == ProjectedMaterializationStatus.REJECTED) return nested
+                if (nested.status == ProjectedMaterializationStatus.MATERIALIZABLE) return nested
+                return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
             }
             val resolution = resolver.resolve(sourceId, shape.first)
             return when (resolution.status) {
@@ -53,11 +50,8 @@ object ProjectedMaterializationChecker {
                     ProjectedMaterializationCheck(ProjectedMaterializationStatus.AMBIGUOUS, "CORE-S023")
                 ProjectedResolutionStatus.UNRESOLVED ->
                     ProjectedMaterializationCheck(ProjectedMaterializationStatus.UNRESOLVED, "AIDL-T001")
-                ProjectedResolutionStatus.RESOLVED -> if (resolution.symbols.single().kind in materializedKinds) {
+                ProjectedResolutionStatus.RESOLVED ->
                     ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005")
-                } else {
-                    ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-                }
             }
         }
 
@@ -84,11 +78,7 @@ object ProjectedMaterializationChecker {
             if (shape.first in standardTypes) {
                 return materializationOnly(sourceId, shape.second, resolver)
             }
-            val resolution = resolver.resolve(sourceId, shape.first)
-            return if (
-                resolution.status == ProjectedResolutionStatus.RESOLVED &&
-                resolution.symbols.single().kind in materializedKinds
-            ) {
+            return if (resolver.resolve(sourceId, shape.first).status == ProjectedResolutionStatus.RESOLVED) {
                 ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005")
             } else {
                 ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
