@@ -3,7 +3,7 @@ module parity.ir.domain
 export enum Status { active, archived }
 
 export value PetInput {
-  name: string required default "anonymous"
+  name: string required
   status: Status required
 }
 
