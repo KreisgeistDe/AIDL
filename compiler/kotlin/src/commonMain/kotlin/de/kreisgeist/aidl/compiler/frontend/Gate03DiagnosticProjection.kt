@@ -1,41 +1,40 @@
 package de.kreisgeist.aidl.compiler.frontend
 
-internal data class ProjectedDiagnosticTokenSpan(
-    val start: ProjectedSourceLocation,
-    val end: ProjectedSourceLocation,
-    val stdoutLocation: String,
-)
-
 internal data class ProjectedGate03Diagnostic(
     val code: String,
-    val span: ProjectedDiagnosticTokenSpan,
+    val sourcePath: String? = null,
+    val location: ProjectedSourceLocation? = null,
 )
 
 /**
  * Bounded M10.5-03 certification projection over already-owned front-end semantics.
  *
- * This object does not invent diagnostic meaning. Materialization, resolution and default
- * assignment classification remain owned by their existing checkers. The only additional fact
- * projected here is the exact TypeRef token span supplied by the caller, including an exclusive
- * end anchor and the deterministic text location used by parity certification.
+ * This object does not invent diagnostic meaning or source anchors. Materialization and default
+ * assignment diagnostics use the caller-owned declaration anchor that matches the current Python
+ * issue contract. Resolver classifications remain location-less because the current authoritative
+ * resolver evidence owns no diagnostic location for unresolved or ambiguous references.
  */
 internal object ProjectedGate03DiagnosticProjector {
     fun materialization(
         sourceId: String,
         sourceText: String,
-        typeOffset: Int,
+        diagnosticOffset: Int,
         typeSource: String,
         resolver: ProjectNameResolver,
     ): ProjectedGate03Diagnostic? {
-        val check = ProjectedMaterializationChecker.check(sourceId, typeSource, resolver)
+        val check = ProjectedMaterializationChecker.checkAt(
+            sourceId = sourceId,
+            sourceText = sourceText,
+            diagnosticOffset = diagnosticOffset,
+            typeSource = typeSource,
+            resolver = resolver,
+        )
         val code = check.diagnosticCode ?: return null
-        return ProjectedGate03Diagnostic(code, tokenSpan(sourceId, sourceText, typeOffset, typeSource))
+        return ProjectedGate03Diagnostic(code, check.sourcePath, check.location)
     }
 
     fun resolution(
         sourceId: String,
-        sourceText: String,
-        typeOffset: Int,
         typeSource: String,
         resolver: ProjectNameResolver,
     ): ProjectedGate03Diagnostic? {
@@ -44,40 +43,25 @@ internal object ProjectedGate03DiagnosticProjector {
             ProjectedResolutionStatus.UNRESOLVED -> "AIDL-T001"
             ProjectedResolutionStatus.AMBIGUOUS -> "CORE-S023"
         } ?: return null
-        return ProjectedGate03Diagnostic(code, tokenSpan(sourceId, sourceText, typeOffset, typeSource))
+        return ProjectedGate03Diagnostic(code)
     }
 
     fun defaultAssignment(
         sourceId: String,
         sourceText: String,
-        typeOffset: Int,
+        diagnosticOffset: Int,
         typeSource: String,
         literalSource: String,
         resolver: ProjectNameResolver,
     ): ProjectedGate03Diagnostic? {
+        require(diagnosticOffset in 0..sourceText.length) { "diagnostic offset is outside source text" }
         val check = ProjectedTypeChecker.checkDefault(sourceId, typeSource, literalSource, resolver)
         val code = check.diagnosticCode ?: return null
-        return ProjectedGate03Diagnostic(code, tokenSpan(sourceId, sourceText, typeOffset, typeSource))
-    }
-
-    private fun tokenSpan(
-        sourceId: String,
-        sourceText: String,
-        typeOffset: Int,
-        typeSource: String,
-    ): ProjectedDiagnosticTokenSpan {
-        require(typeOffset >= 0 && typeOffset + typeSource.length <= sourceText.length) {
-            "TypeRef token span is outside source text"
-        }
-        require(sourceText.substring(typeOffset, typeOffset + typeSource.length) == typeSource) {
-            "TypeRef token span does not match source text"
-        }
-        val start = sourceLocation(sourceText, typeOffset)
-        val end = sourceLocation(sourceText, typeOffset + typeSource.length)
-        return ProjectedDiagnosticTokenSpan(
-            start = start,
-            end = end,
-            stdoutLocation = "$sourceId:${start.line}:${start.column}-${end.line}:${end.column}",
+        if (code != "AIDL-T002") return ProjectedGate03Diagnostic(code)
+        return ProjectedGate03Diagnostic(
+            code = code,
+            sourcePath = sourceId,
+            location = sourceLocation(sourceText, diagnosticOffset),
         )
     }
 
