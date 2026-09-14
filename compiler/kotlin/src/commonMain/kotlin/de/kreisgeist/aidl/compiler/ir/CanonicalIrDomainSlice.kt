@@ -292,7 +292,9 @@ object CanonicalIrDomainSliceProjector {
                 if (startsNextField) break
                 when (token) {
                     "required", "immutable" -> index += 1
-                    "default" -> index = consumeDefaultValue(tokens, index + 1, name)
+                    "default" -> throw CanonicalIrDomainSliceException(
+                        "field '$name' default is not represented by the current Canonical IR field contract",
+                    )
                     "mutable" -> { mutable = true; index += 1 }
                     "sensitive" -> { sensitive = true; index += 1 }
                     "generated" -> { generated = true; index += 1 }
@@ -328,13 +330,6 @@ object CanonicalIrDomainSliceProjector {
             )
         }
         return result
-    }
-
-    private fun consumeDefaultValue(tokens: List<String>, start: Int, fieldName: String): Int {
-        if (start >= tokens.size) {
-            throw CanonicalIrDomainSliceException("field '$fieldName' lacks default value")
-        }
-        return start + 1
     }
 
     private fun typeRef(
