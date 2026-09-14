@@ -1,0 +1,4 @@
+positive|sourceId=source-projection-positive|path=parity/source-projection-positive.source|accepted=true|module=parity.source|imports=parity.shared.Types|declarations=enum:Status:true@55,value:PetInput:true@95,entity:Pet:true@143
+unexpected-character|sourceId=source-projection-unexpected-character|path=parity/source-projection-unexpected-character.source|accepted=false|diagnostic=unexpected character '#'@54
+unterminated-comment|sourceId=source-projection-unterminated-comment|path=parity/source-projection-unterminated-comment.source|accepted=false|diagnostic=unterminated block comment@18
+newline-string|sourceId=source-projection-newline-string|path=parity/source-projection-newline-string.source|accepted=false|diagnostic=newline in string literal@62
