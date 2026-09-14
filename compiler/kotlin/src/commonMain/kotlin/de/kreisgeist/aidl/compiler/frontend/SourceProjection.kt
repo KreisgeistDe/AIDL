@@ -11,6 +11,7 @@ data class ProjectedDeclaration(
     val exported: Boolean,
     val bodyTokens: List<String>,
     val offset: Int = -1,
+    val endOffset: Int = -1,
 )
 
 data class SourceProjection(
@@ -111,6 +112,7 @@ object AidlSourceProjector {
                     if (current().value != "{") fail("expected '{' after $kind $name")
                     advance()
                     var depth = 1
+                    var declarationEndOffset = declarationOffset
                     val body = mutableListOf<String>()
                     while (depth > 0) {
                         val token = current()
@@ -118,11 +120,25 @@ object AidlSourceProjector {
                         advance()
                         when (token.value) {
                             "{" -> { depth += 1; body += token.value }
-                            "}" -> { depth -= 1; if (depth > 0) body += token.value }
+                            "}" -> {
+                                depth -= 1
+                                if (depth > 0) {
+                                    body += token.value
+                                } else {
+                                    declarationEndOffset = token.offset + token.value.length
+                                }
+                            }
                             else -> if (token.kind != Token.Kind.NEWLINE) body += token.value
                         }
                     }
-                    declarations += ProjectedDeclaration(kind, name, exported, body, declarationOffset)
+                    declarations += ProjectedDeclaration(
+                        kind,
+                        name,
+                        exported,
+                        body,
+                        declarationOffset,
+                        declarationEndOffset,
+                    )
                     skipNewlines()
                 }
             }

@@ -135,13 +135,13 @@
     "frozenKotlinWorkIncludes": []
   },
   "nextGate": {
-    "id": "M10.5-03",
-    "status": "closure-audit-pending",
+    "id": "M10.5-04",
+    "status": "bounded-canonical-ir-parity-in-progress",
     "laterSemanticKotlinBlockedUntilComplete": true
   },
   "nextAction": {
-    "id": "M10.5-03-GATE-03-CLOSURE-AUDIT",
-    "status": "pending-independent-closure-audit",
-    "reason": "The binding Core EBNF correction was independently reviewed at PR #104 head 9efde375636bb7deed1c901842087169cb5b2763 and serially integrated as main commit 363f2a7a20f75d9fa7f46aea19e015bcdf121c33. Remaining sequencing is governed by the M10.5 Gate-03 closure audit; this status update does not close Gate 03 or authorize M10.5-04+."
+    "id": "M10.5-04-CANONICAL-IR-DOMAIN-SLICE",
+    "status": "bounded-first-package",
+    "reason": "M10.5-03 Gate 03 was independently certified complete on exact main 7bd092ed81906dd471c198792eadd96bcd1853d7 after integration of PR #113. Only bounded M10.5-04 Canonical-IR parity is now eligible; Gate 04 remains incomplete, Python remains the migration reference/conformance implementation, and no M10.5-05+ or downstream semantic ownership is authorized."
   }
 }

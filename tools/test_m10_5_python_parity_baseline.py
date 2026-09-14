@@ -190,7 +190,7 @@ class M105PythonParityBaselineTest(unittest.TestCase):
                 actual_fingerprint="sha256:" + "0" * 64,
             )
 
-    def test_todo_records_integrated_gate01_gate02_and_incomplete_gate03(self) -> None:
+    def test_todo_records_integrated_gate01_gate02_closed_gate03_and_open_gate04(self) -> None:
         todo = (self.root / "TODO.md").read_text(encoding="utf-8")
         self.assertIn("PR #77 remains already-merged historical/provisional evidence", todo)
         self.assertIn("- [x] **M10.5-01 — Refresh the Python parity baseline", todo)
@@ -205,7 +205,10 @@ class M105PythonParityBaselineTest(unittest.TestCase):
         self.assertIn("Validation #409", todo)
         self.assertIn("Kotlin Compiler Skeleton #66", todo)
         self.assertIn("- [ ] **M10.5-03 and later Kotlin semantic work.**", todo)
-        self.assertIn("Gate 03 remains incomplete", todo)
+        self.assertIn("Gate 03 itself is complete", todo)
+        self.assertIn("Gate 04 remains incomplete", todo)
+        self.assertIn("7bd092ed81906dd471c198792eadd96bcd1853d7", todo)
+        self.assertNotIn("Gate 03 remains incomplete", todo)
         self.assertNotIn("Dependency-ready next roadmap action", todo)
         self.assertNotIn("Current post-G1 candidate", todo)
         self.assertNotIn("requires fresh independent validation and integration before Gate 01", todo)
