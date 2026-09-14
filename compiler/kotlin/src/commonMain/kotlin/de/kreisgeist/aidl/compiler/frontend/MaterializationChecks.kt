@@ -21,6 +21,12 @@ data class ProjectedMaterializationCheck(
     val location: ProjectedSourceLocation? = null,
 )
 
+internal data class ProjectedFieldMaterializationCheck(
+    val fieldName: String,
+    val typeSource: String,
+    val check: ProjectedMaterializationCheck,
+)
+
 /**
  * Bounded M10.5-03 materialization-boundary parity over the integrated type/resolution surface.
  *
@@ -109,6 +115,62 @@ object ProjectedMaterializationChecker {
             sourcePath = sourceId,
             location = sourceLocation(sourceText, diagnosticOffset),
         )
+    }
+
+    /**
+     * Bounded value/entity field traversal over the already-projected declaration body.
+     *
+     * SourceProjection owns lexical declaration boundaries; this layer only extracts ordered
+     * `field name: TypeRef` facts from its deterministic body token stream and delegates every
+     * TypeRef to the existing materialization/type/resolution boundary. It does not add parser or
+     * language authority. The source anchor is the field keyword, matching the Python field span.
+     */
+    internal fun checkProjectedFields(
+        sourceId: String,
+        sourceText: String,
+        declaration: ProjectedDeclaration,
+        resolver: ProjectNameResolver,
+    ): List<ProjectedFieldMaterializationCheck> {
+        require(declaration.kind == "value" || declaration.kind == "entity") {
+            "field materialization traversal is bounded to value/entity declarations"
+        }
+        val fields = projectedFields(declaration.bodyTokens)
+        var searchFrom = 0
+        return fields.map { (fieldName, typeSource) ->
+            val marker = "field $fieldName"
+            val offset = sourceText.indexOf(marker, startIndex = searchFrom)
+            require(offset >= 0) { "projected field '$fieldName' is missing from source text" }
+            searchFrom = offset + marker.length
+            ProjectedFieldMaterializationCheck(
+                fieldName = fieldName,
+                typeSource = typeSource,
+                check = checkAt(sourceId, sourceText, offset, typeSource, resolver),
+            )
+        }
+    }
+
+    private fun projectedFields(tokens: List<String>): List<Pair<String, String>> {
+        val result = mutableListOf<Pair<String, String>>()
+        var index = 0
+        while (index < tokens.size) {
+            if (tokens[index] != "field") {
+                index += 1
+                continue
+            }
+            require(index + 3 < tokens.size && tokens[index + 2] == ":") {
+                "projected field tokens are malformed"
+            }
+            val name = tokens[index + 1]
+            index += 3
+            val typeTokens = mutableListOf<String>()
+            while (index < tokens.size && tokens[index] != "field") {
+                typeTokens += tokens[index]
+                index += 1
+            }
+            require(typeTokens.isNotEmpty()) { "projected field '$name' has no type" }
+            result += name to typeTokens.joinToString("")
+        }
+        return result
     }
 
     private fun sourceLocation(source: String, offset: Int): ProjectedSourceLocation {
