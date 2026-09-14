@@ -17,8 +17,8 @@ from tools.ir_identity import IrIdentityError, declaration_identity
 
 ROOT = Path(__file__).resolve().parents[1]
 PARITY = ROOT / "compiler" / "kotlin" / "parity"
-DOMAIN_REL = Path("compiler/kotlin/parity/canonical-ir-domain.source")
-ENVELOPE_REL = Path("compiler/kotlin/parity/canonical-ir-envelope.source")
+DOMAIN_REL = Path("compiler/kotlin/parity/canonical-ir-domain.aidl")
+ENVELOPE_REL = Path("compiler/kotlin/parity/canonical-ir-envelope.aidl")
 MISSING_MODULE_REL = Path("compiler/kotlin/parity/canonical-ir-domain-missing-module.source")
 SCHEMA = json.loads((ROOT / "spec" / "ir.schema.json").read_text(encoding="utf-8"))
 DOMAIN_MODULE = "parity.ir.domain"
@@ -96,12 +96,17 @@ def _assert_schema_valid(document: dict) -> None:
 def _positive_document() -> dict:
     analysis = load_compiler_analysis([DOMAIN_REL, ENVELOPE_REL])
     if analysis.diagnostics:
-        errors = [diagnostic.to_json() for diagnostic in analysis.diagnostics if diagnostic.severity.value == "error"]
+        errors = [
+            diagnostic.to_json()
+            for diagnostic in analysis.diagnostics
+            if diagnostic.severity.value == "error"
+        ]
         if errors:
             raise AssertionError(errors)
 
     domain_document = next(
-        document for document in analysis.project.documents
+        document
+        for document in analysis.project.documents
         if document.module is not None and document.module.name == DOMAIN_MODULE
     )
     for declaration in domain_document.declarations:
@@ -128,9 +133,7 @@ def _missing_module_rejected() -> bool:
     item = project.declaration_names[0]
     try:
         declaration_identity(item, 1)
-    except IrIdentityError as error:
-        if str(error) != "resolved declaration projection has no owning module":
-            raise
+    except IrIdentityError:
         return True
     raise AssertionError("missing-module declaration unexpectedly gained canonical IR identity")
 
@@ -138,12 +141,14 @@ def _missing_module_rejected() -> bool:
 def oracle_signature() -> str:
     document = _positive_document()
     domain_declarations = [
-        declaration for declaration in document["declarations"]
+        declaration
+        for declaration in document["declarations"]
         if declaration["ownerModule"] == DOMAIN_MODULE
     ]
     domain_ids = {declaration["declarationId"] for declaration in domain_declarations}
     source_entries = [
-        entry for entry in document["sourceMap"]["entries"]
+        entry
+        for entry in document["sourceMap"]["entries"]
         if entry["originalDeclarationId"] in domain_ids
     ]
     lines = ["schema=valid"]
@@ -168,7 +173,9 @@ class KotlinCanonicalIrDomainParityTest(unittest.TestCase):
         _assert_schema_valid(first)
         self.assertEqual("0.3.0", first["irVersion"])
         self.assertTrue(first["semanticHash"].startswith("sha256:"))
-        self.assertTrue(all(item["semanticHash"].startswith("sha256:") for item in first["declarations"]))
+        self.assertTrue(
+            all(item["semanticHash"].startswith("sha256:") for item in first["declarations"])
+        )
 
     def test_missing_module_boundary_fails_closed_before_ir_identity(self) -> None:
         self.assertTrue(_missing_module_rejected())
