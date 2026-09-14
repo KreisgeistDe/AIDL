@@ -88,4 +88,25 @@ class TypeCheckingParityTest {
             ProjectedTypeChecker.checkDefault("resolution-consumer", "string", "bare", resolver).status,
         )
     }
+
+    @Test
+    fun bindingCoreGenericTypeRefDoesNotEscapeHistoricalConstructionException() {
+        val resolver = resolver()
+        val first = ProjectedTypeChecker.checkDefault(
+            "resolution-consumer",
+            "Page<myQuery>",
+            "\"unused\"",
+            resolver,
+        )
+        val second = ProjectedTypeChecker.checkDefault(
+            "resolution-consumer",
+            "Page<myQuery>",
+            "\"unused\"",
+            resolver,
+        )
+
+        assertEquals(ProjectedAssignmentStatus.OUTSIDE_SLICE, first.status)
+        assertEquals(null, first.diagnosticCode)
+        assertEquals(first, second)
+    }
 }
