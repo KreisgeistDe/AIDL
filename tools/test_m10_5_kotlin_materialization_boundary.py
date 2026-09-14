@@ -57,6 +57,16 @@ def _project():
     return compiler_project_from_documents([consumer, provider_a, provider_b])
 
 
+def _query_kind_project():
+    source = _document(
+        "query-kind",
+        "module demo.query\n"
+        "query lookup(id: string) -> string {}\n"
+        "alias QueryTarget = lookup\n",
+    )
+    return compiler_project_from_documents([source])
+
+
 def oracle_signature() -> str:
     project = _project()
     consumer_document = project.documents[0]
@@ -71,6 +81,15 @@ def oracle_signature() -> str:
     unexpected_aliases = set(alias_issues) - {"ProjectGenericTarget"}
     if unexpected_aliases:
         raise AssertionError(f"unexpected alias materialization issues: {sorted(unexpected_aliases)}")
+
+    query_issues = {
+        issue.subject_name: issue
+        for issue in collect_core_materialization_issues(_query_kind_project())
+        if issue.subject_name == "QueryTarget"
+    }
+    query_target = query_issues.get("QueryTarget")
+    if query_target is None or query_target.code != "AIDL-T005":
+        raise AssertionError("resolved query TypeRef target must be rejected by AIDL-T005 materialization boundary")
 
     duplicate = _reference_candidates(project, consumer_document, "Duplicate")
     missing = _reference_candidates(project, consumer_document, "Missing")
@@ -89,9 +108,12 @@ def oracle_signature() -> str:
             "string|MATERIALIZABLE|",
             "PublicEntity|MATERIALIZABLE|",
             "[PublicEntity]?|MATERIALIZABLE|",
+            "myQuery|REJECTED|AIDL-T005",
             "PublicEntity<PublicEnum>|REJECTED|AIDL-T005",
             "Page<PublicEntity>|MATERIALIZABLE|",
             "Page<myQuery>|OUTSIDE_SLICE|",
+            "Page<Missing>|UNRESOLVED|AIDL-T001",
+            "Page<Duplicate>|AMBIGUOUS|CORE-S023",
             "Duplicate|AMBIGUOUS|CORE-S023",
             "Missing|UNRESOLVED|AIDL-T001",
         )
