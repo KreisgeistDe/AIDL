@@ -5,26 +5,43 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
 class MaterializationChecksParityTest {
-    private fun resolver(): ProjectNameResolver = ProjectNameResolver.fromSources(
-        listOf(
-            "consumer" to """
+    private fun resolver(): ProjectNameResolver {
+        val consumerProjection = AidlSourceProjector.project(
+            """
                 module demo.consumer
                 import demo.shared.*
                 entity Holder {}
-                query myQuery(id: PublicEntity) -> PublicEntity {}
             """.trimIndent(),
-            "provider-a" to """
-                module demo.shared
-                export enum PublicEnum {}
-                export entity PublicEntity {}
-                export entity Duplicate {}
-            """.trimIndent(),
-            "provider-b" to """
-                module demo.shared
-                export enum Duplicate {}
-            """.trimIndent(),
-        ),
-    )
+        )
+        val consumer = ProjectedDocument(
+            "consumer",
+            consumerProjection.copy(
+                declarations = consumerProjection.declarations +
+                    ProjectedDeclaration("query", "myQuery", false, emptyList()),
+            ),
+        )
+        val providerA = ProjectedDocument(
+            "provider-a",
+            AidlSourceProjector.project(
+                """
+                    module demo.shared
+                    export enum PublicEnum {}
+                    export entity PublicEntity {}
+                    export entity Duplicate {}
+                """.trimIndent(),
+            ),
+        )
+        val providerB = ProjectedDocument(
+            "provider-b",
+            AidlSourceProjector.project(
+                """
+                    module demo.shared
+                    export enum Duplicate {}
+                """.trimIndent(),
+            ),
+        )
+        return ProjectNameResolver.fromProjectedDocuments(listOf(consumer, providerA, providerB))
+    }
 
     private fun signature(): String {
         val resolver = resolver()
