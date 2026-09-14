@@ -61,6 +61,7 @@
         "tools/test_m10_5_kotlin_materialization_recursion.py",
         "tools/test_m10_5_kotlin_name_resolution.py",
         "tools/test_m10_5_kotlin_serialization_checks.py",
+        "tools/test_m10_5_kotlin_source_projection.py",
         "tools/test_m10_5_kotlin_type_checking.py",
         "tools/test_m10_5_kotlin_type_construction.py"
       ],
