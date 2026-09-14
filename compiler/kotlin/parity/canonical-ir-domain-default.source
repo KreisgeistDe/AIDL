@@ -1,0 +1,5 @@
+module parity.ir.default
+
+export value WithDefault {
+  name: string default "anonymous"
+}
