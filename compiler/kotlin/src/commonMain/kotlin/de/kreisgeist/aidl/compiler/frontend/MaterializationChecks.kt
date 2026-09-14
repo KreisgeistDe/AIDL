@@ -122,30 +122,30 @@ object ProjectedMaterializationChecker {
      *
      * SourceProjection owns lexical declaration boundaries; this layer only extracts ordered
      * `field name: TypeRef` facts from its deterministic body token stream and delegates every
-     * TypeRef to the existing materialization/type/resolution boundary. It does not add parser or
-     * language authority. The source anchor is the field keyword, matching the Python field span.
+     * TypeRef to the existing materialization/type/resolution boundary. Current Python
+     * materialization does not own AIDL-T005 for value/entity field clauses, so a resolved field
+     * shape that the generic checker would reject remains OUTSIDE_SLICE here, with no invented
+     * materialization location. Resolver-owned unresolved/ambiguous classifications are preserved.
      */
     internal fun checkProjectedFields(
         sourceId: String,
-        sourceText: String,
         declaration: ProjectedDeclaration,
         resolver: ProjectNameResolver,
     ): List<ProjectedFieldMaterializationCheck> {
         require(declaration.kind == "value" || declaration.kind == "entity") {
             "field materialization traversal is bounded to value/entity declarations"
         }
-        val fields = projectedFields(declaration.bodyTokens)
-        var searchFrom = 0
-        return fields.map { (fieldName, typeSource) ->
-            val marker = "field $fieldName"
-            val offset = sourceText.indexOf(marker, startIndex = searchFrom)
-            require(offset >= 0) { "projected field '$fieldName' is missing from source text" }
-            searchFrom = offset + marker.length
-            ProjectedFieldMaterializationCheck(
-                fieldName = fieldName,
-                typeSource = typeSource,
-                check = checkAt(sourceId, sourceText, offset, typeSource, resolver),
-            )
+        return projectedFields(declaration.bodyTokens).map { (fieldName, typeSource) ->
+            val raw = check(sourceId, typeSource, resolver)
+            val bounded = if (
+                raw.status == ProjectedMaterializationStatus.REJECTED &&
+                raw.diagnosticCode == "AIDL-T005"
+            ) {
+                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+            } else {
+                raw
+            }
+            ProjectedFieldMaterializationCheck(fieldName, typeSource, bounded)
         }
     }
 
