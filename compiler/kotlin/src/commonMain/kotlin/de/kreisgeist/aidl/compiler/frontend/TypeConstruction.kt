@@ -167,7 +167,7 @@ object ProjectedTypeConstructor {
                 code = typeDiagnosticCode,
                 phase = typeDiagnosticPhase,
                 severity = ProjectedTypeDiagnosticSeverity.ERROR,
-                message = error.message ?: "invalid Core type expression",
+                message = error.message!!,
                 sourcePath = sourcePath,
                 location = sourceLocation(sourceText, diagnosticOffset),
                 subject = ProjectedTypeDiagnosticSubject(subjectKind, subjectName),
