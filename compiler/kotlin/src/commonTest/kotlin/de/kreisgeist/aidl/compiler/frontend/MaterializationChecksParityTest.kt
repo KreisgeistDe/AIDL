@@ -60,44 +60,66 @@ class MaterializationChecksParityTest {
 
     @Test
     fun nestedProjectGenericRejectionPropagatesThroughKnownStandardGeneric() {
+        val resolver = resolver()
         assertEquals(
             ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005"),
             ProjectedMaterializationChecker.check(
                 "consumer",
                 "Page<PublicEntity<PublicEnum>>",
-                resolver(),
+                resolver,
             ),
+        )
+        assertEquals(
+            ProjectedMaterializationStatus.MATERIALIZABLE,
+            ProjectedMaterializationChecker.check(
+                "consumer",
+                "Page<Page<PublicEntity>>",
+                resolver,
+            ).status,
+        )
+    }
+
+    @Test
+    fun genericProjectResolutionPreservesExistingDiagnostics() {
+        val resolver = resolver()
+        assertEquals(
+            ProjectedMaterializationCheck(ProjectedMaterializationStatus.AMBIGUOUS, "CORE-S023"),
+            ProjectedMaterializationChecker.check("consumer", "Duplicate<PublicEnum>", resolver),
+        )
+        assertEquals(
+            ProjectedMaterializationCheck(ProjectedMaterializationStatus.UNRESOLVED, "AIDL-T001"),
+            ProjectedMaterializationChecker.check("consumer", "Missing<PublicEnum>", resolver),
         )
     }
 
     @Test
     fun malformedGenericShapesStayOutsideBoundedSlice() {
         val resolver = resolver()
-        assertEquals(
-            ProjectedMaterializationStatus.OUTSIDE_SLICE,
-            ProjectedMaterializationChecker.check("consumer", "Page<>", resolver).status,
-        )
-        assertEquals(
-            ProjectedMaterializationStatus.OUTSIDE_SLICE,
-            ProjectedMaterializationChecker.check("consumer", "Page<PublicEntity,>", resolver).status,
-        )
-        assertEquals(
-            ProjectedMaterializationStatus.OUTSIDE_SLICE,
-            ProjectedMaterializationChecker.check("consumer", "Page<PublicEntity", resolver).status,
-        )
+        for (type in listOf(
+            "Page<>",
+            "Page<PublicEntity,>",
+            "Page<PublicEntity",
+            "PublicEntity>",
+            "<PublicEntity>",
+            "Page<PublicEntity,PublicEnum>",
+            "Page<Page<PublicEntity>>>",
+        )) {
+            assertEquals(
+                ProjectedMaterializationStatus.OUTSIDE_SLICE,
+                ProjectedMaterializationChecker.check("consumer", type, resolver).status,
+            )
+        }
     }
 
     @Test
-    fun unresolvedOrAmbiguousNestedStandardArgumentsDoNotBecomeMaterializationErrors() {
+    fun unresolvedAmbiguousAndInvalidNestedStandardArgumentsStayOutsideSlice() {
         val resolver = resolver()
-        assertEquals(
-            ProjectedMaterializationStatus.OUTSIDE_SLICE,
-            ProjectedMaterializationChecker.check("consumer", "Page<Missing>", resolver).status,
-        )
-        assertEquals(
-            ProjectedMaterializationStatus.OUTSIDE_SLICE,
-            ProjectedMaterializationChecker.check("consumer", "Page<Duplicate>", resolver).status,
-        )
+        for (type in listOf("Page<Missing>", "Page<Duplicate>", "Page<bad-name>")) {
+            assertEquals(
+                ProjectedMaterializationStatus.OUTSIDE_SLICE,
+                ProjectedMaterializationChecker.check("consumer", type, resolver).status,
+            )
+        }
     }
 
     @Test
