@@ -1,18 +1,24 @@
 package de.kreisgeist.aidl.compiler.frontend
 
-class SourceProjectionException(message: String) : IllegalArgumentException(message)
+class SourceProjectionException(
+    val diagnostic: String,
+    val offset: Int,
+) : IllegalArgumentException("$diagnostic at offset $offset")
 
 data class ProjectedDeclaration(
     val kind: String,
     val name: String,
     val exported: Boolean,
     val bodyTokens: List<String>,
+    val offset: Int = -1,
 )
 
 data class SourceProjection(
     val module: String?,
     val imports: List<String>,
     val declarations: List<ProjectedDeclaration>,
+    val sourceId: String = "inline",
+    val path: String = "inline.aidl",
 ) {
     fun stableSignature(): String = buildString {
         append("module=").append(module ?: "")
@@ -39,7 +45,9 @@ object AidlSourceProjector {
     private val twoCharSymbols = setOf("->", "==", "!=", "<=", ">=", "..")
     private val singleSymbols = "{}[]()<>,:.*+-/%=?".toSet()
 
-    fun project(source: String): SourceProjection {
+    fun project(source: String): SourceProjection = project("inline", "inline.aidl", source)
+
+    fun project(sourceId: String, path: String, source: String): SourceProjection {
         val tokens = lex(source)
         var index = 0
         var module: String? = null
@@ -49,7 +57,7 @@ object AidlSourceProjector {
         fun current(): Token = tokens[index]
         fun advance(): Token = tokens[index++]
         fun skipNewlines() { while (current().kind == Token.Kind.NEWLINE) advance() }
-        fun fail(message: String): Nothing = throw SourceProjectionException("$message at offset ${current().offset}")
+        fun fail(message: String): Nothing = throw SourceProjectionException(message, current().offset)
         fun consumeWord(message: String): String {
             if (current().kind != Token.Kind.WORD) fail(message)
             return advance().value
@@ -96,6 +104,7 @@ object AidlSourceProjector {
                         exported = true
                         advance()
                     }
+                    val declarationOffset = current().offset
                     val kind = consumeWord("expected declaration kind")
                     if (kind !in supportedDeclarations) fail("unsupported declaration kind '$kind'")
                     val name = consumeWord("expected declaration name")
@@ -113,12 +122,18 @@ object AidlSourceProjector {
                             else -> if (token.kind != Token.Kind.NEWLINE) body += token.value
                         }
                     }
-                    declarations += ProjectedDeclaration(kind, name, exported, body)
+                    declarations += ProjectedDeclaration(kind, name, exported, body, declarationOffset)
                     skipNewlines()
                 }
             }
         }
-        return SourceProjection(module, imports.toList(), declarations.toList())
+        return SourceProjection(
+            module = module,
+            imports = imports.toList(),
+            declarations = declarations.toList(),
+            sourceId = sourceId,
+            path = path,
+        )
     }
 
     private fun lex(source: String): List<Token> {
@@ -138,7 +153,7 @@ object AidlSourceProjector {
                 }
                 ch == '/' && next == '*' -> {
                     val close = source.indexOf("*/", index + 2)
-                    if (close < 0) throw SourceProjectionException("unterminated block comment at offset $start")
+                    if (close < 0) throw SourceProjectionException("unterminated block comment", start)
                     index = close + 2
                 }
                 ch == '"' -> {
@@ -146,19 +161,19 @@ object AidlSourceProjector {
                     var escaped = false
                     while (index < source.length) {
                         val current = source[index]
-                        if (current == '\n') throw SourceProjectionException("newline in string literal at offset $start")
+                        if (current == '\n') throw SourceProjectionException("newline in string literal", start)
                         index += 1
                         if (!escaped && current == '"') break
                         escaped = !escaped && current == '\\'
                         if (current != '\\') escaped = false
                     }
-                    if (source.getOrNull(index - 1) != '"') throw SourceProjectionException("unterminated string literal at offset $start")
+                    if (source.getOrNull(index - 1) != '"') throw SourceProjectionException("unterminated string literal", start)
                     add(Token.Kind.STRING, source.substring(start, index), start)
                 }
                 ch == '@' -> {
                     index += 1
                     while (index < source.length && source[index].isWordPart()) index += 1
-                    if (index == start + 1) throw SourceProjectionException("empty annotation at offset $start")
+                    if (index == start + 1) throw SourceProjectionException("empty annotation", start)
                     add(Token.Kind.WORD, source.substring(start, index), start)
                 }
                 ch.isDigit() || (ch == '-' && next?.isDigit() == true) -> {
@@ -182,7 +197,7 @@ object AidlSourceProjector {
                     index += 2
                 }
                 ch in singleSymbols -> { add(Token.Kind.SYMBOL, ch.toString(), start); index += 1 }
-                else -> throw SourceProjectionException("unexpected character '$ch' at offset $start")
+                else -> throw SourceProjectionException("unexpected character '$ch'", start)
             }
         }
         result += Token(Token.Kind.EOF, "", source.length)

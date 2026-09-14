@@ -1,0 +1,2 @@
+module parity.bad
+export value Broken { value: string # }
