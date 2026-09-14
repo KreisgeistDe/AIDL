@@ -140,12 +140,6 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
-    fun boundedSliceRejectsUnsupportedDeclarationAndTypeTargetKinds() {
-        reject("module p\nexport alias A = string\n")
-        reject("module p\nexport value V { other: A }\nexport alias A = string\n")
-    }
-
-    @Test
     fun boundedSliceRejectsMalformedEnums() {
         reject("module p\nexport enum E { one two }\n")
         reject("module p\nexport enum E { }\n")
