@@ -45,6 +45,24 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
+    fun sharedFixtureExercisesAcceptedFieldDefaultWithoutChangingCanonicalFieldFacts() {
+        val root = parityRoot()
+        val filename = "canonical-ir-domain.source"
+        val source = Files.readString(root.resolve(filename))
+        assertTrue(source.contains("name: string required default \"anonymous\""))
+        val slice = CanonicalIrDomainSliceProjector.project(
+            sourceId = "canonical-ir-domain",
+            path = "compiler/kotlin/parity/$filename",
+            source = source,
+        )
+        val petInputName = slice.declarations[1].fields[0]
+        assertEquals(
+            "name=scalar:string|required=true|mutable=false|sensitive=false|generated=false|primary=false|concurrencyToken=false|onDelete=none",
+            petInputName.stableSignature(),
+        )
+    }
+
+    @Test
     fun repeatedCanonicalIrDomainProjectionIsDeterministic() {
         assertEquals(positiveSignature(), positiveSignature())
     }
@@ -228,7 +246,7 @@ class CanonicalIrDomainDifferentialParityTest {
     }
 
     @Test
-    fun boundedSliceRejectsMalformedFields() {
+    fun boundedSliceRejectsMalformedFieldsAndDefaults() {
         reject("module p\nexport value V { name string }\n")
         reject("module p\nexport value V { name: required }\n")
         reject("module p\nexport value V { name: [string }\n")
@@ -236,7 +254,8 @@ class CanonicalIrDomainDifferentialParityTest {
         reject("module p\nexport value V { name: string required weird }\n")
         reject("module p\nexport value V { name: string onDelete }\n")
         reject("module p\nexport value V { name: string onDelete explode }\n")
-        reject("module p\nexport value V { name: string default \"x\" }\n")
+        val missingDefault = reject("module p\nexport value V { name: string default }\n")
+        assertTrue(missingDefault.message.orEmpty().contains("default value"))
     }
 
     @Test
