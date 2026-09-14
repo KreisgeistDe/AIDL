@@ -3,6 +3,7 @@ package de.kreisgeist.aidl.compiler.frontend
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class Gate03DiagnosticLocationParityTest {
     private val source =
@@ -112,6 +113,40 @@ class Gate03DiagnosticLocationParityTest {
         """.trimIndent()
         assertEquals(expected, signature())
         assertEquals(signature(), signature())
+    }
+
+    @Test
+    fun nonDiagnosticResultsRemainUnprojected() {
+        val resolver = resolver()
+        val stringOffset = offset("value: string", "string")
+        assertNull(
+            ProjectedGate03DiagnosticProjector.materialization(
+                "consumer.aidl",
+                source,
+                stringOffset,
+                "string",
+                resolver,
+            ),
+        )
+        assertNull(
+            ProjectedGate03DiagnosticProjector.resolution(
+                "consumer.aidl",
+                source,
+                offset("= myQuery", "myQuery"),
+                "myQuery",
+                resolver,
+            ),
+        )
+        assertNull(
+            ProjectedGate03DiagnosticProjector.defaultAssignment(
+                "consumer.aidl",
+                source,
+                stringOffset,
+                "string",
+                "\"ok\"",
+                resolver,
+            ),
+        )
     }
 
     @Test
