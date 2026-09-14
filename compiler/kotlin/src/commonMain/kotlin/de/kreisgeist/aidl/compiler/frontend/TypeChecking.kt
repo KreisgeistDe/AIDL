@@ -41,7 +41,7 @@ object ProjectedTypeChecker {
         val typeCheck = try {
             ProjectedTypeConstructor.check(sourceId, typeSource, resolver)
         } catch (error: ProjectedTypeException) {
-            if (error.message == historicalGenericBoundary && ('<' in typeSource || '>' in typeSource)) {
+            if (error.message == historicalGenericBoundary) {
                 // Direct Core admits recursive generic TypeRefs (for example Page<myQuery>).
                 // The consumed TypeConstruction slice predates that binding correction, so its
                 // generic rejection is a bounded-support marker here, not a semantic invalidity.
