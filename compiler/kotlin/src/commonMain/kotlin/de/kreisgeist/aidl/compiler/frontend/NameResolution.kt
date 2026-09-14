@@ -90,10 +90,15 @@ class ProjectNameResolver private constructor(
                 "sourceId values must be unique"
             }
             require(sources.all { it.first.isNotBlank() }) { "sourceId must not be blank" }
+            return fromProjectedDocuments(
+                sources.map { (sourceId, source) ->
+                    ProjectedDocument(sourceId, AidlSourceProjector.project(source))
+                },
+            )
+        }
 
-            val documents = sources.map { (sourceId, source) ->
-                ProjectedDocument(sourceId, AidlSourceProjector.project(source))
-            }
+        /** Internal composition hook for already-projected bounded source models. */
+        internal fun fromProjectedDocuments(documents: List<ProjectedDocument>): ProjectNameResolver {
             val symbols = buildList {
                 for (document in documents) {
                     val module = document.projection.module
