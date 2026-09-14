@@ -1,0 +1,5 @@
+query|REJECTED|AIDL-T005|consumer.aidl|4|1|81
+missing|UNRESOLVED|AIDL-T001||||
+ambiguous|AMBIGUOUS|CORE-S023||||
+binding-core-generic|OUTSIDE_SLICE|||||
+accepted|MATERIALIZABLE|||||

@@ -8,9 +8,17 @@ enum class ProjectedMaterializationStatus {
     OUTSIDE_SLICE,
 }
 
+data class ProjectedSourceLocation(
+    val line: Int,
+    val column: Int,
+    val offset: Int,
+)
+
 data class ProjectedMaterializationCheck(
     val status: ProjectedMaterializationStatus,
     val diagnosticCode: String? = null,
+    val sourcePath: String? = null,
+    val location: ProjectedSourceLocation? = null,
 )
 
 /**
@@ -73,6 +81,48 @@ object ProjectedMaterializationChecker {
                 ProjectedMaterializationCheck(ProjectedMaterializationStatus.MATERIALIZABLE)
             }
         }
+    }
+
+    /**
+     * Internal diagnostic projection for callers that already own an authoritative source anchor.
+     *
+     * The materialization layer owns source anchoring only for its AIDL-T005 rejection. Resolver
+     * classifications remain location-less here because their source-location contract belongs to
+     * the resolver slice. OUTSIDE_SLICE and accepted results likewise carry no invented location.
+     */
+    internal fun checkAt(
+        sourceId: String,
+        sourceText: String,
+        diagnosticOffset: Int,
+        typeSource: String,
+        resolver: ProjectNameResolver,
+    ): ProjectedMaterializationCheck {
+        require(diagnosticOffset in 0..sourceText.length) { "diagnostic offset is outside source text" }
+        val check = check(sourceId, typeSource, resolver)
+        if (
+            check.status != ProjectedMaterializationStatus.REJECTED ||
+            check.diagnosticCode != "AIDL-T005"
+        ) {
+            return check
+        }
+        return check.copy(
+            sourcePath = sourceId,
+            location = sourceLocation(sourceText, diagnosticOffset),
+        )
+    }
+
+    private fun sourceLocation(source: String, offset: Int): ProjectedSourceLocation {
+        var line = 1
+        var column = 1
+        for (index in 0 until offset) {
+            if (source[index] == '\n') {
+                line += 1
+                column = 1
+            } else {
+                column += 1
+            }
+        }
+        return ProjectedSourceLocation(line = line, column = column, offset = offset)
     }
 
     private fun materializationOnly(
