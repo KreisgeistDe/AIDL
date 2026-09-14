@@ -6,3 +6,4 @@ sourceMap|/declarations/0|parity.ir.domain.Status@1|compiler/kotlin/parity/canon
 sourceMap|/declarations/1|parity.ir.domain.PetInput@1|compiler/kotlin/parity/canonical-ir-domain.source:5:8-8:2
 sourceMap|/declarations/2|parity.ir.domain.Pet@1|compiler/kotlin/parity/canonical-ir-domain.source:10:8-15:2
 negative|missing-module|rejected=true
+negative|field-default|rejected=true
