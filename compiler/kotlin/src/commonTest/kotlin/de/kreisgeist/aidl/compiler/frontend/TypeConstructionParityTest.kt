@@ -2,16 +2,20 @@ package de.kreisgeist.aidl.compiler.frontend
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class TypeConstructionParityTest {
+    private val consumerSource = """
+        module demo.consumer
+        import demo.shared.Public
+        import demo.shared.*
+        entity Local {}
+    """.trimIndent()
+
     private fun resolver(): ProjectNameResolver = ProjectNameResolver.fromSources(
         listOf(
-            "resolution-consumer" to """
-                module demo.consumer
-                import demo.shared.Public
-                import demo.shared.*
-                entity Local {}
-            """.trimIndent(),
+            "resolution-consumer" to consumerSource,
             "resolution-provider-a" to """
                 module demo.shared
                 export value Public {}
@@ -55,6 +59,37 @@ class TypeConstructionParityTest {
         }
     }
 
+    private fun diagnosticSignature(): String {
+        val anchor = consumerSource.indexOf("entity Local")
+        val diagnostics = ProjectedTypeConstructor.diagnosticsAt(
+            sourcePath = "resolution-consumer.source",
+            sourceText = consumerSource,
+            requests = listOf(
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", ""),
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", "string??"),
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", "[string"),
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", "string]"),
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", "string"),
+            ),
+        )
+        return diagnostics.joinToString("\n") { diagnostic ->
+            listOf(
+                diagnostic.code,
+                diagnostic.phase,
+                diagnostic.severity.name.lowercase(),
+                diagnostic.message,
+                diagnostic.subject.kind,
+                diagnostic.subject.name,
+                diagnostic.sourcePath,
+                diagnostic.location.line.toString(),
+                diagnostic.location.column.toString(),
+                diagnostic.location.offset.toString(),
+                diagnostic.expected,
+                diagnostic.docs,
+            ).joinToString("|")
+        }
+    }
+
     @Test
     fun boundedTypeConstructionMatchesPinnedParitySignature() {
         val expected = """
@@ -72,5 +107,59 @@ class TypeConstructionParityTest {
         """.trimIndent()
         assertEquals(expected, signature())
         assertEquals(signature(), signature())
+    }
+
+    @Test
+    fun negativeTypeConstructionProjectsStablePythonOwnedDiagnostics() {
+        val expected = """
+            AIDL-T001|type|error|empty type expression|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+            AIDL-T001|type|error|invalid Core type expression 'string]'|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+            AIDL-T001|type|error|list requires one element type|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+            AIDL-T001|type|error|nullable requires one non-nullable operand|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+        """.trimIndent()
+        assertEquals(expected, diagnosticSignature())
+        assertEquals(diagnosticSignature(), diagnosticSignature())
+    }
+
+    @Test
+    fun typeDiagnosticOrderingUsesOwnedSourceOffsetsBeforeMessages() {
+        val anchor = consumerSource.indexOf("entity Local")
+        val diagnostics = ProjectedTypeConstructor.diagnosticsAt(
+            sourcePath = "resolution-consumer.source",
+            sourceText = consumerSource,
+            requests = listOf(
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", ""),
+                ProjectedTypeDiagnosticRequest(0, "module", "demo.consumer", "string??"),
+            ),
+        )
+        assertEquals(listOf(0, anchor), diagnostics.map { it.location.offset })
+        assertEquals(listOf(1, 4), diagnostics.map { it.location.line })
+    }
+
+    @Test
+    fun typeDiagnosticProjectionIsBoundedToRejectedConstructionAndOwnedAnchors() {
+        val anchor = consumerSource.indexOf("entity Local")
+        assertNull(
+            ProjectedTypeConstructor.diagnosticAt(
+                sourcePath = "resolution-consumer.source",
+                sourceText = consumerSource,
+                diagnosticOffset = anchor,
+                subjectKind = "entity",
+                subjectName = "Local",
+                typeSource = "string",
+            ),
+        )
+        for (invalidOffset in listOf(-1, consumerSource.length + 1)) {
+            assertFailsWith<IllegalArgumentException> {
+                ProjectedTypeConstructor.diagnosticAt(
+                    sourcePath = "resolution-consumer.source",
+                    sourceText = consumerSource,
+                    diagnosticOffset = invalidOffset,
+                    subjectKind = "entity",
+                    subjectName = "Local",
+                    typeSource = "string??",
+                )
+            }
+        }
     }
 }

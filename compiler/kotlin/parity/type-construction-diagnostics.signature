@@ -1,0 +1,4 @@
+AIDL-T001|type|error|empty type expression|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+AIDL-T001|type|error|invalid Core type expression 'string]'|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+AIDL-T001|type|error|list requires one element type|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
+AIDL-T001|type|error|nullable requires one non-nullable operand|entity|Local|resolution-consumer.source|4|1|68|well-formed Core type constructor|aidl://diagnostics/AIDL-T001
