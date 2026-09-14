@@ -44,7 +44,8 @@ object ProjectedTypeChecker {
         }
 
         val type = typeCheck.type
-        if (type.isList || type.range != null || type.name !in scalarNames) {
+        val typeName = type.name
+        if (type.isList || type.range != null || typeName == null || typeName !in scalarNames) {
             return ProjectedAssignmentCheck(ProjectedAssignmentStatus.OUTSIDE_SLICE)
         }
 
@@ -60,7 +61,7 @@ object ProjectedTypeChecker {
             return ProjectedAssignmentCheck(ProjectedAssignmentStatus.OUTSIDE_SLICE)
         }
 
-        val assignable = literalKind == type.name || type.name == "decimal" && literalKind == "int"
+        val assignable = literalKind == typeName || typeName == "decimal" && literalKind == "int"
         return if (assignable) {
             ProjectedAssignmentCheck(ProjectedAssignmentStatus.ASSIGNABLE)
         } else {
