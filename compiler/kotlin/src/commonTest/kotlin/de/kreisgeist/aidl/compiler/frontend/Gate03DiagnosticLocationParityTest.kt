@@ -42,18 +42,12 @@ class Gate03DiagnosticLocationParityTest {
         ),
     )
 
-    private fun offset(marker: String, token: String): Int =
-        source.indexOf(marker).also { require(it >= 0) } + marker.length - token.length
-
     private fun render(label: String, diagnostic: ProjectedGate03Diagnostic): String = buildString {
         append(label).append('|').append(diagnostic.code).append('|')
-        append(diagnostic.span.start.line).append(':')
-            .append(diagnostic.span.start.column).append(':')
-            .append(diagnostic.span.start.offset).append('|')
-        append(diagnostic.span.end.line).append(':')
-            .append(diagnostic.span.end.column).append(':')
-            .append(diagnostic.span.end.offset).append('|')
-        append(diagnostic.span.stdoutLocation)
+        append(diagnostic.sourcePath.orEmpty()).append('|')
+        diagnostic.location?.let {
+            append(it.line).append(':').append(it.column).append(':').append(it.offset)
+        }
     }
 
     private fun signature(): String {
@@ -62,7 +56,7 @@ class Gate03DiagnosticLocationParityTest {
             ProjectedGate03DiagnosticProjector.materialization(
                 "consumer.aidl",
                 source,
-                offset("= myQuery", "myQuery"),
+                source.indexOf("alias RejectedTarget"),
                 "myQuery",
                 resolver,
             ),
@@ -70,8 +64,6 @@ class Gate03DiagnosticLocationParityTest {
         val missing = requireNotNull(
             ProjectedGate03DiagnosticProjector.resolution(
                 "consumer.aidl",
-                source,
-                offset("= Missing", "Missing"),
                 "Missing",
                 resolver,
             ),
@@ -79,8 +71,6 @@ class Gate03DiagnosticLocationParityTest {
         val ambiguous = requireNotNull(
             ProjectedGate03DiagnosticProjector.resolution(
                 "consumer.aidl",
-                source,
-                offset("= Duplicate", "Duplicate"),
                 "Duplicate",
                 resolver,
             ),
@@ -89,7 +79,7 @@ class Gate03DiagnosticLocationParityTest {
             ProjectedGate03DiagnosticProjector.defaultAssignment(
                 "consumer.aidl",
                 source,
-                offset("value: string", "string"),
+                source.indexOf("query WrongDefault"),
                 "string",
                 "true",
                 resolver,
@@ -104,44 +94,78 @@ class Gate03DiagnosticLocationParityTest {
     }
 
     @Test
-    fun exactGate03DiagnosticLocationsMatchPinnedSignature() {
+    fun exactGate03DiagnosticLocationsMatchPinnedPythonOwnership() {
         val expected = """
-            materialization-rejected|AIDL-T005|3:24:65|3:31:72|consumer.aidl:3:24-3:31
-            resolution-missing|AIDL-T001|4:23:95|4:30:102|consumer.aidl:4:23-4:30
-            resolution-ambiguous|CORE-S023|5:25:127|5:34:136|consumer.aidl:5:25-5:34
-            type-mismatch|AIDL-T002|6:27:163|6:33:169|consumer.aidl:6:27-6:33
+            materialization-rejected|AIDL-T005|consumer.aidl|3:1:42
+            resolution-missing|AIDL-T001||
+            resolution-ambiguous|CORE-S023||
+            type-mismatch|AIDL-T002|consumer.aidl|6:1:137
         """.trimIndent()
         assertEquals(expected, signature())
         assertEquals(signature(), signature())
     }
 
     @Test
-    fun nonDiagnosticResultsRemainUnprojected() {
+    fun declarationAnchorsAreNotReplacedByTypeRefTokenArithmetic() {
         val resolver = resolver()
-        val stringOffset = offset("value: string", "string")
-        assertNull(
+        val rejected = requireNotNull(
             ProjectedGate03DiagnosticProjector.materialization(
                 "consumer.aidl",
                 source,
-                stringOffset,
-                "string",
-                resolver,
-            ),
-        )
-        assertNull(
-            ProjectedGate03DiagnosticProjector.resolution(
-                "consumer.aidl",
-                source,
-                offset("= myQuery", "myQuery"),
+                source.indexOf("alias RejectedTarget"),
                 "myQuery",
                 resolver,
             ),
         )
+        val mismatch = requireNotNull(
+            ProjectedGate03DiagnosticProjector.defaultAssignment(
+                "consumer.aidl",
+                source,
+                source.indexOf("query WrongDefault"),
+                "string",
+                "true",
+                resolver,
+            ),
+        )
+        assertEquals(42, rejected.location?.offset)
+        assertEquals(137, mismatch.location?.offset)
+        assertEquals(65, source.indexOf("myQuery", source.indexOf("alias RejectedTarget")))
+        assertEquals(163, source.indexOf("string", source.indexOf("query WrongDefault")))
+    }
+
+    @Test
+    fun resolverDiagnosticsDoNotFabricateLocations() {
+        val resolver = resolver()
+        val missing = requireNotNull(
+            ProjectedGate03DiagnosticProjector.resolution("consumer.aidl", "Missing", resolver),
+        )
+        val ambiguous = requireNotNull(
+            ProjectedGate03DiagnosticProjector.resolution("consumer.aidl", "Duplicate", resolver),
+        )
+        assertNull(missing.sourcePath)
+        assertNull(missing.location)
+        assertNull(ambiguous.sourcePath)
+        assertNull(ambiguous.location)
+    }
+
+    @Test
+    fun nonDiagnosticResultsRemainUnprojected() {
+        val resolver = resolver()
+        assertNull(
+            ProjectedGate03DiagnosticProjector.materialization(
+                "consumer.aidl",
+                source,
+                source.indexOf("query WrongDefault"),
+                "string",
+                resolver,
+            ),
+        )
+        assertNull(ProjectedGate03DiagnosticProjector.resolution("consumer.aidl", "myQuery", resolver))
         assertNull(
             ProjectedGate03DiagnosticProjector.defaultAssignment(
                 "consumer.aidl",
                 source,
-                stringOffset,
+                source.indexOf("query WrongDefault"),
                 "string",
                 "\"ok\"",
                 resolver,
@@ -150,13 +174,13 @@ class Gate03DiagnosticLocationParityTest {
     }
 
     @Test
-    fun tokenAnchorsFailClosedInsteadOfFallingBackToDeclarationSpans() {
+    fun ownedDiagnosticAnchorsFailClosedOutsideSourceText() {
         val resolver = resolver()
         assertFailsWith<IllegalArgumentException> {
             ProjectedGate03DiagnosticProjector.materialization(
                 "consumer.aidl",
                 source,
-                0,
+                -1,
                 "myQuery",
                 resolver,
             )
@@ -165,7 +189,7 @@ class Gate03DiagnosticLocationParityTest {
             ProjectedGate03DiagnosticProjector.defaultAssignment(
                 "consumer.aidl",
                 source,
-                source.length,
+                source.length + 1,
                 "string",
                 "true",
                 resolver,
