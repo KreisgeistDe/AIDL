@@ -18,9 +18,9 @@ data class ProjectedMaterializationCheck(
  *
  * Direct Core remains semantic authority and Python remains compatibility/conformance evidence.
  * This slice mirrors the current Python Core-materialization observable that rejects resolved
- * project generic nominal targets with AIDL-T005 while preserving known Core standard generics.
- * Generic forms that are valid in direct Core but cannot be resolved by the historical bounded
- * Kotlin projector remain OUTSIDE_SLICE rather than becoming language errors.
+ * project generic nominal targets with AIDL-T005 while preserving known one-argument Core
+ * standard generics. Direct-Core-valid generic forms that the historical projector cannot resolve
+ * remain OUTSIDE_SLICE rather than becoming language errors.
  */
 object ProjectedMaterializationChecker {
     private val standardTypes = setOf(
@@ -37,7 +37,28 @@ object ProjectedMaterializationChecker {
     ): ProjectedMaterializationCheck {
         val text = typeSource.trim()
         if ('<' in text || '>' in text) {
-            return checkGeneric(sourceId, text, resolver, composeResolution = true)
+            val shape = genericShape(text)
+                ?: return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+            if (shape.first in standardTypes) {
+                val nested = materializationOnly(sourceId, shape.second, resolver)
+                return when (nested.status) {
+                    ProjectedMaterializationStatus.MATERIALIZABLE -> nested
+                    ProjectedMaterializationStatus.REJECTED -> nested
+                    else -> ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+                }
+            }
+            val resolution = resolver.resolve(sourceId, shape.first)
+            return when (resolution.status) {
+                ProjectedResolutionStatus.AMBIGUOUS ->
+                    ProjectedMaterializationCheck(ProjectedMaterializationStatus.AMBIGUOUS, "CORE-S023")
+                ProjectedResolutionStatus.UNRESOLVED ->
+                    ProjectedMaterializationCheck(ProjectedMaterializationStatus.UNRESOLVED, "AIDL-T001")
+                ProjectedResolutionStatus.RESOLVED -> if (resolution.symbols.single().kind in materializedKinds) {
+                    ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005")
+                } else {
+                    ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+                }
+            }
         }
 
         val typeCheck = ProjectedTypeConstructor.check(sourceId, typeSource, resolver)
@@ -51,54 +72,27 @@ object ProjectedMaterializationChecker {
         }
     }
 
-    private fun checkGeneric(
-        sourceId: String,
-        text: String,
-        resolver: ProjectNameResolver,
-        composeResolution: Boolean,
-    ): ProjectedMaterializationCheck {
-        val shape = parseGeneric(text)
-            ?: return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-
-        if (shape.name in standardTypes) {
-            val nested = shape.arguments.map { argument ->
-                checkMaterializationOnly(sourceId, argument, resolver)
-            }
-            nested.firstOrNull { it.status == ProjectedMaterializationStatus.REJECTED }?.let { return it }
-            if (nested.any { it.status != ProjectedMaterializationStatus.MATERIALIZABLE }) {
-                return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-            }
-            return ProjectedMaterializationCheck(ProjectedMaterializationStatus.MATERIALIZABLE)
-        }
-
-        val resolution = resolver.resolve(sourceId, shape.name)
-        return when (resolution.status) {
-            ProjectedResolutionStatus.AMBIGUOUS -> if (composeResolution) {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.AMBIGUOUS, "CORE-S023")
-            } else {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-            }
-            ProjectedResolutionStatus.UNRESOLVED -> if (composeResolution) {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.UNRESOLVED, "AIDL-T001")
-            } else {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-            }
-            ProjectedResolutionStatus.RESOLVED -> if (resolution.symbols.single().kind in materializedKinds) {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005")
-            } else {
-                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
-            }
-        }
-    }
-
-    private fun checkMaterializationOnly(
+    private fun materializationOnly(
         sourceId: String,
         source: String,
         resolver: ProjectNameResolver,
     ): ProjectedMaterializationCheck {
         val text = source.trim()
         if ('<' in text || '>' in text) {
-            return checkGeneric(sourceId, text, resolver, composeResolution = false)
+            val shape = genericShape(text)
+                ?: return ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+            if (shape.first in standardTypes) {
+                return materializationOnly(sourceId, shape.second, resolver)
+            }
+            val resolution = resolver.resolve(sourceId, shape.first)
+            return if (
+                resolution.status == ProjectedResolutionStatus.RESOLVED &&
+                resolution.symbols.single().kind in materializedKinds
+            ) {
+                ProjectedMaterializationCheck(ProjectedMaterializationStatus.REJECTED, "AIDL-T005")
+            } else {
+                ProjectedMaterializationCheck(ProjectedMaterializationStatus.OUTSIDE_SLICE)
+            }
         }
         return try {
             val check = ProjectedTypeConstructor.check(sourceId, text, resolver)
@@ -112,37 +106,10 @@ object ProjectedMaterializationChecker {
         }
     }
 
-    private data class GenericShape(val name: String, val arguments: List<String>)
-
-    private fun parseGeneric(text: String): GenericShape? {
+    private fun genericShape(text: String): Pair<String, String>? {
         val match = genericHead.matchEntire(text) ?: return null
-        val body = match.groupValues[2]
-        val arguments = mutableListOf<String>()
-        val buffer = StringBuilder()
-        var depth = 0
-        for (char in body) {
-            when (char) {
-                '<' -> { depth += 1; buffer.append(char) }
-                '>' -> {
-                    if (depth == 0) return null
-                    depth -= 1
-                    buffer.append(char)
-                }
-                ',' -> if (depth == 0) {
-                    val argument = buffer.toString().trim()
-                    if (argument.isEmpty()) return null
-                    arguments += argument
-                    buffer.clear()
-                } else {
-                    buffer.append(char)
-                }
-                else -> buffer.append(char)
-            }
-        }
-        if (depth != 0) return null
-        val last = buffer.toString().trim()
-        if (last.isEmpty()) return null
-        arguments += last
-        return GenericShape(match.groupValues[1], arguments)
+        val argument = match.groupValues[2].trim()
+        if (argument.isEmpty() || ',' in argument) return null
+        return match.groupValues[1] to argument
     }
 }
