@@ -1,6 +1,6 @@
 package de.kreisgeist.aidl.compiler.frontend
 
-class ProjectedTypeException(message: String) : IllegalArgumentException(message)
+class ProjectedTypeException(val diagnosticMessage: String) : IllegalArgumentException(diagnosticMessage)
 
 internal enum class ProjectedTypeDiagnosticSeverity {
     ERROR,
@@ -167,7 +167,7 @@ object ProjectedTypeConstructor {
                 code = typeDiagnosticCode,
                 phase = typeDiagnosticPhase,
                 severity = ProjectedTypeDiagnosticSeverity.ERROR,
-                message = error.message!!,
+                message = error.diagnosticMessage,
                 sourcePath = sourcePath,
                 location = sourceLocation(sourceText, diagnosticOffset),
                 subject = ProjectedTypeDiagnosticSubject(subjectKind, subjectName),
