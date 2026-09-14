@@ -1,0 +1,5 @@
+module parity.source
+import parity.shared.Types
+export enum Status { active, archived }
+export value PetInput { name: string required }
+export entity Pet { field id: uuid primary }
