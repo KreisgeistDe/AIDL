@@ -122,6 +122,21 @@ class TypeConstructionParityTest {
     }
 
     @Test
+    fun typeDiagnosticOrderingUsesOwnedSourceOffsetsBeforeMessages() {
+        val anchor = consumerSource.indexOf("entity Local")
+        val diagnostics = ProjectedTypeConstructor.diagnosticsAt(
+            sourcePath = "resolution-consumer.source",
+            sourceText = consumerSource,
+            requests = listOf(
+                ProjectedTypeDiagnosticRequest(anchor, "entity", "Local", ""),
+                ProjectedTypeDiagnosticRequest(0, "module", "demo.consumer", "string??"),
+            ),
+        )
+        assertEquals(listOf(0, anchor), diagnostics.map { it.location.offset })
+        assertEquals(listOf(1, 4), diagnostics.map { it.location.line })
+    }
+
+    @Test
     fun typeDiagnosticProjectionIsBoundedToRejectedConstructionAndOwnedAnchors() {
         val anchor = consumerSource.indexOf("entity Local")
         assertNull(
