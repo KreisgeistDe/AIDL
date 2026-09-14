@@ -69,16 +69,20 @@ The common-core boundary is demonstrably platform-neutral, both Native and JVM t
 
 ### M10.5-03 — Front-end parity slices
 
-- [ ] Migrate parsing/source projection in bounded slices while Python remains the reference.
-- [ ] Migrate module/import/name resolution and stable symbol/FQN identity in bounded slices.
-- [ ] Migrate type construction, type checking, serialization checks, and materialization boundaries in bounded slices.
-- [ ] For every slice, require Python-versus-Kotlin differential parity across positive fixtures, negative diagnostics, ordering, locations, and deterministic repeated runs before expanding scope.
+Gate 03 is independently certified complete on exact main `7bd092ed81906dd471c198792eadd96bcd1853d7` after integration of PR #113. The closure audit accepted the complete integrated front-end parity matrix and authorized only bounded M10.5-04 work; it did not authorize a default-compiler cutover or any M10.5-05+ work.
+
+- [x] Migrate parsing/source projection in bounded slices while Python remains the reference.
+- [x] Migrate module/import/name resolution and stable symbol/FQN identity in bounded slices.
+- [x] Migrate type construction, type checking, serialization checks, and materialization boundaries in bounded slices.
+- [x] For every slice, require Python-versus-Kotlin differential parity across positive fixtures, negative diagnostics, ordering, locations, and deterministic repeated runs before expanding scope.
 
 #### Gate 03
 
-The Kotlin front end must produce equivalent accepted/rejected source classification and equivalent stable diagnostics for the covered surface before Canonical-IR construction can become Kotlin-owned for that same surface.
+Complete. The independent closure audit on exact main `7bd092ed81906dd471c198792eadd96bcd1853d7` verified equivalent accepted/rejected classification and stable diagnostics across the integrated parsing/source-projection, resolution, TypeConstruction/type-checking, serialization, materialization, location, recursion and diagnostic-parity evidence. Python remains the migration reference/conformance implementation and direct Core remains permanent semantic authority.
 
 ### M10.5-04 — Canonical IR and semantic query parity
+
+M10.5-04 is now eligible only through bounded independently reviewable packages. The first package is limited to Canonical-IR construction parity for the already Gate-03-covered enum/value/entity domain-declaration slice; root envelope construction, semantic hashes and semantic queries remain Python-owned until separately migrated. This does not close Gate 04.
 
 - [ ] Migrate Canonical-IR construction without changing the existing versioned schema or silently defaulting/dropping source facts.
 - [ ] Prove full-document schema validity and deterministic structural equality against Python for the supported parity corpus.
