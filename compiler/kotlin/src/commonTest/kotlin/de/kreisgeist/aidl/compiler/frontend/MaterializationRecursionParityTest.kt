@@ -11,7 +11,7 @@ class MaterializationRecursionParityTest {
         value RecursiveValue {
           field accepted: [[PublicEntity?]?]?
           field recursive: [RecursiveValue?]?
-          field rejected: [[myQuery?]?]?
+          field unsupported: [[myQuery?]?]?
           field missing: [Missing?]?
           field ambiguous: [Duplicate?]?
         }
@@ -52,7 +52,6 @@ class MaterializationRecursionParityTest {
         val projection = AidlSourceProjector.project(consumerSource)
         return ProjectedMaterializationChecker.checkProjectedFields(
             sourceId = "consumer.aidl",
-            sourceText = consumerSource,
             declaration = projection.declarations.single(),
             resolver = resolver(),
         )
@@ -75,11 +74,11 @@ class MaterializationRecursionParityTest {
     private fun signature(): String = checks().joinToString("\n", transform = ::render)
 
     @Test
-    fun nestedValueFieldMaterializationMatchesPinnedOrderingAndLocations() {
+    fun nestedValueFieldMaterializationMatchesPinnedOrderingAndOwnership() {
         val expected = """
             accepted|[[PublicEntity?]?]?|MATERIALIZABLE|||||
             recursive|[RecursiveValue?]?|MATERIALIZABLE|||||
-            rejected|[[myQuery?]?]?|REJECTED|AIDL-T005|consumer.aidl|6|3|143
+            unsupported|[[myQuery?]?]?|OUTSIDE_SLICE|||||
             missing|[Missing?]?|UNRESOLVED|AIDL-T001||||
             ambiguous|[Duplicate?]?|AMBIGUOUS|CORE-S023||||
         """.trimIndent()
@@ -88,15 +87,12 @@ class MaterializationRecursionParityTest {
     }
 
     @Test
-    fun recursiveTraversalPreservesDiagnosticOwnership() {
+    fun recursiveTraversalPreservesResolverOwnershipAndLocationAbsence() {
         val byName = checks().associateBy { it.fieldName }
         assertEquals(ProjectedMaterializationStatus.MATERIALIZABLE, byName.getValue("accepted").check.status)
         assertEquals(ProjectedMaterializationStatus.MATERIALIZABLE, byName.getValue("recursive").check.status)
-        assertEquals(
-            ProjectedSourceLocation(line = 6, column = 3, offset = 143),
-            byName.getValue("rejected").check.location,
-        )
-        for (name in listOf("missing", "ambiguous")) {
+        assertEquals(ProjectedMaterializationStatus.OUTSIDE_SLICE, byName.getValue("unsupported").check.status)
+        for (name in listOf("unsupported", "missing", "ambiguous")) {
             assertEquals(null, byName.getValue(name).check.sourcePath)
             assertEquals(null, byName.getValue(name).check.location)
         }
@@ -104,7 +100,6 @@ class MaterializationRecursionParityTest {
 
     @Test
     fun entityTraversalAndMalformedProjectedFieldsFailClosed() {
-        val entitySource = "entity Holder { field accepted: PublicEntity }"
         val entity = ProjectedDeclaration(
             "entity",
             "Holder",
@@ -113,7 +108,6 @@ class MaterializationRecursionParityTest {
         )
         val result = ProjectedMaterializationChecker.checkProjectedFields(
             sourceId = "consumer.aidl",
-            sourceText = entitySource,
             declaration = entity,
             resolver = resolver(),
         )
@@ -122,16 +116,7 @@ class MaterializationRecursionParityTest {
         assertFailsWith<IllegalArgumentException> {
             ProjectedMaterializationChecker.checkProjectedFields(
                 sourceId = "consumer.aidl",
-                sourceText = entitySource,
                 declaration = ProjectedDeclaration("value", "Broken", false, listOf("field", "broken", ":")),
-                resolver = resolver(),
-            )
-        }
-        assertFailsWith<IllegalArgumentException> {
-            ProjectedMaterializationChecker.checkProjectedFields(
-                sourceId = "consumer.aidl",
-                sourceText = entitySource,
-                declaration = ProjectedDeclaration("value", "Broken", false, listOf("field", "missing", ":", "string")),
                 resolver = resolver(),
             )
         }
@@ -142,7 +127,6 @@ class MaterializationRecursionParityTest {
         assertFailsWith<IllegalArgumentException> {
             ProjectedMaterializationChecker.checkProjectedFields(
                 sourceId = "consumer.aidl",
-                sourceText = consumerSource,
                 declaration = ProjectedDeclaration("enum", "NoFields", false, emptyList()),
                 resolver = resolver(),
             )
