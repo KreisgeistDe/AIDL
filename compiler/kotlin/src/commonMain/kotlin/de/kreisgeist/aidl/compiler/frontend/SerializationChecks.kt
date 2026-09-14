@@ -18,15 +18,16 @@ data class ProjectedSerializationCheck(
  *
  * This does not define wire semantics. Direct Core remains semantic authority and Python remains
  * compatibility/conformance evidence. The slice mirrors the current Python public-wire observable
- * only for scalar/list/nullable shapes, empty nominal enum/entity/value declarations, and the
- * existing sensitive-value rejection. More complex value-field recursion and materialization stay
- * outside this package.
+ * only for scalar/list/nullable shapes, empty nominal enum/entity/value declarations, and resolved
+ * entity refs, which the current Python serializer rejects for public wire use. More complex value
+ * recursion and materialization stay outside this package.
  */
 object ProjectedSerializationChecker {
     private val serialScalars = setOf(
         "bool", "bytes", "date", "datetime", "decimal", "duration", "email", "int",
         "revision", "string", "url", "uuid",
     )
+    private val boundedRef = Regex("ref\\s+([A-Za-z_][A-Za-z0-9_.]*)")
     private const val historicalGenericBoundary =
         "generic type arguments are outside the bounded revision-4 slice"
 
@@ -35,6 +36,25 @@ object ProjectedSerializationChecker {
         typeSource: String,
         resolver: ProjectNameResolver,
     ): ProjectedSerializationCheck {
+        val text = typeSource.trim()
+        boundedRef.matchEntire(text)?.let { match ->
+            val resolution = resolver.resolve(sourceId, match.groupValues[1])
+            return when (resolution.status) {
+                ProjectedResolutionStatus.AMBIGUOUS ->
+                    ProjectedSerializationCheck(ProjectedSerializationStatus.AMBIGUOUS, "CORE-S023")
+                ProjectedResolutionStatus.UNRESOLVED ->
+                    ProjectedSerializationCheck(ProjectedSerializationStatus.UNRESOLVED, "AIDL-T001")
+                ProjectedResolutionStatus.RESOLVED -> if (resolution.symbols.single().kind == "entity") {
+                    ProjectedSerializationCheck(ProjectedSerializationStatus.NOT_SERIALIZABLE, "AIDL-T004")
+                } else {
+                    ProjectedSerializationCheck(ProjectedSerializationStatus.OUTSIDE_SLICE)
+                }
+            }
+        }
+        if (text.startsWith("ref ")) {
+            return ProjectedSerializationCheck(ProjectedSerializationStatus.OUTSIDE_SLICE)
+        }
+
         val typeCheck = try {
             ProjectedTypeConstructor.check(sourceId, typeSource, resolver)
         } catch (error: ProjectedTypeException) {
@@ -76,12 +96,10 @@ object ProjectedSerializationChecker {
             .projection.declarations[symbol.declarationIndex]
         return when (symbol.kind) {
             "enum", "entity" -> ProjectedSerializationCheck(ProjectedSerializationStatus.SERIALIZABLE)
-            "value" -> when {
-                declaration.bodyTokens.isEmpty() ->
-                    ProjectedSerializationCheck(ProjectedSerializationStatus.SERIALIZABLE)
-                "sensitive" in declaration.bodyTokens ->
-                    ProjectedSerializationCheck(ProjectedSerializationStatus.NOT_SERIALIZABLE, "AIDL-T004")
-                else -> ProjectedSerializationCheck(ProjectedSerializationStatus.OUTSIDE_SLICE)
+            "value" -> if (declaration.bodyTokens.isEmpty()) {
+                ProjectedSerializationCheck(ProjectedSerializationStatus.SERIALIZABLE)
+            } else {
+                ProjectedSerializationCheck(ProjectedSerializationStatus.OUTSIDE_SLICE)
             }
             else -> ProjectedSerializationCheck(ProjectedSerializationStatus.OUTSIDE_SLICE)
         }
