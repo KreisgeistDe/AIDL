@@ -90,10 +90,20 @@ class ProjectNameResolver private constructor(
                 "sourceId values must be unique"
             }
             require(sources.all { it.first.isNotBlank() }) { "sourceId must not be blank" }
+            return fromProjectedDocuments(
+                sources.map { (sourceId, source) ->
+                    ProjectedDocument(sourceId, AidlSourceProjector.project(source))
+                },
+            )
+        }
 
-            val documents = sources.map { (sourceId, source) ->
-                ProjectedDocument(sourceId, AidlSourceProjector.project(source))
+        /** Compose resolution from an already-projected bounded source model without reparsing it. */
+        fun fromProjectedDocuments(documents: List<ProjectedDocument>): ProjectNameResolver {
+            require(documents.map { it.sourceId }.distinct().size == documents.size) {
+                "sourceId values must be unique"
             }
+            require(documents.all { it.sourceId.isNotBlank() }) { "sourceId must not be blank" }
+
             val symbols = buildList {
                 for (document in documents) {
                     val module = document.projection.module
