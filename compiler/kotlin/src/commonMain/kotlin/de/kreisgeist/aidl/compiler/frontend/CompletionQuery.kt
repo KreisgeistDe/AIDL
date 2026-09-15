@@ -91,7 +91,7 @@ class ProjectCompletionQuery private constructor(
         val module = document.projection.module
         if (module != null) {
             for (symbol in resolver.symbols) {
-                if (symbol.module != module || symbol.fullyQualifiedName == null) continue
+                if (symbol.module != module) continue
                 if (!symbol.name.startsWith(prefix)) continue
                 visible.getOrPut(symbol.name) { mutableListOf() }
                     .add(symbol to "local:$module")
@@ -200,7 +200,7 @@ class ProjectCompletionQuery private constructor(
         anchor: Int,
     ): Boolean {
         val declaration = projection.declarations.firstOrNull {
-            it.offset >= 0 && it.endOffset >= 0 && anchor in it.offset..it.endOffset
+            anchor in it.offset..it.endOffset
         } ?: return false
         val before = anchor - 1
         if (before < declaration.offset) return false
