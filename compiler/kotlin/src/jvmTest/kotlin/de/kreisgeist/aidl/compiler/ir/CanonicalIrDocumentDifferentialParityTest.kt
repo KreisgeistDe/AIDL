@@ -58,6 +58,34 @@ class CanonicalIrDocumentDifferentialParityTest {
     }
 
     @Test
+    fun boundedEnvelopeSupportsEmptyAuthListsDeterministically() {
+        val root = parityRoot()
+        val domain = Files.readString(root.resolve("canonical-ir-domain.source"))
+        val envelope = Files.readString(root.resolve("canonical-ir-envelope.source"))
+            .replace("roles [user]", "roles []")
+            .replace("scopes [parity.read]", "scopes []")
+        val first = CanonicalIrDocumentSliceProjector.project(
+            "domain",
+            "compiler/kotlin/parity/canonical-ir-domain.source",
+            domain,
+            "envelope",
+            "compiler/kotlin/parity/canonical-ir-envelope.source",
+            envelope,
+        ).canonicalJson()
+        val second = CanonicalIrDocumentSliceProjector.project(
+            "domain",
+            "compiler/kotlin/parity/canonical-ir-domain.source",
+            domain,
+            "envelope",
+            "compiler/kotlin/parity/canonical-ir-envelope.source",
+            envelope,
+        ).canonicalJson()
+        assertEquals(first, second)
+        assertTrue(first.contains("\"roles\":[]"))
+        assertTrue(first.contains("\"scopes\":[]"))
+    }
+
+    @Test
     fun boundedEnvelopeRejectsEveryUnsupportedShapeOrReference() {
         val root = parityRoot()
         val domain = Files.readString(root.resolve("canonical-ir-domain.source"))
