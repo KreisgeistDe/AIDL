@@ -30,26 +30,14 @@ data class ProjectedDefinitionResult(
  */
 class ProjectDefinitionQuery private constructor(
     private val resolver: ProjectNameResolver,
+    private val sources: List<Pair<String, String>>,
     private val sourceById: Map<String, String>,
 ) {
     fun definition(sourceId: String, offset: Int): ProjectedDefinitionResult {
         val source = sourceById[sourceId]
             ?: return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID)
-        return definition(sourceId, source, offset)
-    }
-
-    /**
-     * Query an explicit in-memory text for an existing projected source identity.
-     *
-     * This bounded override is intended for offset/reference changes that leave the already
-     * projected module/import/declaration graph unchanged. It does not create workspace state.
-     */
-    fun definition(sourceId: String, sourceText: String, offset: Int): ProjectedDefinitionResult {
-        if (sourceId !in sourceById) {
-            return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID)
-        }
         val reference = try {
-            AidlSourceProjector.referenceAt(sourceText, offset)
+            AidlSourceProjector.referenceAt(source, offset)
         } catch (_: SourceProjectionException) {
             null
         } ?: return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID)
@@ -67,6 +55,31 @@ class ProjectDefinitionQuery private constructor(
                     targetFor(resolution.symbols.single()),
                 )
         }
+    }
+
+    /**
+     * Query an explicit in-memory text for an existing projected source identity.
+     *
+     * The override is projected for this call so reference extraction, resolution facts and
+     * target locations all come from the same snapshot text. No workspace or cached state is
+     * retained between calls.
+     */
+    fun definition(sourceId: String, sourceText: String, offset: Int): ProjectedDefinitionResult {
+        if (sourceId !in sourceById) {
+            return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID)
+        }
+        if (sourceById.getValue(sourceId) == sourceText) {
+            return definition(sourceId, offset)
+        }
+        val overriddenSources = sources.map { (candidateId, source) ->
+            candidateId to if (candidateId == sourceId) sourceText else source
+        }
+        val overridden = try {
+            fromSources(overriddenSources)
+        } catch (_: SourceProjectionException) {
+            return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID)
+        }
+        return overridden.definition(sourceId, offset)
     }
 
     private fun targetFor(symbol: ProjectedSymbol): ProjectedDefinitionTarget {
@@ -89,10 +102,13 @@ class ProjectDefinitionQuery private constructor(
     }
 
     companion object {
-        fun fromSources(sources: List<Pair<String, String>>): ProjectDefinitionQuery =
-            ProjectDefinitionQuery(
-                resolver = ProjectNameResolver.fromSources(sources),
-                sourceById = sources.toMap(),
+        fun fromSources(sources: List<Pair<String, String>>): ProjectDefinitionQuery {
+            val stableSources = sources.toList()
+            return ProjectDefinitionQuery(
+                resolver = ProjectNameResolver.fromSources(stableSources),
+                sources = stableSources,
+                sourceById = stableSources.toMap(),
             )
+        }
     }
 }
