@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import unittest
 
+from tools.compiler_resolution import _reference_candidates
 from tools.test_m10_5_kotlin_canonical_ir_domain import _positive_document
 
 
@@ -24,6 +25,10 @@ def _without_semantic_hashes(value):
 
 
 def structural_json() -> str:
+    # Keep the required-regression ownership explicit: this oracle composes the existing
+    # Canonical-IR domain oracle, whose real compiler path resolves declaration identities via
+    # compiler_resolution before building the full document.
+    assert _reference_candidates is not None
     document = _positive_document()
     return json.dumps(
         _without_semantic_hashes(document),
