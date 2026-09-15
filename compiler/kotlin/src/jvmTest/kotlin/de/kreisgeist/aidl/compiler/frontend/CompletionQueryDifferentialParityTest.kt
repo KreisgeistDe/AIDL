@@ -100,6 +100,7 @@ class CompletionQueryDifferentialParityTest {
             query.complete("missing-source", consumer, 0).status,
         )
         assertEquals(ProjectedCompletionStatus.INVALID, query.complete("completion-consumer", -1).status)
+        assertEquals(ProjectedCompletionStatus.INVALID, query.complete("completion-consumer", consumer.length).status)
         assertEquals(
             ProjectedCompletionStatus.INVALID,
             query.complete("completion-consumer", consumer.indexOf("entity Uses")).status,
@@ -119,11 +120,14 @@ class CompletionQueryDifferentialParityTest {
     fun prefixWildcardModulelessAndOverrideBranchesStayBounded() {
         val providerA = File("parity/resolution-provider-a.source").readText()
         val providerB = File("parity/resolution-provider-b.source").readText()
+        val moduleless = "entity Local {}\nentity Uses { target: Local }\n"
         val consumer = """module demo.consumer
 import demo.shared.*
 entity Local {}
+entity _Local {}
 entity Uses {
   partial: Local
+  underscore: _Lo
   wildcard: Other
   none: Zzz
   nested: demo.
@@ -133,10 +137,11 @@ entity Uses {
             "inline-consumer" to consumer,
             "resolution-provider-a" to providerA,
             "resolution-provider-b" to providerB,
+            "moduleless" to moduleless,
         )
         val query = ProjectCompletionQuery.fromSources(sourceEntries)
 
-        val partialStart = consumer.indexOf("Local\n", startIndex = 60)
+        val partialStart = consumer.indexOf("Local\n", startIndex = 80)
         val partial = query.complete("inline-consumer", partialStart + 3)
         assertEquals(ProjectedCompletionStatus.RESOLVED, partial.status)
         assertEquals("Loc", partial.prefix)
@@ -145,6 +150,11 @@ entity Uses {
             partial,
             query.complete("inline-consumer", consumer, partialStart + 3),
         )
+
+        val underscoreStart = consumer.indexOf("_Lo\n")
+        val underscore = query.complete("inline-consumer", underscoreStart + 3)
+        assertEquals("_Lo", underscore.prefix)
+        assertEquals(listOf("_Local"), underscore.candidates.map { it.insertText })
 
         val wildcardStart = consumer.indexOf("Other\n")
         val wildcard = query.complete("inline-consumer", wildcardStart + 3)
@@ -160,9 +170,7 @@ entity Uses {
         assertEquals("demo", nestedDot.qualifier)
         assertEquals(emptyList(), nestedDot.candidates)
 
-        val moduleless = "entity Local {}\nentity Uses { target: Local }\n"
-        val modulelessQuery = ProjectCompletionQuery.fromSources(listOf("moduleless" to moduleless))
-        val modulelessResult = modulelessQuery.complete(
+        val modulelessResult = query.complete(
             "moduleless",
             moduleless.lastIndexOf("Local") + 3,
         )
@@ -183,6 +191,16 @@ entity Uses {
         assertEquals(
             ProjectedCompletionStatus.INVALID,
             malformedQuery.complete("malformed", malformedQualifier.indexOf(". }") + 1).status,
+        )
+
+        val leadingDotQualifier = "module demo\nentity Local {}\nentity Uses { target: .demo. }\n"
+        val leadingDotQuery = ProjectCompletionQuery.fromSources(listOf("leading-dot" to leadingDotQualifier))
+        assertEquals(
+            ProjectedCompletionStatus.INVALID,
+            leadingDotQuery.complete(
+                "leading-dot",
+                leadingDotQualifier.indexOf(".demo.") + ".demo.".length,
+            ).status,
         )
     }
 }
