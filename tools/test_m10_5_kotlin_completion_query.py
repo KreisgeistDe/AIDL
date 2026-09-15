@@ -158,6 +158,39 @@ class KotlinCompletionQueryParityTest(unittest.TestCase):
             ).rstrip()
             self.assertEqual(expected, actual)
 
+    def test_python_authority_rejects_non_reference_clause_value_tokens(self) -> None:
+        source = (
+            "module demo\n"
+            "entity Local {}\n"
+            "entity Uses {\n"
+            '  stringValue: "Local"\n'
+            "  numberValue: 123\n"
+            "  annotationValue: @Local\n"
+            "}\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source_path = root / "non-reference.aidl"
+            source_path.write_text(source, encoding="utf-8")
+            analysis = load_compiler_analysis([root])
+            offsets = (
+                source.index('"Local"') + 3,
+                source.index("123") + 2,
+                source.index("@Local") + 3,
+            )
+
+            for offset in offsets:
+                with self.subTest(offset=offset):
+                    result = complete_project_reference(
+                        analysis.project,
+                        source_path,
+                        offset,
+                    )
+                    self.assertEqual("invalid", result.status)
+                    self.assertIsNone(result.prefix)
+                    self.assertIsNone(result.qualifier)
+                    self.assertEqual((), result.candidates)
+
 
 if __name__ == "__main__":
     unittest.main()
