@@ -75,8 +75,19 @@ class CanonicalIrDocumentDifferentialParityTest {
         }
 
         assertTrue(reject(envelope.replace("import parity.ir.domain.*", "import other.domain.*")).message.orEmpty().contains("import"))
+        assertTrue(reject(envelope + "\nimport parity.ir.domain.*\n").message.orEmpty().contains("import"))
         assertTrue(reject(envelope.replace("uses []", "uses [SomeResource]")).message.orEmpty().contains("outside bounded"))
+        assertTrue(reject(envelope.replace("exposes []", "exposes [SomeQuery]")).message.orEmpty().contains("outside bounded"))
+        assertTrue(reject(envelope.replace("runs []", "runs [SomeTask]")).message.orEmpty().contains("outside bounded"))
         assertTrue(reject(envelope.replace("resources []", "resources [SomeResource]")).message.orEmpty().contains("outside bounded"))
+        assertTrue(reject(envelope.replace("apis []", "apis [SomeApi]")).message.orEmpty().contains("outside bounded"))
+        assertTrue(reject(envelope.replace("owns [parity.ir.domain.Pet]", "owns [parity.ir.domain.Missing]")).message.orEmpty().contains("unresolved"))
+        assertTrue(reject(envelope.replace("services [ParityService]", "services [MissingService]")).message.orEmpty().contains("unresolved"))
+        assertTrue(reject(envelope.replace("roles [user]", "roles user")).message.orEmpty().contains("bracketed"))
+        assertTrue(reject(envelope.replace("roles [user]", "roles [user, ]")).message.orEmpty().contains("empty item"))
+        assertTrue(reject(envelope.replace("subject claim \"sub\"", "subject principal")).message.orEmpty().contains("subject claim"))
+        assertTrue(reject(envelope.replace("serviceIdentities required", "serviceIdentities maybe")).message.orEmpty().contains("serviceIdentities"))
+        assertTrue(reject(envelope.replace("  profile core version 1\n", "")).message.orEmpty().contains("profile"))
         assertTrue(reject(envelope + "\nexport query NotOwned {}\n").message.orEmpty().contains("unsupported"))
         assertTrue(
             reject(
@@ -86,6 +97,62 @@ class CanonicalIrDocumentDifferentialParityTest {
                 ),
             ).message.orEmpty().contains("does not match"),
         )
+        assertTrue(reject(envelope.replace("defaultDeployment local", "defaultDeployment other")).message.orEmpty().contains("deployment references"))
+        assertTrue(reject(envelope.replace("  colocate services all\n", "")).message.orEmpty().contains("colocate"))
+        assertTrue(reject(envelope.replace("  colocate services all\n", "  colocate services all\n  region nowhere\n")).message.orEmpty().contains("unsupported deployment fact"))
+
+        val serviceBlock = """
+            export service ParityService {
+              owns [parity.ir.domain.Pet]
+              uses []
+              exposes []
+              runs []
+            }
+        """.trimIndent()
+        assertTrue(reject(envelope.replace(serviceBlock, "")).message.orEmpty().contains("at least one service"))
+        assertTrue(reject(envelope.replace(serviceBlock, "$serviceBlock\n\n$serviceBlock")).message.orEmpty().contains("unique service"))
+
+        val deploymentBlock = """
+            export deployment local for ParitySystem {
+              environment test
+              target process
+              colocate services all
+            }
+        """.trimIndent()
+        assertTrue(reject(envelope.replace(deploymentBlock, "$deploymentBlock\n\n$deploymentBlock")).message.orEmpty().contains("exactly one deployment"))
+    }
+
+    @Test
+    fun boundedDocumentCoversNullableTypesAndDeterministicJsonScalarBranches() {
+        val root = parityRoot()
+        val domain = Files.readString(root.resolve("canonical-ir-domain.source"))
+            .replace("status: Status required", "status: Status?", ignoreCase = false)
+        val envelope = Files.readString(root.resolve("canonical-ir-envelope.source"))
+        val nullable = CanonicalIrDocumentSliceProjector.project(
+            "nullable-domain",
+            "nullable-domain.aidl",
+            domain,
+            "envelope",
+            "envelope.aidl",
+            envelope,
+        ).canonicalJson()
+        assertTrue(nullable.contains("\"kind\":\"nullable\""))
+
+        val encoded = CanonicalIrDocumentSlice(
+            mapOf(
+                "null" to null,
+                "boolean" to true,
+                "int" to 1,
+                "long" to 2L,
+                "double" to 3.5,
+                "float" to 4.5f,
+                "escaped" to "\b\u000C\n\r\t\"\\\u0001",
+            ),
+        ).canonicalJson()
+        assertTrue(encoded.contains("\\b\\f\\n\\r\\t\\\"\\\\\\u0001"))
+        assertFailsWith<CanonicalIrDocumentSliceException> {
+            CanonicalIrDocumentSlice(mapOf("unsupported" to Any())).canonicalJson()
+        }
     }
 
     @Test
