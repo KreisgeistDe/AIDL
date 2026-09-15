@@ -31,7 +31,7 @@ private data class ProjectedCompletionContext(
  * Bounded M10.5-04 completion query over the already-migrated Gate-03 source/resolution facts.
  *
  * This class owns no resolver, index, cache or workspace state. It uses the bounded source
- * projector only to establish an accepted source/declaration shape, derives a conservative
+ * projector to establish an accepted source/declaration shape, derives a conservative
  * parser-backed reference-value context inside that projection, and projects candidates through
  * [ProjectNameResolver]. Ambiguous simple names are omitted instead of guessed.
  */
@@ -63,12 +63,7 @@ class ProjectCompletionQuery private constructor(
         )
     }
 
-    /**
-     * Query an explicit in-memory text for an existing projected source identity.
-     *
-     * The override is projected only for this call, matching the transient definition-query
-     * pattern. No persistent workspace/project state is introduced.
-     */
+    /** Query an explicit in-memory text for an existing projected source identity. */
     fun complete(sourceId: String, sourceText: String, offset: Int): ProjectedCompletionResult {
         if (sourceId !in sourceById) {
             return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
@@ -82,8 +77,6 @@ class ProjectCompletionQuery private constructor(
         val overridden = try {
             fromSources(overriddenSources)
         } catch (_: SourceProjectionException) {
-            return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
-        } catch (_: IllegalArgumentException) {
             return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
         }
         return overridden.complete(sourceId, offset)
@@ -123,7 +116,7 @@ class ProjectCompletionQuery private constructor(
                     .distinctBy { (symbol, _) -> symbol.sourceId to symbol.declarationIndex }
                 if (unique.size != 1) continue
                 val (symbol, origin) = unique.single()
-                candidateFor(symbol, name, origin)?.let(::add)
+                add(candidateFor(symbol, name, origin))
             }
         }
     }
@@ -144,7 +137,7 @@ class ProjectCompletionQuery private constructor(
                 if ('.' in remainder || !remainder.startsWith(prefix)) continue
                 val matches = resolver.lookupFullyQualified(fullyQualifiedName)
                 if (matches.size != 1) continue
-                candidateFor(matches.single(), remainder, "qualified:$qualifier")?.let(::add)
+                add(candidateFor(matches.single(), remainder, "qualified:$qualifier"))
             }
         }
     }
@@ -153,14 +146,13 @@ class ProjectCompletionQuery private constructor(
         symbol: ProjectedSymbol,
         insertText: String,
         origin: String,
-    ): ProjectedCompletionCandidate? {
-        val document = resolver.documents.firstOrNull { it.sourceId == symbol.sourceId } ?: return null
-        val declaration = document.projection.declarations.getOrNull(symbol.declarationIndex) ?: return null
-        if (symbol.fullyQualifiedName == null || declaration.nameOffset < 0) return null
+    ): ProjectedCompletionCandidate {
+        val document = resolver.documents.first { it.sourceId == symbol.sourceId }
+        val declaration = document.projection.declarations[symbol.declarationIndex]
         return ProjectedCompletionCandidate(
             insertText = insertText,
             displayText = "$insertText (${symbol.kind})",
-            fullyQualifiedName = symbol.fullyQualifiedName,
+            fullyQualifiedName = symbol.fullyQualifiedName!!,
             kind = symbol.kind,
             origin = origin,
             sourceId = symbol.sourceId,
@@ -187,8 +179,10 @@ class ProjectCompletionQuery private constructor(
             while (end < source.length && source[end].isCompletionWordPart()) end += 1
             if (!isParserBackedReferenceValue(projection, source, start)) return null
             val prefixEnd = offset.coerceIn(start, end)
-            val qualifier = qualifierBefore(source, start)
-            return ProjectedCompletionContext(source.substring(start, prefixEnd), qualifier)
+            return ProjectedCompletionContext(
+                prefix = source.substring(start, prefixEnd),
+                qualifier = qualifierBefore(source, start),
+            )
         }
 
         if (offset > 0 && source[offset - 1] == '.') {
@@ -216,8 +210,7 @@ class ProjectCompletionQuery private constructor(
             source.lastIndexOf('}', before),
             declaration.offset - 1,
         )
-        val colon = source.lastIndexOf(':', before)
-        return colon > boundary
+        return source.lastIndexOf(':', before) > boundary
     }
 
     private fun qualifierBefore(source: String, wordStart: Int): String? {
@@ -230,16 +223,11 @@ class ProjectCompletionQuery private constructor(
         var start = endInclusive
         while (start > 0) {
             val previous = source[start - 1]
-            if (previous.isCompletionWordPart() || previous == '.') {
-                start -= 1
-            } else {
-                break
-            }
+            if (!previous.isCompletionWordPart() && previous != '.') break
+            start -= 1
         }
         val value = source.substring(start, endInclusive + 1)
-        if (value.startsWith('.') || value.endsWith('.') || ".." in value) return null
-        if (value.split('.').any { it.isEmpty() || it.any { ch -> !ch.isCompletionWordPart() } }) return null
-        return value
+        return value.takeIf { candidate -> candidate.split('.').all { it.isNotEmpty() } }
     }
 
     private fun Char.isCompletionWordPart(): Boolean = this == '_' || isLetterOrDigit()
