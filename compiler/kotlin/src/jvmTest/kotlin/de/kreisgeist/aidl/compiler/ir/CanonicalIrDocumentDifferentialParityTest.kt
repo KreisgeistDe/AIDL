@@ -101,6 +101,22 @@ class CanonicalIrDocumentDifferentialParityTest {
         assertTrue(reject(envelope.replace("  colocate services all\n", "")).message.orEmpty().contains("colocate"))
         assertTrue(reject(envelope.replace("  colocate services all\n", "  colocate services all\n  region nowhere\n")).message.orEmpty().contains("unsupported deployment fact"))
 
+        val appBlock = """
+            app ParityApp {
+              profile core version 1
+              system ParitySystem
+              defaultDeployment local
+            }
+        """.trimIndent()
+        val authBlock = """
+            auth {
+              provider oidc
+              subject claim "sub"
+              roles [user]
+              scopes [parity.read]
+              serviceIdentities required
+            }
+        """.trimIndent()
         val serviceBlock = """
             export service ParityService {
               owns [parity.ir.domain.Pet]
@@ -109,9 +125,13 @@ class CanonicalIrDocumentDifferentialParityTest {
               runs []
             }
         """.trimIndent()
-        assertTrue(reject(envelope.replace(serviceBlock, "")).message.orEmpty().contains("at least one service"))
-        assertTrue(reject(envelope.replace(serviceBlock, "$serviceBlock\n\n$serviceBlock")).message.orEmpty().contains("unique service"))
-
+        val systemBlock = """
+            export system ParitySystem {
+              services [ParityService]
+              resources []
+              apis []
+            }
+        """.trimIndent()
         val deploymentBlock = """
             export deployment local for ParitySystem {
               environment test
@@ -119,7 +139,23 @@ class CanonicalIrDocumentDifferentialParityTest {
               colocate services all
             }
         """.trimIndent()
+
+        assertTrue(reject(envelope.replace(appBlock, "")).message.orEmpty().contains("exactly one app"))
+        assertTrue(reject(envelope.replace(appBlock, "$appBlock\n\n$appBlock")).message.orEmpty().contains("exactly one app"))
+        assertTrue(reject(envelope.replace(authBlock, "")).message.orEmpty().contains("exactly one auth"))
+        assertTrue(reject(envelope.replace(authBlock, "$authBlock\n\n$authBlock")).message.orEmpty().contains("exactly one auth"))
+        assertTrue(reject(envelope.replace(systemBlock, "")).message.orEmpty().contains("exactly one system"))
+        assertTrue(reject(envelope.replace(systemBlock, "$systemBlock\n\n$systemBlock")).message.orEmpty().contains("exactly one system"))
+        assertTrue(reject(envelope.replace(serviceBlock, "")).message.orEmpty().contains("at least one service"))
+        assertTrue(reject(envelope.replace(serviceBlock, "$serviceBlock\n\n$serviceBlock")).message.orEmpty().contains("unique service"))
+        assertTrue(reject(envelope.replace(deploymentBlock, "")).message.orEmpty().contains("exactly one deployment"))
         assertTrue(reject(envelope.replace(deploymentBlock, "$deploymentBlock\n\n$deploymentBlock")).message.orEmpty().contains("exactly one deployment"))
+
+        assertTrue(reject(envelope.replace("  provider oidc\n", "")).message.orEmpty().contains("provider"))
+        assertTrue(reject(envelope.replace("  roles [user]\n", "")).message.orEmpty().contains("roles"))
+        assertTrue(reject(envelope.replace("  scopes [parity.read]\n", "")).message.orEmpty().contains("scopes"))
+        assertTrue(reject(envelope.replace("  environment test\n", "")).message.orEmpty().contains("environment"))
+        assertTrue(reject(envelope.replace("  target process\n", "")).message.orEmpty().contains("target"))
     }
 
     @Test
