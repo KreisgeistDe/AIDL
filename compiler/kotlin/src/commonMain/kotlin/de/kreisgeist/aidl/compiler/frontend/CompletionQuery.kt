@@ -165,7 +165,7 @@ class ProjectCompletionQuery private constructor(
         source: String,
         offset: Int,
     ): ProjectedCompletionContext? {
-        if (offset < 0 || offset > source.length) return null
+        if (offset !in 0..source.length) return null
 
         val wordIndex = when {
             offset < source.length && source[offset].isCompletionWordPart() -> offset
