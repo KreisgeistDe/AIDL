@@ -1,0 +1,10 @@
+module demo.consumer
+import demo.shared.Public
+import demo.shared.*
+entity Local {}
+entity Uses {
+  local: Loc
+  exact: Pub
+  qualified: demo.shared.Pub
+  ambiguous: Dup
+}
