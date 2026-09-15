@@ -10,46 +10,25 @@
       "area": "completion",
       "module": "tools.compiler_completion",
       "source": "tools/compiler_completion.py",
-      "compilerTests": [
-        "tools/test_compiler_completion.py",
-        "tools/test_m10_5_kotlin_completion_query.py"
-      ],
-      "cliCommands": [
-        "complete"
-      ],
-      "cliTests": [
-        "tools/test_aidl_completion_cli.py"
-      ]
+      "compilerTests": ["tools/test_compiler_completion.py", "tools/test_m10_5_kotlin_completion_query.py"],
+      "cliCommands": ["complete"],
+      "cliTests": ["tools/test_aidl_completion_cli.py"]
     },
     {
       "area": "documentation",
       "module": "tools.compiler_documentation",
       "source": "tools/compiler_documentation.py",
-      "compilerTests": [
-        "tools/test_compiler_documentation.py",
-        "tools/test_m10_5_kotlin_documentation_query.py"
-      ],
-      "cliCommands": [
-        "document"
-      ],
-      "cliTests": [
-        "tools/test_aidl_documentation_cli.py"
-      ]
+      "compilerTests": ["tools/test_compiler_documentation.py", "tools/test_m10_5_kotlin_documentation_query.py"],
+      "cliCommands": ["document"],
+      "cliTests": ["tools/test_aidl_documentation_cli.py"]
     },
     {
       "area": "refactoring",
       "module": "tools.compiler_refactoring",
       "source": "tools/compiler_refactoring.py",
-      "compilerTests": [
-        "tools/test_compiler_refactoring.py"
-      ],
-      "cliCommands": [
-        "rename",
-        "usages"
-      ],
-      "cliTests": [
-        "tools/test_aidl_refactoring_cli.py"
-      ]
+      "compilerTests": ["tools/test_compiler_refactoring.py", "tools/test_m10_5_kotlin_references_query.py"],
+      "cliCommands": ["rename", "usages"],
+      "cliTests": ["tools/test_aidl_refactoring_cli.py"]
     },
     {
       "area": "resolution",
@@ -70,12 +49,8 @@
         "tools/test_m10_5_kotlin_type_checking.py",
         "tools/test_m10_5_kotlin_type_construction.py"
       ],
-      "cliCommands": [
-        "resolve"
-      ],
-      "cliTests": [
-        "tools/test_aidl_resolve_cli.py"
-      ]
+      "cliCommands": ["resolve"],
+      "cliTests": ["tools/test_aidl_resolve_cli.py"]
     }
   ],
   "cliRegressionModules": [
