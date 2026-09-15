@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.compiler_refactoring import find_project_usages
 from tools.compiler_snapshot import create_compiler_snapshot
 from tools.compiler_snapshot_editing import find_snapshot_usages
 
@@ -44,6 +45,14 @@ class KotlinReferencesQueryParityTest(unittest.TestCase):
                 self._render("memory-lexical-failure", find_snapshot_usages(invalid_snapshot, consumer_path, invalid_text.index("Local\n", invalid_text.index("local:")) + 1)),
             ))
             self.assertEqual((PARITY / "references-query.signature").read_text(encoding="utf-8").rstrip(), actual)
+
+    def test_saved_project_usages_matches_snapshot_oracle(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); paths = self._project(root); consumer_path = paths["references-consumer"]
+            consumer = consumer_path.read_text(encoding="utf-8"); offset = consumer.index("Public\n", consumer.index("imported:")) + 1
+            saved = find_project_usages(create_compiler_snapshot([root]).analysis, consumer_path, offset)
+            snapshot = find_snapshot_usages(create_compiler_snapshot([root]), consumer_path, offset)
+            self.assertEqual(self._render("saved", saved), self._render("saved", snapshot))
 
     def test_isolated_roots_do_not_leak(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
