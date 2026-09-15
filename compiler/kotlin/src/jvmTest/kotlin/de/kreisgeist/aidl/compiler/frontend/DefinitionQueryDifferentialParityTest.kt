@@ -79,16 +79,20 @@ class DefinitionQueryDifferentialParityTest {
         val query = ProjectDefinitionQuery.fromSources(sourceEntries)
         val consumer = sourceEntries.toMap().getValue("resolution-consumer")
         val invalidUnknownSource = query.definition("missing-source", 0)
+        val invalidUnknownOverride = query.definition("missing-source", consumer, 0)
         val invalidNegative = query.definition("resolution-consumer", -1)
         val invalidWhitespace = query.definition("resolution-consumer", consumer.indexOf(" "))
+        val invalidDot = query.definition("resolution-consumer", consumer.indexOf("."))
         val ambiguous = query.definition(
             "resolution-provider-a",
             sourceEntries.toMap().getValue("resolution-provider-a").indexOf("Duplicate"),
         )
 
         assertEquals(ProjectedDefinitionStatus.INVALID, invalidUnknownSource.status)
+        assertEquals(ProjectedDefinitionStatus.INVALID, invalidUnknownOverride.status)
         assertEquals(ProjectedDefinitionStatus.INVALID, invalidNegative.status)
         assertEquals(ProjectedDefinitionStatus.INVALID, invalidWhitespace.status)
+        assertEquals(ProjectedDefinitionStatus.INVALID, invalidDot.status)
         assertEquals(ProjectedDefinitionStatus.AMBIGUOUS, ambiguous.status)
         assertNull(ambiguous.target)
 
