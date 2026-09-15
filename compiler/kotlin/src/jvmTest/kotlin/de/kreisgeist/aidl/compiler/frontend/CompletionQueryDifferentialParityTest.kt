@@ -102,12 +102,87 @@ class CompletionQueryDifferentialParityTest {
         assertEquals(ProjectedCompletionStatus.INVALID, query.complete("completion-consumer", -1).status)
         assertEquals(
             ProjectedCompletionStatus.INVALID,
-            query.complete("completion-consumer", consumer.indexOf("entity Uses") + 8).status,
+            query.complete("completion-consumer", consumer.indexOf("entity Uses")).status,
+        )
+        assertEquals(
+            ProjectedCompletionStatus.INVALID,
+            query.complete("completion-consumer", consumer.indexOf("local:") + "local:".length).status,
         )
 
         val ambiguous = query.complete("completion-consumer", consumer.indexOf("Dup\n") + 3)
         assertEquals(ProjectedCompletionStatus.RESOLVED, ambiguous.status)
         assertEquals("Dup", ambiguous.prefix)
         assertEquals(emptyList(), ambiguous.candidates)
+    }
+
+    @Test
+    fun prefixWildcardModulelessAndOverrideBranchesStayBounded() {
+        val providerA = File("parity/resolution-provider-a.source").readText()
+        val providerB = File("parity/resolution-provider-b.source").readText()
+        val consumer = """module demo.consumer
+import demo.shared.*
+entity Local {}
+entity Uses {
+  partial: Local
+  wildcard: Other
+  none: Zzz
+  nested: demo.
+}
+"""
+        val sourceEntries = listOf(
+            "inline-consumer" to consumer,
+            "resolution-provider-a" to providerA,
+            "resolution-provider-b" to providerB,
+        )
+        val query = ProjectCompletionQuery.fromSources(sourceEntries)
+
+        val partialStart = consumer.indexOf("Local\n", startIndex = 60)
+        val partial = query.complete("inline-consumer", partialStart + 3)
+        assertEquals(ProjectedCompletionStatus.RESOLVED, partial.status)
+        assertEquals("Loc", partial.prefix)
+        assertEquals(listOf("Local"), partial.candidates.map { it.insertText })
+        assertEquals(
+            partial,
+            query.complete("inline-consumer", consumer, partialStart + 3),
+        )
+
+        val wildcardStart = consumer.indexOf("Other\n")
+        val wildcard = query.complete("inline-consumer", wildcardStart + 3)
+        assertEquals(listOf("Other"), wildcard.candidates.map { it.insertText })
+        assertEquals("wildcardImport:demo.shared.*", wildcard.candidates.single().origin)
+
+        val none = query.complete("inline-consumer", consumer.indexOf("Zzz\n") + 3)
+        assertEquals(ProjectedCompletionStatus.RESOLVED, none.status)
+        assertEquals(emptyList(), none.candidates)
+
+        val nestedDot = query.complete("inline-consumer", consumer.indexOf("demo.\n") + "demo.".length)
+        assertEquals(ProjectedCompletionStatus.RESOLVED, nestedDot.status)
+        assertEquals("demo", nestedDot.qualifier)
+        assertEquals(emptyList(), nestedDot.candidates)
+
+        val moduleless = "entity Local {}\nentity Uses { target: Local }\n"
+        val modulelessQuery = ProjectCompletionQuery.fromSources(listOf("moduleless" to moduleless))
+        val modulelessResult = modulelessQuery.complete(
+            "moduleless",
+            moduleless.lastIndexOf("Local") + 3,
+        )
+        assertEquals(ProjectedCompletionStatus.RESOLVED, modulelessResult.status)
+        assertEquals(emptyList(), modulelessResult.candidates)
+
+        val providerOverride = providerA + "entity Probe { target: Pub }\n"
+        val providerResult = ProjectCompletionQuery.fromSources(sources()).complete(
+            "resolution-provider-a",
+            providerOverride,
+            providerOverride.lastIndexOf("Pub") + 3,
+        )
+        assertEquals(listOf("Public"), providerResult.candidates.map { it.insertText })
+        assertEquals("local:demo.shared", providerResult.candidates.single().origin)
+
+        val malformedQualifier = "module demo\nentity Local {}\nentity Uses { target: . }\n"
+        val malformedQuery = ProjectCompletionQuery.fromSources(listOf("malformed" to malformedQualifier))
+        assertEquals(
+            ProjectedCompletionStatus.INVALID,
+            malformedQuery.complete("malformed", malformedQualifier.indexOf(". }") + 1).status,
+        )
     }
 }
