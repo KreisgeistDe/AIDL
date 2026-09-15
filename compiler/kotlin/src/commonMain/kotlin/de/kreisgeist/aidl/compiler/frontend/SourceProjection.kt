@@ -30,6 +30,13 @@ data class SourceProjection(
     }
 }
 
+data class ProjectedReferenceToken(
+    val reference: String,
+    val terminal: String,
+    val offset: Int,
+    val length: Int,
+)
+
 private data class Token(val kind: Kind, val value: String, val offset: Int) {
     enum class Kind { WORD, STRING, NUMBER, SYMBOL, NEWLINE, EOF }
 }
@@ -155,13 +162,6 @@ object AidlSourceProjector {
         )
     }
 
-    /**
-     * Return the same bounded lexical qualified-name reference containing [offset].
-     *
-     * This reuses the source projector lexer so semantic-query migration does not introduce
-     * a second tokenization path. Any lexer failure remains fail-closed via
-     * [SourceProjectionException].
-     */
     fun referenceAt(source: String, offset: Int): String? {
         if (offset < 0 || offset >= source.length) return null
         val tokens = lex(source)
@@ -191,6 +191,38 @@ object AidlSourceProjector {
             end += 2
         }
         return tokens.subList(start, end + 1).joinToString("") { it.value }
+    }
+
+    /** Return terminal name tokens with the qualified reference they belong to. */
+    fun terminalReferences(source: String): List<ProjectedReferenceToken> {
+        val tokens = lex(source)
+        return buildList {
+            for (index in tokens.indices) {
+                val terminal = tokens[index]
+                if (terminal.kind != Token.Kind.WORD) continue
+                if (
+                    index + 2 < tokens.size &&
+                    tokens[index + 1].kind == Token.Kind.SYMBOL &&
+                    tokens[index + 1].value == "." &&
+                    tokens[index + 2].kind == Token.Kind.WORD
+                ) continue
+                var start = index
+                while (
+                    start >= 2 &&
+                    tokens[start - 1].kind == Token.Kind.SYMBOL &&
+                    tokens[start - 1].value == "." &&
+                    tokens[start - 2].kind == Token.Kind.WORD
+                ) start -= 2
+                add(
+                    ProjectedReferenceToken(
+                        reference = tokens.subList(start, index + 1).joinToString("") { it.value },
+                        terminal = terminal.value,
+                        offset = terminal.offset,
+                        length = terminal.value.length,
+                    )
+                )
+            }
+        }
     }
 
     private fun lex(source: String): List<Token> {
