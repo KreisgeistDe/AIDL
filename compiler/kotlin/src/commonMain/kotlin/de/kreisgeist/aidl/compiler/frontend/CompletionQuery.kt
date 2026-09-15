@@ -214,12 +214,12 @@ class ProjectCompletionQuery private constructor(
     }
 
     private fun qualifierBefore(source: String, wordStart: Int): String? {
-        if (wordStart < 2 || source[wordStart - 1] != '.') return null
+        if (source[wordStart - 1] != '.') return null
         return qualifiedNameEndingAt(source, wordStart - 2)
     }
 
     private fun qualifiedNameEndingAt(source: String, endInclusive: Int): String? {
-        if (endInclusive !in source.indices || !source[endInclusive].isCompletionWordPart()) return null
+        if (!source[endInclusive].isCompletionWordPart()) return null
         var start = endInclusive
         while (start > 0) {
             val previous = source[start - 1]
