@@ -12,42 +12,38 @@ class CanonicalIrDocumentSlice internal constructor(
     fun structuralJson(): String = deterministicJson(stripSemanticHashes(document))
 }
 
-/**
- * Bounded M10.5-04 full-document projector for the already-integrated enum/value/entity corpus.
- *
- * The envelope grammar is intentionally closed to the shared one-app/one-service/one-system/
- * one-deployment parity fixture. This is not a second general AIDL parser: the real bounded domain
- * declarations still flow through [CanonicalIrDomainSliceProjector], while any envelope shape not
- * explicitly owned by this slice is rejected as a whole. Semantic hash calculation stays outside
- * this migration package; zero hashes are schema-valid placeholders only.
- */
 object CanonicalIrDocumentSliceProjector {
     private val envelopePattern = Regex(
-        """(?ms)\A\s*module\s+([A-Za-z_][A-Za-z0-9_.]*)\s+
-            |import\s+([A-Za-z_][A-Za-z0-9_.]*)\.\*\s+
-            |app\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
-            |profile\s+([a-z][a-z0-9-]*)\s+version\s+([1-9][0-9]*)\s*
-            |system\s+([A-Za-z_][A-Za-z0-9_]*)\s*
-            |defaultDeployment\s+([A-Za-z_][A-Za-z0-9_]*)\s*\}\s*
-            |auth\s*\{\s*
-            |provider\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
-            |subject\s+claim\s+"([^"]+)"\s*
-            |roles\s+\[([^\]]*)]\s*
-            |scopes\s+\[([^\]]*)]\s*
-            |serviceIdentities\s+(required|optional)\s*\}\s*
-            |export\s+service\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
-            |owns\s+\[([^\]]*)]\s*
-            |uses\s+\[\s*]\s*
-            |exposes\s+\[\s*]\s*
-            |runs\s+\[\s*]\s*\}\s*
-            |export\s+system\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
-            |services\s+\[([^\]]*)]\s*
-            |resources\s+\[\s*]\s*
-            |apis\s+\[\s*]\s*\}\s*
-            |export\s+deployment\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
-            |environment\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
-            |target\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
-            |colocate\s+services\s+all\s*\}\s*\z""".trimMargin(),
+        """\Amodule\s+([A-Za-z_][A-Za-z0-9_.]*)
+import\s+([A-Za-z_][A-Za-z0-9_.]*)\.\*
+app\s+([A-Za-z_][A-Za-z0-9_]*)\s+\{
+profile\s+([a-z][a-z0-9-]*)\s+version\s+([1-9][0-9]*)
+system\s+([A-Za-z_][A-Za-z0-9_]*)
+defaultDeployment\s+([A-Za-z_][A-Za-z0-9_]*)
+\}
+auth\s+\{
+provider\s+([A-Za-z_][A-Za-z0-9_-]*)
+subject\s+claim\s+"([^"]+)"
+roles\s+\[([^\]]*)]
+scopes\s+\[([^\]]*)]
+serviceIdentities\s+(required|optional)
+\}
+export\s+service\s+([A-Za-z_][A-Za-z0-9_]*)\s+\{
+owns\s+\[([^\]]*)]
+uses\s+\[\s*]
+exposes\s+\[\s*]
+runs\s+\[\s*]
+\}
+export\s+system\s+([A-Za-z_][A-Za-z0-9_]*)\s+\{
+services\s+\[([^\]]*)]
+resources\s+\[\s*]
+apis\s+\[\s*]
+\}
+export\s+deployment\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+([A-Za-z_][A-Za-z0-9_]*)\s+\{
+environment\s+([A-Za-z_][A-Za-z0-9_-]*)
+target\s+([A-Za-z_][A-Za-z0-9_-]*)
+colocate\s+services\s+all
+\}\z""",
     )
 
     fun project(
@@ -61,7 +57,11 @@ object CanonicalIrDocumentSliceProjector {
         val domain = CanonicalIrDomainSliceProjector.project(domainSourceId, domainPath, domainSource)
         val domainModule = domain.declarations.firstOrNull()?.ownerModule
             ?: throw CanonicalIrDocumentSliceException("bounded Canonical IR document requires domain declarations")
-        val match = envelopePattern.matchEntire(envelopeSource)
+        val normalizedEnvelope = envelopeSource.lineSequence()
+            .map(String::trim)
+            .filter(String::isNotEmpty)
+            .joinToString("\n")
+        val match = envelopePattern.matchEntire(normalizedEnvelope)
             ?: throw CanonicalIrDocumentSliceException("unsupported Canonical IR envelope shape")
         val g = match.groupValues
         val module = g[1]
@@ -187,8 +187,14 @@ object CanonicalIrDocumentSliceProjector {
         )
     }
 
-    private fun commaList(raw: String): List<String> = raw.trim().let { value ->
-        if (value.isEmpty()) emptyList() else value.split(',').map(String::trim)
+    private fun commaList(raw: String): List<String> {
+        val value = raw.trim()
+        if (value.isEmpty()) return emptyList()
+        val values = value.split(',').map(String::trim)
+        if (values.any(String::isEmpty)) {
+            throw CanonicalIrDocumentSliceException("bounded envelope list contains empty item")
+        }
+        return values
     }
 
     private fun declarationMap(value: CanonicalIrDomainDeclaration): Map<String, Any?> {
