@@ -197,7 +197,6 @@ class ProjectCompletionQuery private constructor(
             anchor in it.offset..it.endOffset
         } ?: return false
         val before = anchor - 1
-        if (before < declaration.offset) return false
         val boundary = maxOf(
             source.lastIndexOf('\n', before),
             source.lastIndexOf('{', before),
