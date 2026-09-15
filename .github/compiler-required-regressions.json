@@ -11,7 +11,8 @@
       "module": "tools.compiler_completion",
       "source": "tools/compiler_completion.py",
       "compilerTests": [
-        "tools/test_compiler_completion.py"
+        "tools/test_compiler_completion.py",
+        "tools/test_m10_5_kotlin_completion_query.py"
       ],
       "cliCommands": [
         "complete"
