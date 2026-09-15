@@ -110,6 +110,14 @@ class CompletionQueryDifferentialParityTest {
             query.complete("completion-consumer", consumer.indexOf("local:") + "local:".length).status,
         )
 
+        val leadingSourceEntries = sourceEntries.map { (sourceId, source) ->
+            sourceId to if (sourceId == "completion-consumer") "\n$source" else source
+        }
+        assertEquals(
+            ProjectedCompletionStatus.INVALID,
+            ProjectCompletionQuery.fromSources(leadingSourceEntries).complete("completion-consumer", 0).status,
+        )
+
         val ambiguous = query.complete("completion-consumer", consumer.indexOf("Dup\n") + 3)
         assertEquals(ProjectedCompletionStatus.RESOLVED, ambiguous.status)
         assertEquals("Dup", ambiguous.prefix)
