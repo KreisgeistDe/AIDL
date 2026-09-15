@@ -190,7 +190,7 @@ object AidlSourceProjector {
         ) {
             end += 2
         }
-        return tokens.subList(start, end + 1).joinToString("") { it.value }.ifBlank { null }
+        return tokens.subList(start, end + 1).joinToString("") { it.value }
     }
 
     private fun lex(source: String): List<Token> {
