@@ -26,7 +26,8 @@
       "module": "tools.compiler_documentation",
       "source": "tools/compiler_documentation.py",
       "compilerTests": [
-        "tools/test_compiler_documentation.py"
+        "tools/test_compiler_documentation.py",
+        "tools/test_m10_5_kotlin_documentation_query.py"
       ],
       "cliCommands": [
         "document"
