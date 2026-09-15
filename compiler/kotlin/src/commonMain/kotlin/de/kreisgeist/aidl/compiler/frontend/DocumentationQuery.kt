@@ -38,12 +38,7 @@ class ProjectDocumentationQuery private constructor(
     fun document(sourceId: String, offset: Int): ProjectedDocumentationResult {
         val source = sourceById[sourceId] ?: return invalidResult()
         if (offset !in source.indices) return invalidResult()
-        val reference = try {
-            AidlSourceProjector.referenceAt(source, offset)
-        } catch (_: SourceProjectionException) {
-            null
-        } ?: return invalidResult()
-
+        val reference = AidlSourceProjector.referenceAt(source, offset) ?: return invalidResult()
         val resolution = resolver.resolve(sourceId, reference)
         return when (resolution.status) {
             ProjectedResolutionStatus.UNRESOLVED ->
@@ -82,12 +77,7 @@ class ProjectDocumentationQuery private constructor(
         val line = prefix.count { it == '\n' } + 1
         val lineStart = prefix.lastIndexOf('\n') + 1
         val column = offset - lineStart + 1
-        val headerEnd = listOf(
-            source.indexOf('{', declaration.offset).takeIf { it >= 0 } ?: declaration.endOffset,
-            source.indexOf('\n', declaration.offset).takeIf { it >= 0 } ?: declaration.endOffset,
-            source.indexOf('\r', declaration.offset).takeIf { it >= 0 } ?: declaration.endOffset,
-            declaration.endOffset,
-        ).filter { it >= declaration.offset }.minOrNull() ?: declaration.endOffset
+        val headerEnd = source.indexOf('{', declaration.offset)
         val representation = source.substring(declaration.offset, headerEnd)
             .trim()
             .split(Regex("\\s+"))
