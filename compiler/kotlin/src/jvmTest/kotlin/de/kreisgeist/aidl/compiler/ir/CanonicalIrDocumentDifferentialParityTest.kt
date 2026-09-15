@@ -78,7 +78,14 @@ class CanonicalIrDocumentDifferentialParityTest {
         assertTrue(reject(envelope.replace("uses []", "uses [SomeResource]")).message.orEmpty().contains("outside bounded"))
         assertTrue(reject(envelope.replace("resources []", "resources [SomeResource]")).message.orEmpty().contains("outside bounded"))
         assertTrue(reject(envelope + "\nexport query NotOwned {}\n").message.orEmpty().contains("unsupported"))
-        assertTrue(reject(envelope.replace("system ParitySystem", "system OtherSystem")).message.orEmpty().contains("does not match"))
+        assertTrue(
+            reject(
+                envelope.replace(
+                    "\n  system ParitySystem\n",
+                    "\n  system OtherSystem\n",
+                ),
+            ).message.orEmpty().contains("does not match"),
+        )
     }
 
     @Test
