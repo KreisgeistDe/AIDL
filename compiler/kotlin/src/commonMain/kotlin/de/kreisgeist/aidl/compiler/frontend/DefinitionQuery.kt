@@ -60,33 +60,26 @@ class ProjectDefinitionQuery private constructor(
                 ProjectedDefinitionResult(ProjectedDefinitionStatus.UNRESOLVED, reference)
             ProjectedResolutionStatus.AMBIGUOUS ->
                 ProjectedDefinitionResult(ProjectedDefinitionStatus.AMBIGUOUS, reference)
-            ProjectedResolutionStatus.RESOLVED -> {
-                val target = resolution.symbols.singleOrNull()?.let(::targetFor)
-                    ?: return ProjectedDefinitionResult(ProjectedDefinitionStatus.INVALID, reference)
-                ProjectedDefinitionResult(ProjectedDefinitionStatus.RESOLVED, reference, target)
-            }
+            ProjectedResolutionStatus.RESOLVED ->
+                ProjectedDefinitionResult(
+                    ProjectedDefinitionStatus.RESOLVED,
+                    reference,
+                    targetFor(resolution.symbols.single()),
+                )
         }
     }
 
-    private fun targetFor(symbol: ProjectedSymbol): ProjectedDefinitionTarget? {
-        val document = resolver.documents.firstOrNull { it.sourceId == symbol.sourceId } ?: return null
-        val declaration = document.projection.declarations.getOrNull(symbol.declarationIndex) ?: return null
-        val source = sourceById[symbol.sourceId] ?: return null
+    private fun targetFor(symbol: ProjectedSymbol): ProjectedDefinitionTarget {
+        val document = resolver.documents.first { it.sourceId == symbol.sourceId }
+        val declaration = document.projection.declarations[symbol.declarationIndex]
+        val source = sourceById.getValue(symbol.sourceId)
         val offset = declaration.nameOffset
-        if (
-            offset < 0 ||
-            offset + declaration.name.length > source.length ||
-            source.substring(offset, offset + declaration.name.length) != declaration.name
-        ) {
-            return null
-        }
         val prefix = source.substring(0, offset)
         val line = prefix.count { it == '\n' } + 1
         val lineStart = prefix.lastIndexOf('\n') + 1
         val column = offset - lineStart + 1
-        val fullyQualifiedName = symbol.fullyQualifiedName ?: return null
         return ProjectedDefinitionTarget(
-            fullyQualifiedName = fullyQualifiedName,
+            fullyQualifiedName = symbol.fullyQualifiedName!!,
             kind = symbol.kind,
             sourceId = symbol.sourceId,
             line = line,
@@ -96,21 +89,10 @@ class ProjectDefinitionQuery private constructor(
     }
 
     companion object {
-        fun fromSources(sources: List<Pair<String, String>>): ProjectDefinitionQuery {
-            require(sources.map { it.first }.distinct().size == sources.size) {
-                "sourceId values must be unique"
-            }
-            require(sources.all { it.first.isNotBlank() }) { "sourceId must not be blank" }
-            val documents = sources.map { (sourceId, source) ->
-                ProjectedDocument(
-                    sourceId,
-                    AidlSourceProjector.project(sourceId, "$sourceId.source", source),
-                )
-            }
-            return ProjectDefinitionQuery(
-                resolver = ProjectNameResolver.fromProjectedDocuments(documents),
+        fun fromSources(sources: List<Pair<String, String>>): ProjectDefinitionQuery =
+            ProjectDefinitionQuery(
+                resolver = ProjectNameResolver.fromSources(sources),
                 sourceById = sources.toMap(),
             )
-        }
     }
 }
