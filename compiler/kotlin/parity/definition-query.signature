@@ -9,4 +9,5 @@ memory-hidden|unresolved|Hidden||||||
 memory-missing|unresolved|Missing||||||
 memory-duplicate|ambiguous|Duplicate||||||
 memory-public|resolved|Public|demo.shared.Public|value|resolution-provider-a|2|14|32
+memory-shifted-hidden|resolved|Hidden|demo.shared.Hidden|value|resolution-provider-a|4|7|49
 memory-lexical-failure|invalid|||||||
