@@ -156,6 +156,22 @@ class KotlinDefinitionQueryParityTest(unittest.TestCase):
                     ),
                 ),
             ]
+
+            shifted_provider_a = "\n" + provider_a
+            shifted_snapshot = create_compiler_snapshot(
+                [root],
+                {paths["resolution-provider-a"]: shifted_provider_a},
+            )
+            memory.append(
+                self._render(
+                    "memory-shifted-hidden",
+                    shifted_snapshot.resolve(
+                        paths["resolution-provider-a"],
+                        shifted_provider_a.index("Hidden"),
+                    ),
+                )
+            )
+
             invalid_override = consumer + "§"
             invalid_snapshot = create_compiler_snapshot(
                 [root],
