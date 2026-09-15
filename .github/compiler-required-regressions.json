@@ -57,6 +57,7 @@
         "tools/test_compiler_resolution.py",
         "tools/test_m10_5_kotlin_canonical_ir_document.py",
         "tools/test_m10_5_kotlin_canonical_ir_domain.py",
+        "tools/test_m10_5_kotlin_definition_query.py",
         "tools/test_m10_5_kotlin_gate_03_diagnostic_locations.py",
         "tools/test_m10_5_kotlin_materialization_boundary.py",
         "tools/test_m10_5_kotlin_materialization_locations.py",
