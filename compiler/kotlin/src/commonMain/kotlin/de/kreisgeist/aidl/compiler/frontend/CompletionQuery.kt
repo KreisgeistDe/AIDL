@@ -17,9 +17,9 @@ data class ProjectedCompletionCandidate(
 
 data class ProjectedCompletionResult(
     val status: ProjectedCompletionStatus,
-    val prefix: String? = null,
-    val qualifier: String? = null,
-    val candidates: List<ProjectedCompletionCandidate> = emptyList(),
+    val prefix: String?,
+    val qualifier: String?,
+    val candidates: List<ProjectedCompletionCandidate>,
 )
 
 private data class ProjectedCompletionContext(
@@ -41,15 +41,13 @@ class ProjectCompletionQuery private constructor(
     private val sourceById: Map<String, String>,
 ) {
     fun complete(sourceId: String, offset: Int): ProjectedCompletionResult {
-        val source = sourceById[sourceId]
-            ?: return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
+        val source = sourceById[sourceId] ?: return invalidResult()
         val projection = try {
             AidlSourceProjector.project(source)
         } catch (_: SourceProjectionException) {
-            return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
+            return invalidResult()
         }
-        val context = completionContext(projection, source, offset)
-            ?: return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
+        val context = completionContext(projection, source, offset) ?: return invalidResult()
         val candidates = if (context.qualifier != null) {
             qualifiedCandidates(context.qualifier, context.prefix)
         } else {
@@ -65,19 +63,15 @@ class ProjectCompletionQuery private constructor(
 
     /** Query an explicit in-memory text for an existing projected source identity. */
     fun complete(sourceId: String, sourceText: String, offset: Int): ProjectedCompletionResult {
-        if (sourceId !in sourceById) {
-            return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
-        }
-        if (sourceById.getValue(sourceId) == sourceText) {
-            return complete(sourceId, offset)
-        }
+        if (sourceId !in sourceById) return invalidResult()
+        if (sourceById.getValue(sourceId) == sourceText) return complete(sourceId, offset)
         val overriddenSources = sources.map { (candidateId, source) ->
             candidateId to if (candidateId == sourceId) sourceText else source
         }
         val overridden = try {
             fromSources(overriddenSources)
         } catch (_: SourceProjectionException) {
-            return ProjectedCompletionResult(ProjectedCompletionStatus.INVALID)
+            return invalidResult()
         }
         return overridden.complete(sourceId, offset)
     }
@@ -231,6 +225,13 @@ class ProjectCompletionQuery private constructor(
     }
 
     private fun Char.isCompletionWordPart(): Boolean = this == '_' || isLetterOrDigit()
+
+    private fun invalidResult(): ProjectedCompletionResult = ProjectedCompletionResult(
+        status = ProjectedCompletionStatus.INVALID,
+        prefix = null,
+        qualifier = null,
+        candidates = emptyList(),
+    )
 
     companion object {
         fun fromSources(sources: List<Pair<String, String>>): ProjectCompletionQuery {
