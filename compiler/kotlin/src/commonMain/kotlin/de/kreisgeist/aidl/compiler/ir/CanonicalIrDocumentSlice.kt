@@ -138,11 +138,39 @@ object CanonicalIrDocumentSliceProjector {
         )
 
         val sourceEntries = mutableListOf<Map<String, Any?>>()
-        sourceEntries += envelopeEntry("/app", declarationId(module, appName), envelopePath, envelopeSource, "app $appName")
+        sourceEntries += envelopeEntry(
+            "/app",
+            declarationId(module, appName),
+            envelopePath,
+            envelopeSource,
+            "app $appName",
+            "app $appName",
+        )
         sourceEntries += domain.sourceEntries.map(::sourceEntryMap)
-        sourceEntries += envelopeEntry("/system", declarationId(module, systemName), envelopePath, envelopeSource, "system $systemName")
-        sourceEntries += envelopeEntry("/system/services/0", declarationId(module, serviceName), envelopePath, envelopeSource, "service $serviceName")
-        sourceEntries += envelopeEntry("/deployments/0", declarationId(module, deploymentName), envelopePath, envelopeSource, "deployment $deploymentName")
+        sourceEntries += envelopeEntry(
+            "/system",
+            declarationId(module, systemName),
+            envelopePath,
+            envelopeSource,
+            "export system $systemName",
+            "system $systemName",
+        )
+        sourceEntries += envelopeEntry(
+            "/system/services/0",
+            declarationId(module, serviceName),
+            envelopePath,
+            envelopeSource,
+            "export service $serviceName",
+            "service $serviceName",
+        )
+        sourceEntries += envelopeEntry(
+            "/deployments/0",
+            declarationId(module, deploymentName),
+            envelopePath,
+            envelopeSource,
+            "export deployment $deploymentName",
+            "deployment $deploymentName",
+        )
 
         return CanonicalIrDocumentSlice(
             linkedMapOf(
@@ -224,11 +252,12 @@ object CanonicalIrDocumentSliceProjector {
         declarationId: String,
         path: String,
         source: String,
-        header: String,
+        searchHeader: String,
+        spanHeader: String,
     ): Map<String, Any?> {
-        val headerOffset = source.indexOf(header)
-        val blockStart = source.lastIndexOf("export ", headerOffset).takeIf { it >= 0 } ?: headerOffset
-        val closeOffset = source.indexOf('}', headerOffset) + 1
+        val searchOffset = source.indexOf(searchHeader)
+        val headerOffset = searchOffset + searchHeader.indexOf(spanHeader)
+        val closeOffset = source.indexOf('}', searchOffset) + 1
         val start = position(source, headerOffset)
         val end = position(source, closeOffset)
         return mapOf(
@@ -241,7 +270,7 @@ object CanonicalIrDocumentSliceProjector {
                 "endLine" to end.first,
                 "endColumn" to end.second,
             ),
-        ).also { blockStart }
+        )
     }
 
     private fun position(source: String, offset: Int): Pair<Int, Int> {
