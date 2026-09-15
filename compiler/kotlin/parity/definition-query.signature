@@ -1,0 +1,12 @@
+saved-local|resolved|Local|demo.consumer.Local|entity|resolution-consumer|4|8|75
+saved-exact-import|resolved|demo.shared.Public|demo.shared.Public|value|resolution-provider-a|2|14|32
+saved-module-missing|unresolved|demo.consumer||||||
+saved-hidden-local|resolved|Hidden|demo.shared.Hidden|value|resolution-provider-a|3|7|48
+saved-duplicate|ambiguous|Duplicate||||||
+saved-other|resolved|Other|demo.shared.Other|value|resolution-provider-b|3|14|57
+saved-out-of-range|invalid|||||||
+memory-hidden|unresolved|Hidden||||||
+memory-missing|unresolved|Missing||||||
+memory-duplicate|ambiguous|Duplicate||||||
+memory-public|resolved|Public|demo.shared.Public|value|resolution-provider-a|2|14|32
+memory-lexical-failure|invalid|||||||

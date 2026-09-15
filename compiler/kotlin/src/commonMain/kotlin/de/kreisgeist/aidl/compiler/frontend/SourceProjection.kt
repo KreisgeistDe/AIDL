@@ -12,6 +12,7 @@ data class ProjectedDeclaration(
     val bodyTokens: List<String>,
     val offset: Int = -1,
     val endOffset: Int = -1,
+    val nameOffset: Int = -1,
 )
 
 data class SourceProjection(
@@ -108,6 +109,7 @@ object AidlSourceProjector {
                     val declarationOffset = current().offset
                     val kind = consumeWord("expected declaration kind")
                     if (kind !in supportedDeclarations) fail("unsupported declaration kind '$kind'")
+                    val nameOffset = current().offset
                     val name = consumeWord("expected declaration name")
                     if (current().value != "{") fail("expected '{' after $kind $name")
                     advance()
@@ -138,6 +140,7 @@ object AidlSourceProjector {
                         body,
                         declarationOffset,
                         declarationEndOffset,
+                        nameOffset,
                     )
                     skipNewlines()
                 }
@@ -150,6 +153,44 @@ object AidlSourceProjector {
             sourceId = sourceId,
             path = path,
         )
+    }
+
+    /**
+     * Return the same bounded lexical qualified-name reference containing [offset].
+     *
+     * This reuses the source projector lexer so semantic-query migration does not introduce
+     * a second tokenization path. Any lexer failure remains fail-closed via
+     * [SourceProjectionException].
+     */
+    fun referenceAt(source: String, offset: Int): String? {
+        if (offset < 0 || offset >= source.length) return null
+        val tokens = lex(source)
+        val index = tokens.indexOfFirst { token ->
+            token.kind == Token.Kind.WORD &&
+                token.offset <= offset &&
+                offset < token.offset + token.value.length
+        }
+        if (index < 0) return null
+
+        var start = index
+        while (
+            start >= 2 &&
+            tokens[start - 1].kind == Token.Kind.SYMBOL &&
+            tokens[start - 1].value == "." &&
+            tokens[start - 2].kind == Token.Kind.WORD
+        ) {
+            start -= 2
+        }
+        var end = index
+        while (
+            end + 2 < tokens.size &&
+            tokens[end + 1].kind == Token.Kind.SYMBOL &&
+            tokens[end + 1].value == "." &&
+            tokens[end + 2].kind == Token.Kind.WORD
+        ) {
+            end += 2
+        }
+        return tokens.subList(start, end + 1).joinToString("") { it.value }.ifBlank { null }
     }
 
     private fun lex(source: String): List<Token> {
