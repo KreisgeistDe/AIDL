@@ -1,0 +1,8 @@
+saved-local|resolved|demo.consumer.Local|entity|documentation-consumer|4|8|75|entity Local
+saved-imported|resolved|demo.shared.Public|value|resolution-provider-a|2|14|32|value Public
+saved-qualified|resolved|demo.shared.Public|value|resolution-provider-a|2|14|32|value Public
+saved-ambiguous|ambiguous|||||||
+saved-unresolved|unresolved|||||||
+saved-invalid|invalid|||||||
+memory-shifted-local|resolved|demo.consumer.Local|entity|documentation-consumer|5|8|76|entity Local
+memory-lexical-failure|invalid|||||||
