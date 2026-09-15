@@ -5,26 +5,51 @@ private const val ZERO_HASH = "sha256:000000000000000000000000000000000000000000
 
 class CanonicalIrDocumentSliceException(message: String) : IllegalArgumentException(message)
 
-data class CanonicalIrDocumentSlice internal constructor(
+class CanonicalIrDocumentSlice internal constructor(
     internal val document: Map<String, Any?>,
 ) {
-    /** Schema-shaped JSON. Semantic hashes are placeholders because hash migration is out of scope. */
     fun canonicalJson(): String = deterministicJson(document)
-
-    /** Full-document structural comparison surface excluding separately owned semantic hashes. */
     fun structuralJson(): String = deterministicJson(stripSemanticHashes(document))
 }
 
 /**
- * Second bounded M10.5-04 Canonical-IR slice.
+ * Bounded M10.5-04 full-document projector for the already-integrated enum/value/entity corpus.
  *
- * The existing domain projector remains the only Kotlin owner of enum/value/entity construction.
- * This projector composes that slice with the already-shared minimal app/service/system/deployment
- * envelope fixture so Kotlin can produce a complete schema-shaped document. Semantic hash
- * calculation remains Python-owned; zero hashes are carried only as schema-valid placeholders and
- * are deliberately excluded from the cross-implementation structural comparison surface.
+ * The envelope grammar is intentionally closed to the shared one-app/one-service/one-system/
+ * one-deployment parity fixture. This is not a second general AIDL parser: the real bounded domain
+ * declarations still flow through [CanonicalIrDomainSliceProjector], while any envelope shape not
+ * explicitly owned by this slice is rejected as a whole. Semantic hash calculation stays outside
+ * this migration package; zero hashes are schema-valid placeholders only.
  */
 object CanonicalIrDocumentSliceProjector {
+    private val envelopePattern = Regex(
+        """(?ms)\A\s*module\s+([A-Za-z_][A-Za-z0-9_.]*)\s+
+            |import\s+([A-Za-z_][A-Za-z0-9_.]*)\.\*\s+
+            |app\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
+            |profile\s+([a-z][a-z0-9-]*)\s+version\s+([1-9][0-9]*)\s*
+            |system\s+([A-Za-z_][A-Za-z0-9_]*)\s*
+            |defaultDeployment\s+([A-Za-z_][A-Za-z0-9_]*)\s*\}\s*
+            |auth\s*\{\s*
+            |provider\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
+            |subject\s+claim\s+"([^"]+)"\s*
+            |roles\s+\[([^\]]*)]\s*
+            |scopes\s+\[([^\]]*)]\s*
+            |serviceIdentities\s+(required|optional)\s*\}\s*
+            |export\s+service\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
+            |owns\s+\[([^\]]*)]\s*
+            |uses\s+\[\s*]\s*
+            |exposes\s+\[\s*]\s*
+            |runs\s+\[\s*]\s*\}\s*
+            |export\s+system\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
+            |services\s+\[([^\]]*)]\s*
+            |resources\s+\[\s*]\s*
+            |apis\s+\[\s*]\s*\}\s*
+            |export\s+deployment\s+([A-Za-z_][A-Za-z0-9_]*)\s+for\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*
+            |environment\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
+            |target\s+([A-Za-z_][A-Za-z0-9_-]*)\s*
+            |colocate\s+services\s+all\s*\}\s*\z""".trimMargin(),
+    )
+
     fun project(
         domainSourceId: String,
         domainPath: String,
@@ -34,239 +59,108 @@ object CanonicalIrDocumentSliceProjector {
         envelopeSource: String,
     ): CanonicalIrDocumentSlice {
         val domain = CanonicalIrDomainSliceProjector.project(domainSourceId, domainPath, domainSource)
-        val domainModule = Regex("(?m)^module\\s+([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)\\s*$")
-            .find(domainSource)?.groupValues?.get(1)
-            ?: throw CanonicalIrDocumentSliceException("canonical IR document slice requires domain module")
-        val envelope = parseEnvelope(envelopePath, envelopeSource, domainModule, domain)
-        return CanonicalIrDocumentSlice(envelope)
-    }
+        val domainModule = domain.declarations.firstOrNull()?.ownerModule
+            ?: throw CanonicalIrDocumentSliceException("bounded Canonical IR document requires domain declarations")
+        val match = envelopePattern.matchEntire(envelopeSource)
+            ?: throw CanonicalIrDocumentSliceException("unsupported Canonical IR envelope shape")
+        val g = match.groupValues
+        val module = g[1]
+        val importedModule = g[2]
+        val appName = g[3]
+        val profileId = g[4]
+        val profileMajor = g[5].toInt()
+        val appSystem = g[6]
+        val defaultDeployment = g[7]
+        val provider = g[8]
+        val subjectClaim = g[9]
+        val roles = commaList(g[10])
+        val scopes = commaList(g[11])
+        val serviceIdentities = g[12]
+        val serviceName = g[13]
+        val ownedEntityRefs = commaList(g[14])
+        val systemName = g[15]
+        val systemServices = commaList(g[16])
+        val deploymentName = g[17]
+        val deploymentSystem = g[18]
+        val environment = g[19]
+        val target = g[20]
 
-    private data class Block(val name: String, val body: String, val start: Int, val end: Int)
-
-    private fun parseEnvelope(
-        path: String,
-        source: String,
-        domainModule: String,
-        domain: CanonicalIrDomainSlice,
-    ): Map<String, Any?> {
-        val module = Regex("(?m)^module\\s+([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)\\s*$")
-            .find(source)?.groupValues?.get(1)
-            ?: throw CanonicalIrDocumentSliceException("canonical IR envelope requires module")
-        val imports = Regex("(?m)^import\\s+([A-Za-z_][A-Za-z0-9_]*(?:\\.[A-Za-z_][A-Za-z0-9_]*)*)\\.\\*\\s*$")
-            .findAll(source).map { it.groupValues[1] }.toList()
-        if (imports != listOf(domainModule)) {
-            throw CanonicalIrDocumentSliceException("canonical IR envelope requires exactly import $domainModule.*")
+        if (importedModule != domainModule) {
+            throw CanonicalIrDocumentSliceException("envelope import does not match bounded domain module")
         }
-
-        val appMatch = singleBlock(source, Regex("(?ms)^app\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{(.*?)^\\}"), "app")
-        val authMatch = singleBlock(source, Regex("(?ms)^auth\\s*\\{(.*?)^\\}"), "auth", nameGroup = null)
-        val serviceMatches = blocks(source, Regex("(?ms)^export\\s+service\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{(.*?)^\\}"))
-        val systemMatch = singleBlock(source, Regex("(?ms)^export\\s+system\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{(.*?)^\\}"), "system")
-        val deploymentRegex = Regex("(?ms)^export\\s+deployment\\s+([A-Za-z_][A-Za-z0-9_]*)\\s+for\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*\\{(.*?)^\\}")
-        val deployments = deploymentRegex.findAll(source).toList()
-        if (deployments.size != 1) throw CanonicalIrDocumentSliceException("canonical IR envelope requires exactly one deployment")
-        ensureOnlyOwnedEnvelopeSurface(source, appMatch, authMatch, serviceMatches, systemMatch, deployments.single())
-
-        val profiles = Regex("(?m)^\\s*profile\\s+([a-z][a-z0-9-]*)\\s+version\\s+([1-9][0-9]*)\\s*$")
-            .findAll(appMatch.body).map { mapOf("id" to it.groupValues[1], "major" to it.groupValues[2].toInt()) }.toList()
-        if (profiles.isEmpty()) throw CanonicalIrDocumentSliceException("canonical IR envelope app requires profile")
-        val appSystem = lineValue(appMatch.body, "system")
-        val defaultDeployment = lineValue(appMatch.body, "defaultDeployment")
-        val appId = identity(module, appMatch.name)
-
-        val authProvider = lineValue(authMatch.body, "provider")
-        val subject = lineValue(authMatch.body, "subject")
-        val subjectClaim = Regex("^claim\\s+\"([^\"]+)\"$").matchEntire(subject)?.groupValues?.get(1)
-            ?: throw CanonicalIrDocumentSliceException("canonical IR envelope owns only auth subject claim")
-        val roles = bracketList(lineValue(authMatch.body, "roles"), "auth roles")
-        val scopes = bracketList(lineValue(authMatch.body, "scopes"), "auth scopes")
-        val serviceIdentities = lineValue(authMatch.body, "serviceIdentities")
-        if (serviceIdentities !in setOf("required", "optional")) {
-            throw CanonicalIrDocumentSliceException("unsupported serviceIdentities '$serviceIdentities'")
+        if (appSystem != systemName || defaultDeployment != deploymentName || deploymentSystem != systemName) {
+            throw CanonicalIrDocumentSliceException("envelope app/system/deployment references are inconsistent")
+        }
+        if (systemServices != listOf(serviceName)) {
+            throw CanonicalIrDocumentSliceException("bounded system must contain exactly its projected service")
         }
 
-        val domainEntities = domain.declarations.filter { it.kind == "entity" }.associateBy { it.fqn }
-        val servicesByName = linkedMapOf<String, Map<String, Any?>>()
-        for (service in serviceMatches) {
-            val owns = bracketList(lineValue(service.body, "owns"), "service owns")
-            val ownerIds = owns.map { ref ->
-                domainEntities[ref]?.declarationId
-                    ?: throw CanonicalIrDocumentSliceException("unsupported or unresolved owned entity '$ref'")
-            }
-            val uses = bracketList(lineValue(service.body, "uses"), "service uses")
-            val exposes = bracketList(lineValue(service.body, "exposes"), "service exposes")
-            val runs = bracketList(lineValue(service.body, "runs"), "service runs")
-            if (uses.isNotEmpty() || exposes.isNotEmpty() || runs.isNotEmpty()) {
-                throw CanonicalIrDocumentSliceException("service uses/exposes/runs are outside bounded document slice")
-            }
-            servicesByName[service.name] = identity(module, service.name) + mapOf(
-                "owns" to ownerIds,
-                "uses" to emptyList<String>(),
-                "exposes" to emptyList<String>(),
-                "runs" to emptyList<String>(),
-            )
-        }
-        if (servicesByName.size != serviceMatches.size) {
-            throw CanonicalIrDocumentSliceException("canonical IR envelope requires unique service names")
+        val entities = domain.declarations.filter { it.kind == "entity" }.associateBy { it.fqn }
+        val ownedEntityIds = ownedEntityRefs.map { ref ->
+            entities[ref]?.declarationId
+                ?: throw CanonicalIrDocumentSliceException("unresolved bounded owned entity '$ref'")
         }
 
-        val systemServices = bracketList(lineValue(systemMatch.body, "services"), "system services")
-        val systemServiceObjects = systemServices.map { name ->
-            servicesByName[name] ?: throw CanonicalIrDocumentSliceException("unresolved system service '$name'")
-        }
-        val resources = bracketList(lineValue(systemMatch.body, "resources"), "system resources")
-        val apis = bracketList(lineValue(systemMatch.body, "apis"), "system apis")
-        if (resources.isNotEmpty() || apis.isNotEmpty()) {
-            throw CanonicalIrDocumentSliceException("system resources/apis are outside bounded document slice")
-        }
-        if (appSystem != systemMatch.name) {
-            throw CanonicalIrDocumentSliceException("app system '$appSystem' does not match '${systemMatch.name}'")
-        }
-
-        val deployment = deployments.single()
-        val deploymentName = deployment.groupValues[1]
-        val deploymentSystem = deployment.groupValues[2]
-        val deploymentBody = deployment.groupValues[3]
-        if (defaultDeployment != deploymentName || deploymentSystem != systemMatch.name) {
-            throw CanonicalIrDocumentSliceException("deployment references do not match app/system")
-        }
-        val environment = lineValue(deploymentBody, "environment")
-        val target = lineValue(deploymentBody, "target")
-        if (!Regex("(?m)^\\s*colocate\\s+services\\s+all\\s*$").containsMatchIn(deploymentBody)) {
-            throw CanonicalIrDocumentSliceException("bounded deployment requires 'colocate services all'")
-        }
-        val deploymentKnown = Regex("(?m)^\\s*(environment\\s+\\S+|target\\s+\\S+|colocate\\s+services\\s+all)\\s*$")
-        val deploymentUnknown = deploymentBody.lines().filter { it.isNotBlank() && !deploymentKnown.matches(it) }
-        if (deploymentUnknown.isNotEmpty()) {
-            throw CanonicalIrDocumentSliceException("unsupported deployment fact '${deploymentUnknown.first().trim()}'")
-        }
-
-        val declarations = domain.declarations.map { declarationMap(it) }
+        val appId = identity(module, appName)
+        val service = identity(module, serviceName) + mapOf(
+            "owns" to ownedEntityIds,
+            "uses" to emptyList<String>(),
+            "exposes" to emptyList<String>(),
+            "runs" to emptyList<String>(),
+        )
         val app = appId + mapOf(
-            "systemId" to declarationId(module, systemMatch.name),
+            "systemId" to declarationId(module, systemName),
             "apiIds" to emptyList<String>(),
             "defaultDeploymentId" to declarationId(module, deploymentName),
             "auth" to mapOf(
-                "provider" to authProvider,
+                "provider" to provider,
                 "subjectClaim" to subjectClaim,
                 "roles" to roles,
                 "scopes" to scopes,
                 "serviceIdentities" to serviceIdentities,
             ),
         )
-        val system = identity(module, systemMatch.name) + mapOf(
-            "services" to systemServiceObjects,
+        val system = identity(module, systemName) + mapOf(
+            "services" to listOf(service),
             "resources" to emptyList<Any?>(),
             "topicIds" to emptyList<String>(),
             "apiIds" to emptyList<String>(),
             "edges" to emptyList<Any?>(),
             "consumerGroups" to emptyList<Any?>(),
         )
-        val deploymentObject = identity(module, deploymentName) + mapOf(
+        val deployment = identity(module, deploymentName) + mapOf(
             "environment" to environment,
             "regions" to emptyList<String>(),
-            "serviceBindings" to systemServices.map { name ->
-                mapOf("serviceId" to declarationId(module, name), "adapter" to target)
-            },
+            "serviceBindings" to listOf(
+                mapOf("serviceId" to declarationId(module, serviceName), "adapter" to target),
+            ),
             "resourceBindings" to emptyList<Any?>(),
         )
 
         val sourceEntries = mutableListOf<Map<String, Any?>>()
-        sourceEntries += sourceEntry("/app", appId.getValue("declarationId") as String, path, source, appMatch.start, appMatch.end)
-        sourceEntries += domain.sourceEntries.map { entry -> sourceEntryMap(entry) }
-        sourceEntries += sourceEntry(
-            "/system",
-            declarationId(module, systemMatch.name),
-            path,
-            source,
-            kindStart(source, systemMatch.start, "system"),
-            systemMatch.end,
-        )
-        serviceMatches.forEachIndexed { index, service ->
-            sourceEntries += sourceEntry(
-                "/system/services/$index",
-                declarationId(module, service.name),
-                path,
-                source,
-                kindStart(source, service.start, "service"),
-                service.end,
-            )
-        }
-        sourceEntries += sourceEntry(
-            "/deployments/0",
-            declarationId(module, deploymentName),
-            path,
-            source,
-            kindStart(source, deployment.range.first, "deployment"),
-            deployment.range.last + 1,
-        )
+        sourceEntries += envelopeEntry("/app", declarationId(module, appName), envelopePath, envelopeSource, "app $appName")
+        sourceEntries += domain.sourceEntries.map(::sourceEntryMap)
+        sourceEntries += envelopeEntry("/system", declarationId(module, systemName), envelopePath, envelopeSource, "system $systemName")
+        sourceEntries += envelopeEntry("/system/services/0", declarationId(module, serviceName), envelopePath, envelopeSource, "service $serviceName")
+        sourceEntries += envelopeEntry("/deployments/0", declarationId(module, deploymentName), envelopePath, envelopeSource, "deployment $deploymentName")
 
-        return linkedMapOf(
-            "irVersion" to IR_VERSION,
-            "semanticHash" to ZERO_HASH,
-            "profiles" to profiles,
-            "app" to app,
-            "declarations" to declarations,
-            "system" to system,
-            "deployments" to listOf(deploymentObject),
-            "sourceMap" to mapOf("entries" to sourceEntries),
-            "profileExtensions" to emptyMap<String, Any?>(),
+        return CanonicalIrDocumentSlice(
+            linkedMapOf(
+                "irVersion" to IR_VERSION,
+                "semanticHash" to ZERO_HASH,
+                "profiles" to listOf(mapOf("id" to profileId, "major" to profileMajor)),
+                "app" to app,
+                "declarations" to domain.declarations.map(::declarationMap),
+                "system" to system,
+                "deployments" to listOf(deployment),
+                "sourceMap" to mapOf("entries" to sourceEntries),
+                "profileExtensions" to emptyMap<String, Any?>(),
+            ),
         )
     }
 
-    private fun singleBlock(
-        source: String,
-        regex: Regex,
-        label: String,
-        nameGroup: Int? = 1,
-    ): Block {
-        val matches = regex.findAll(source).toList()
-        if (matches.size != 1) throw CanonicalIrDocumentSliceException("canonical IR envelope requires exactly one $label block")
-        val match = matches.single()
-        val bodyGroup = if (nameGroup == null) 1 else 2
-        val name = nameGroup?.let { match.groupValues[it] } ?: label
-        return Block(name, match.groupValues[bodyGroup], match.range.first, match.range.last + 1)
-    }
-
-    private fun blocks(source: String, regex: Regex): List<Block> = regex.findAll(source).map { match ->
-        Block(match.groupValues[1], match.groupValues[2], match.range.first, match.range.last + 1)
-    }.toList().also {
-        if (it.isEmpty()) throw CanonicalIrDocumentSliceException("canonical IR envelope requires at least one service")
-    }
-
-    private fun ensureOnlyOwnedEnvelopeSurface(
-        source: String,
-        app: Block,
-        auth: Block,
-        services: List<Block>,
-        system: Block,
-        deployment: MatchResult,
-    ) {
-        val owned = BooleanArray(source.length)
-        fun mark(start: Int, end: Int) { for (index in start until end) owned[index] = true }
-        Regex("(?m)^module\\s+[^\\n]+$").findAll(source).forEach { mark(it.range.first, it.range.last + 1) }
-        Regex("(?m)^import\\s+[^\\n]+$").findAll(source).forEach { mark(it.range.first, it.range.last + 1) }
-        mark(app.start, app.end); mark(auth.start, auth.end); services.forEach { mark(it.start, it.end) }
-        mark(system.start, system.end); mark(deployment.range.first, deployment.range.last + 1)
-        val unexpected = source.indices.firstOrNull { !owned[it] && !source[it].isWhitespace() }
-        if (unexpected != null) {
-            throw CanonicalIrDocumentSliceException("unsupported canonical IR envelope syntax at offset $unexpected")
-        }
-    }
-
-    private fun lineValue(body: String, key: String): String =
-        Regex("(?m)^\\s*${Regex.escape(key)}\\s+(.+?)\\s*$").find(body)?.groupValues?.get(1)
-            ?: throw CanonicalIrDocumentSliceException("canonical IR envelope requires '$key'")
-
-    private fun bracketList(raw: String, label: String): List<String> {
-        val trimmed = raw.trim()
-        if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) {
-            throw CanonicalIrDocumentSliceException("$label must be a bracketed list")
-        }
-        val inner = trimmed.substring(1, trimmed.length - 1).trim()
-        return if (inner.isEmpty()) emptyList() else inner.split(',').map { it.trim() }.also { values ->
-            if (values.any { it.isEmpty() }) throw CanonicalIrDocumentSliceException("$label contains empty item")
-        }
+    private fun commaList(raw: String): List<String> = raw.trim().let { value ->
+        if (value.isEmpty()) emptyList() else value.split(',').map(String::trim)
     }
 
     private fun declarationMap(value: CanonicalIrDomainDeclaration): Map<String, Any?> {
@@ -280,12 +174,11 @@ object CanonicalIrDocumentSliceProjector {
         )
         when (value.kind) {
             "enum" -> result["values"] = value.values
-            "value" -> result["fields"] = value.fields.map { fieldMap(it) }
+            "value" -> result["fields"] = value.fields.map(::fieldMap)
             "entity" -> {
-                result["fields"] = value.fields.map { fieldMap(it) }
+                result["fields"] = value.fields.map(::fieldMap)
                 result["identityFields"] = value.identityFields
             }
-            else -> throw CanonicalIrDocumentSliceException("unsupported document declaration '${value.kind}'")
         }
         return result
     }
@@ -308,7 +201,7 @@ object CanonicalIrDocumentSliceProjector {
             "kind" to "named",
             "declarationId" to value.declarationId,
             "fqn" to value.fqn,
-            "typeArguments" to value.typeArguments.map { typeMap(it) },
+            "typeArguments" to value.typeArguments.map(::typeMap),
         )
         is CanonicalIrListType -> mapOf("kind" to "list", "element" to typeMap(value.element))
         is CanonicalIrNullableType -> mapOf("kind" to "nullable", "element" to typeMap(value.element))
@@ -326,33 +219,36 @@ object CanonicalIrDocumentSliceProjector {
         ),
     )
 
-    private fun sourceEntry(
+    private fun envelopeEntry(
         nodePath: String,
-        id: String,
+        declarationId: String,
         path: String,
         source: String,
-        start: Int,
-        end: Int,
+        header: String,
     ): Map<String, Any?> {
-        val startPosition = position(source, start)
-        val endPosition = position(source, end)
+        val headerOffset = source.indexOf(header)
+        val blockStart = source.lastIndexOf("export ", headerOffset).takeIf { it >= 0 } ?: headerOffset
+        val closeOffset = source.indexOf('}', headerOffset) + 1
+        val start = position(source, headerOffset)
+        val end = position(source, closeOffset)
         return mapOf(
             "nodePath" to nodePath,
-            "originalDeclarationId" to id,
+            "originalDeclarationId" to declarationId,
             "span" to mapOf(
                 "file" to path,
-                "startLine" to startPosition.first,
-                "startColumn" to startPosition.second,
-                "endLine" to endPosition.first,
-                "endColumn" to endPosition.second,
+                "startLine" to start.first,
+                "startColumn" to start.second,
+                "endLine" to end.first,
+                "endColumn" to end.second,
             ),
-        )
+        ).also { blockStart }
     }
 
-    private fun kindStart(source: String, blockStart: Int, kind: String): Int {
-        val found = source.indexOf(kind, blockStart)
-        if (found < blockStart) throw CanonicalIrDocumentSliceException("cannot locate $kind source span")
-        return found
+    private fun position(source: String, offset: Int): Pair<Int, Int> {
+        val before = source.substring(0, offset)
+        val line = before.count { it == '\n' } + 1
+        val column = offset - before.lastIndexOf('\n')
+        return line to column
     }
 
     private fun identity(module: String, name: String): Map<String, Any?> = linkedMapOf(
@@ -364,23 +260,13 @@ object CanonicalIrDocumentSliceProjector {
     )
 
     private fun declarationId(module: String, name: String): String = "$module.$name@1"
-
-    private fun position(source: String, offset: Int): Pair<Int, Int> {
-        if (offset !in 0..source.length) throw CanonicalIrDocumentSliceException("invalid source offset $offset")
-        var line = 1
-        var column = 1
-        for (index in 0 until offset) {
-            if (source[index] == '\n') { line += 1; column = 1 } else column += 1
-        }
-        return line to column
-    }
 }
 
 private fun stripSemanticHashes(value: Any?): Any? = when (value) {
     is Map<*, *> -> value.entries
         .filter { it.key != "semanticHash" }
         .associate { it.key as String to stripSemanticHashes(it.value) }
-    is List<*> -> value.map { stripSemanticHashes(it) }
+    is List<*> -> value.map(::stripSemanticHashes)
     else -> value
 }
 
