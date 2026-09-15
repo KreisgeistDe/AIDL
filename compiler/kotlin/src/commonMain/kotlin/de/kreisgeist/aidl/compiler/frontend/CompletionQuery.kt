@@ -167,10 +167,14 @@ class ProjectCompletionQuery private constructor(
             else -> -1
         }
         if (wordIndex >= 0) {
+            val lexicalReference = AidlSourceProjector.referenceAt(source, wordIndex)
+                ?.takeUnless { it.startsWith("@") }
+                ?: return null
             var start = wordIndex
             while (start > 0 && source[start - 1].isCompletionWordPart()) start -= 1
             var end = wordIndex + 1
             while (end < source.length && source[end].isCompletionWordPart()) end += 1
+            if (!lexicalReference.contains(source.substring(start, end))) return null
             if (!isParserBackedReferenceValue(projection, source, start)) return null
             val prefixEnd = offset.coerceIn(start, end)
             return ProjectedCompletionContext(
@@ -182,7 +186,9 @@ class ProjectCompletionQuery private constructor(
         if (offset > 0 && source[offset - 1] == '.') {
             val dotOffset = offset - 1
             if (!isParserBackedReferenceValue(projection, source, dotOffset)) return null
-            val qualifier = qualifiedNameEndingAt(source, dotOffset - 1) ?: return null
+            val qualifier = AidlSourceProjector.referenceAt(source, dotOffset - 1)
+                ?.takeUnless { it.startsWith("@") }
+                ?: return null
             return ProjectedCompletionContext("", qualifier)
         }
         return null
@@ -207,12 +213,12 @@ class ProjectCompletionQuery private constructor(
     }
 
     private fun qualifierBefore(source: String, wordStart: Int): String? {
-        if (source[wordStart - 1] != '.') return null
+        if (wordStart <= 0 || source[wordStart - 1] != '.') return null
         return qualifiedNameEndingAt(source, wordStart - 2)
     }
 
     private fun qualifiedNameEndingAt(source: String, endInclusive: Int): String? {
-        if (!source[endInclusive].isCompletionWordPart()) return null
+        if (endInclusive < 0 || !source[endInclusive].isCompletionWordPart()) return null
         var start = endInclusive
         while (start > 0) {
             val previous = source[start - 1]
