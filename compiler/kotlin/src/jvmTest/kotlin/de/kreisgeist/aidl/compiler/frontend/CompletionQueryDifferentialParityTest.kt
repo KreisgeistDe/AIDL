@@ -125,6 +125,32 @@ class CompletionQueryDifferentialParityTest {
     }
 
     @Test
+    fun nonReferenceClauseValueTokensMatchPythonFailClosedBoundary() {
+        val source = """module demo
+entity Local {}
+entity Uses {
+  stringValue: "Local"
+  numberValue: 123
+  annotationValue: @Local
+}
+"""
+        val query = ProjectCompletionQuery.fromSources(listOf("non-reference" to source))
+        val offsets = listOf(
+            source.indexOf("\"Local\"") + 3,
+            source.indexOf("123") + 2,
+            source.indexOf("@Local") + 3,
+        )
+
+        for (offset in offsets) {
+            val result = query.complete("non-reference", offset)
+            assertEquals(ProjectedCompletionStatus.INVALID, result.status)
+            assertEquals(null, result.prefix)
+            assertEquals(null, result.qualifier)
+            assertEquals(emptyList(), result.candidates)
+        }
+    }
+
+    @Test
     fun prefixWildcardModulelessAndOverrideBranchesStayBounded() {
         val providerA = File("parity/resolution-provider-a.source").readText()
         val providerB = File("parity/resolution-provider-b.source").readText()
