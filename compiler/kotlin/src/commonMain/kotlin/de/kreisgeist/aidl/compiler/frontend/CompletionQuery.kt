@@ -189,6 +189,7 @@ class ProjectCompletionQuery private constructor(
             val qualifier = AidlSourceProjector.referenceAt(source, dotOffset - 1)
                 ?.takeUnless { it.startsWith("@") }
                 ?: return null
+            if (qualifiedNameEndingAt(source, dotOffset - 1) != qualifier) return null
             return ProjectedCompletionContext("", qualifier)
         }
         return null
