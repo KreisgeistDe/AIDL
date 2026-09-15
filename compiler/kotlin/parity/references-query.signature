@@ -1,0 +1,6 @@
+saved-local|resolved|demo.consumer.Local|references-consumer:6:10:107:5
+saved-imported|resolved|demo.shared.Public|references-consumer:2:20:40:6,references-consumer:7:13:125:6,references-consumer:8:26:157:6
+saved-qualified|resolved|demo.shared.Public|references-consumer:2:20:40:6,references-consumer:7:13:125:6,references-consumer:8:26:157:6
+saved-ambiguous|ambiguous||
+memory-shifted-imported|resolved|demo.shared.Public|references-consumer:3:20:41:6,references-consumer:8:13:126:6,references-consumer:9:26:158:6
+memory-lexical-failure|invalid||
