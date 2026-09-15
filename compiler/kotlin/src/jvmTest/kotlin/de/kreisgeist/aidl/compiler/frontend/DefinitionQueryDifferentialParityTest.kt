@@ -39,6 +39,7 @@ class DefinitionQueryDifferentialParityTest {
             "  duplicate: Duplicate\n" +
             "  imported: Public\n" +
             "}\n"
+        val shiftedProviderA = "\n$providerA"
 
         return listOf(
             render("saved-local", query.definition("resolution-consumer", consumer.indexOf("Local"))),
@@ -52,6 +53,7 @@ class DefinitionQueryDifferentialParityTest {
             render("memory-missing", query.definition("resolution-consumer", override, override.indexOf("Missing", consumer.length))),
             render("memory-duplicate", query.definition("resolution-consumer", override, override.indexOf("Duplicate", consumer.length))),
             render("memory-public", query.definition("resolution-consumer", override, override.indexOf("Public", consumer.length))),
+            render("memory-shifted-hidden", query.definition("resolution-provider-a", shiftedProviderA, shiftedProviderA.indexOf("Hidden"))),
             render("memory-lexical-failure", query.definition("resolution-consumer", "$consumer§", 0)),
         ).joinToString("\n")
     }
