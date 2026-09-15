@@ -1,7 +1,7 @@
 saved-local|resolved|Loc||Local~Local (entity)~demo.consumer.Local~entity~local:demo.consumer~completion-consumer~75
 saved-exact|resolved|Pub||Public~Public (value)~demo.shared.Public~value~exactImport:demo.shared.Public~resolution-provider-a~32
 saved-qualified|resolved|Pub|demo.shared|Public~Public (value)~demo.shared.Public~value~qualified:demo.shared~resolution-provider-a~32
-saved-dot|resolved||demo.shared|Other~Other (value)~demo.shared.Other~value~qualified:demo.shared~resolution-provider-b~57;Public~Public (value)~demo.shared.Public~value~qualified:demo.shared~resolution-provider-a~32
+saved-dot|resolved||demo.shared|Hidden~Hidden (value)~demo.shared.Hidden~value~qualified:demo.shared~resolution-provider-a~48;Other~Other (value)~demo.shared.Other~value~qualified:demo.shared~resolution-provider-b~57;Public~Public (value)~demo.shared.Public~value~qualified:demo.shared~resolution-provider-a~32
 saved-ambiguous|resolved|Dup||
 saved-invalid-key|invalid|||
 saved-invalid-module|invalid|||
