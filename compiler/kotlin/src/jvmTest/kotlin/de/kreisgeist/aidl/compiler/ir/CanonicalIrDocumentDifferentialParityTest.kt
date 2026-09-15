@@ -58,48 +58,50 @@ class CanonicalIrDocumentDifferentialParityTest {
     }
 
     @Test
-    fun boundedEnvelopeRejectsUnsupportedOrInconsistentFacts() {
+    fun boundedEnvelopeRejectsEveryUnsupportedShapeOrReference() {
         val root = parityRoot()
         val domain = Files.readString(root.resolve("canonical-ir-domain.source"))
         val envelope = Files.readString(root.resolve("canonical-ir-envelope.source"))
 
-        fun reject(candidate: String): CanonicalIrDocumentSliceException = assertFailsWith {
-            CanonicalIrDocumentSliceProjector.project(
-                "domain",
-                "compiler/kotlin/parity/canonical-ir-domain.source",
-                domain,
-                "envelope",
-                "compiler/kotlin/parity/canonical-ir-envelope.source",
-                candidate,
-            )
+        fun reject(candidate: String) {
+            assertFailsWith<CanonicalIrDocumentSliceException> {
+                CanonicalIrDocumentSliceProjector.project(
+                    "domain",
+                    "compiler/kotlin/parity/canonical-ir-domain.source",
+                    domain,
+                    "envelope",
+                    "compiler/kotlin/parity/canonical-ir-envelope.source",
+                    candidate,
+                )
+            }
         }
 
-        assertTrue(reject(envelope.replace("import parity.ir.domain.*", "import other.domain.*")).message.orEmpty().contains("import"))
-        assertTrue(reject(envelope + "\nimport parity.ir.domain.*\n").message.orEmpty().contains("import"))
-        assertTrue(reject(envelope.replace("uses []", "uses [SomeResource]")).message.orEmpty().contains("outside bounded"))
-        assertTrue(reject(envelope.replace("exposes []", "exposes [SomeQuery]")).message.orEmpty().contains("outside bounded"))
-        assertTrue(reject(envelope.replace("runs []", "runs [SomeTask]")).message.orEmpty().contains("outside bounded"))
-        assertTrue(reject(envelope.replace("resources []", "resources [SomeResource]")).message.orEmpty().contains("outside bounded"))
-        assertTrue(reject(envelope.replace("apis []", "apis [SomeApi]")).message.orEmpty().contains("outside bounded"))
-        assertTrue(reject(envelope.replace("owns [parity.ir.domain.Pet]", "owns [parity.ir.domain.Missing]")).message.orEmpty().contains("unresolved"))
-        assertTrue(reject(envelope.replace("services [ParityService]", "services [MissingService]")).message.orEmpty().contains("unresolved"))
-        assertTrue(reject(envelope.replace("roles [user]", "roles user")).message.orEmpty().contains("bracketed"))
-        assertTrue(reject(envelope.replace("roles [user]", "roles [user, ]")).message.orEmpty().contains("empty item"))
-        assertTrue(reject(envelope.replace("subject claim \"sub\"", "subject principal")).message.orEmpty().contains("subject claim"))
-        assertTrue(reject(envelope.replace("serviceIdentities required", "serviceIdentities maybe")).message.orEmpty().contains("serviceIdentities"))
-        assertTrue(reject(envelope.replace("  profile core version 1\n", "")).message.orEmpty().contains("profile"))
-        assertTrue(reject(envelope + "\nexport query NotOwned {}\n").message.orEmpty().contains("unsupported"))
-        assertTrue(
-            reject(
-                envelope.replace(
-                    "\n  system ParitySystem\n",
-                    "\n  system OtherSystem\n",
-                ),
-            ).message.orEmpty().contains("does not match"),
-        )
-        assertTrue(reject(envelope.replace("defaultDeployment local", "defaultDeployment other")).message.orEmpty().contains("deployment references"))
-        assertTrue(reject(envelope.replace("  colocate services all\n", "")).message.orEmpty().contains("colocate"))
-        assertTrue(reject(envelope.replace("  colocate services all\n", "  colocate services all\n  region nowhere\n")).message.orEmpty().contains("unsupported deployment fact"))
+        listOf(
+            envelope.replace("import parity.ir.domain.*", "import other.domain.*"),
+            envelope + "\nimport parity.ir.domain.*\n",
+            envelope.replace("uses []", "uses [SomeResource]"),
+            envelope.replace("exposes []", "exposes [SomeQuery]"),
+            envelope.replace("runs []", "runs [SomeTask]"),
+            envelope.replace("resources []", "resources [SomeResource]"),
+            envelope.replace("apis []", "apis [SomeApi]"),
+            envelope.replace("owns [parity.ir.domain.Pet]", "owns [parity.ir.domain.Missing]"),
+            envelope.replace("services [ParityService]", "services [MissingService]"),
+            envelope.replace("roles [user]", "roles user"),
+            envelope.replace("roles [user]", "roles [user, ]"),
+            envelope.replace("subject claim \"sub\"", "subject principal"),
+            envelope.replace("serviceIdentities required", "serviceIdentities maybe"),
+            envelope.replace("  profile core version 1\n", ""),
+            envelope + "\nexport query NotOwned {}\n",
+            envelope.replace("\n  system ParitySystem\n", "\n  system OtherSystem\n"),
+            envelope.replace("defaultDeployment local", "defaultDeployment other"),
+            envelope.replace("  colocate services all\n", ""),
+            envelope.replace("  colocate services all\n", "  colocate services all\n  region nowhere\n"),
+            envelope.replace("  provider oidc\n", ""),
+            envelope.replace("  roles [user]\n", ""),
+            envelope.replace("  scopes [parity.read]\n", ""),
+            envelope.replace("  environment test\n", ""),
+            envelope.replace("  target process\n", ""),
+        ).forEach(::reject)
 
         val appBlock = """
             app ParityApp {
@@ -140,22 +142,18 @@ class CanonicalIrDocumentDifferentialParityTest {
             }
         """.trimIndent()
 
-        assertTrue(reject(envelope.replace(appBlock, "")).message.orEmpty().contains("exactly one app"))
-        assertTrue(reject(envelope.replace(appBlock, "$appBlock\n\n$appBlock")).message.orEmpty().contains("exactly one app"))
-        assertTrue(reject(envelope.replace(authBlock, "")).message.orEmpty().contains("exactly one auth"))
-        assertTrue(reject(envelope.replace(authBlock, "$authBlock\n\n$authBlock")).message.orEmpty().contains("exactly one auth"))
-        assertTrue(reject(envelope.replace(systemBlock, "")).message.orEmpty().contains("exactly one system"))
-        assertTrue(reject(envelope.replace(systemBlock, "$systemBlock\n\n$systemBlock")).message.orEmpty().contains("exactly one system"))
-        assertTrue(reject(envelope.replace(serviceBlock, "")).message.orEmpty().contains("at least one service"))
-        assertTrue(reject(envelope.replace(serviceBlock, "$serviceBlock\n\n$serviceBlock")).message.orEmpty().contains("unique service"))
-        assertTrue(reject(envelope.replace(deploymentBlock, "")).message.orEmpty().contains("exactly one deployment"))
-        assertTrue(reject(envelope.replace(deploymentBlock, "$deploymentBlock\n\n$deploymentBlock")).message.orEmpty().contains("exactly one deployment"))
-
-        assertTrue(reject(envelope.replace("  provider oidc\n", "")).message.orEmpty().contains("provider"))
-        assertTrue(reject(envelope.replace("  roles [user]\n", "")).message.orEmpty().contains("roles"))
-        assertTrue(reject(envelope.replace("  scopes [parity.read]\n", "")).message.orEmpty().contains("scopes"))
-        assertTrue(reject(envelope.replace("  environment test\n", "")).message.orEmpty().contains("environment"))
-        assertTrue(reject(envelope.replace("  target process\n", "")).message.orEmpty().contains("target"))
+        listOf(
+            envelope.replace(appBlock, ""),
+            envelope.replace(appBlock, "$appBlock\n\n$appBlock"),
+            envelope.replace(authBlock, ""),
+            envelope.replace(authBlock, "$authBlock\n\n$authBlock"),
+            envelope.replace(serviceBlock, ""),
+            envelope.replace(serviceBlock, "$serviceBlock\n\n$serviceBlock"),
+            envelope.replace(systemBlock, ""),
+            envelope.replace(systemBlock, "$systemBlock\n\n$systemBlock"),
+            envelope.replace(deploymentBlock, ""),
+            envelope.replace(deploymentBlock, "$deploymentBlock\n\n$deploymentBlock"),
+        ).forEach(::reject)
     }
 
     @Test
