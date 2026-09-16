@@ -2,6 +2,7 @@ package de.kreisgeist.aidl.compiler.frontend
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RenamePlanningCoverageTest {
@@ -34,12 +35,11 @@ class RenamePlanningCoverageTest {
     fun identifierValidationAcceptsPlainAndUnderscoreNamesAndRejectsReservedOrMalformed() {
         val imported = consumer.indexOf("Public", consumer.indexOf("imported:")) + 1
         assertEquals(ProjectedRenameStatus.READY, planner().plan("consumer", imported, "_Renamed2").status)
-        for (name in listOf("", "entity", "2Renamed", "Renamed-name", "Public")) {
-            assertTrue(planner().plan("consumer", imported, name).status in setOf(ProjectedRenameStatus.INVALID_NAME, ProjectedRenameStatus.READY))
-        }
+        assertEquals(ProjectedRenameStatus.INVALID_NAME, planner().plan("consumer", imported, "").status)
         assertEquals(ProjectedRenameStatus.INVALID_NAME, planner().plan("consumer", imported, "entity").status)
         assertEquals(ProjectedRenameStatus.INVALID_NAME, planner().plan("consumer", imported, "2Renamed").status)
         assertEquals(ProjectedRenameStatus.INVALID_NAME, planner().plan("consumer", imported, "Renamed-name").status)
+        assertEquals(ProjectedRenameStatus.INVALID_NAME, planner().plan("consumer", imported, "Public").status)
     }
 
     @Test
@@ -49,5 +49,28 @@ class RenamePlanningCoverageTest {
         assertEquals(ProjectedRenameStatus.UNRESOLVED, planner().plan("consumer", consumer.indexOf("Missing") + 1, "Renamed").status)
         assertEquals(ProjectedRenameStatus.INVALID, planner().plan("unknown", 0, "Renamed").status)
         assertEquals(ProjectedRenameStatus.INVALID, planner().plan("consumer", consumer.indexOf("imported:") + "imported".length, "Renamed").status)
+    }
+
+    @Test
+    fun editValidationCoversMissingBoundsMismatchAndSuccess() {
+        val valid = ProjectedRenameTextEdit("source", 1, 3, "New")
+        assertNull(renameEditValidationError(mapOf("source" to "xOldy"), listOf(valid), "Old"))
+        assertEquals(
+            "rename edit is outside snapshot text",
+            renameEditValidationError(emptyMap(), listOf(valid), "Old"),
+        )
+        assertEquals(
+            "rename edit is outside snapshot text",
+            renameEditValidationError(mapOf("source" to "xOldy"), listOf(valid.copy(offset = -1)), "Old"),
+        )
+        assertEquals(
+            "rename edit is outside snapshot text",
+            renameEditValidationError(mapOf("source" to "xOldy"), listOf(valid.copy(offset = 4)), "Old"),
+        )
+        assertEquals(
+            "snapshot text changed while planning rename",
+            renameEditValidationError(mapOf("source" to "xOther"), listOf(valid), "Old"),
+        )
+        assertTrue(renameEditValidationError(mapOf("source" to "xOldy"), emptyList(), "Old") == null)
     }
 }
