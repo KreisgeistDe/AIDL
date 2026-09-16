@@ -102,18 +102,24 @@ class KotlinRenamePlanningParityTest(unittest.TestCase):
                 tuple((item.source_path, item.location.offset, item.length, item.replacement) for item in saved.edits),
             )
 
-    def test_isolated_roots_and_repeated_snapshots_remain_deterministic(self) -> None:
+    def test_isolated_roots_repeated_snapshots_and_source_order_are_deterministic(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)
             rendered = []
             for name in ("root-a", "root-b"):
                 root = base / name
                 root.mkdir()
-                domain_path = self._project(root)["rename-domain"]
+                paths = self._project(root)
+                domain_path = paths["rename-domain"]
                 offset = DOMAIN.index("Status") + 1
                 first = plan_snapshot_rename(create_compiler_snapshot([root]), domain_path, offset, "Renamed")
                 second = plan_snapshot_rename(create_compiler_snapshot([root]), domain_path, offset, "Renamed")
+                explicit = list(paths.values())
+                ordered = plan_snapshot_rename(create_compiler_snapshot(explicit), domain_path, offset, "Renamed")
+                reversed_order = plan_snapshot_rename(create_compiler_snapshot(list(reversed(explicit))), domain_path, offset, "Renamed")
                 self.assertEqual(first, second)
+                self.assertEqual(first, ordered)
+                self.assertEqual(ordered, reversed_order)
                 self.assertEqual("ready", first.status)
                 self.assertEqual("parity.ir.domain.Renamed", first.new_fully_qualified_name)
                 self.assertTrue(all(edit.source_path == domain_path for edit in first.edits))
