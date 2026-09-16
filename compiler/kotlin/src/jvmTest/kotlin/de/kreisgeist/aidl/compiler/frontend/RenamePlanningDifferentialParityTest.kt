@@ -8,6 +8,9 @@ import kotlin.test.assertTrue
 class RenamePlanningDifferentialParityTest {
     private fun sources(): List<Pair<String, String>> = listOf(
         "rename-domain" to File("parity/canonical-ir-domain.source").readText(),
+        "rename-ambiguity" to File("parity/rename-ambiguity.source").readText(),
+        "rename-provider-one" to File("parity/rename-provider-one.source").readText(),
+        "rename-provider-two" to File("parity/rename-provider-two.source").readText(),
     )
 
     private fun status(result: ProjectedRenameResult): String = when (result.status) {
@@ -31,13 +34,17 @@ class RenamePlanningDifferentialParityTest {
     }
 
     private fun matrix(entries: List<Pair<String, String>> = sources()): String {
-        val domain = entries.single().second
+        val sourceById = entries.toMap()
+        val domain = sourceById.getValue("rename-domain")
+        val ambiguity = sourceById.getValue("rename-ambiguity")
         val planner = ProjectRenamePlanner.fromSources(entries)
         val statusOffset = domain.indexOf("Status") + 1
         val shifted = "\n$domain"
         val invalid = "$domain§"
         return listOf(
             render("saved-status", planner.plan("rename-domain", statusOffset, "Renamed")),
+            render("saved-ambiguous", planner.plan("rename-ambiguity", ambiguity.indexOf("Shared") + 1, "Renamed")),
+            render("saved-unresolved", planner.plan("rename-ambiguity", ambiguity.indexOf("Missing") + 1, "Renamed")),
             render("saved-collision", planner.plan("rename-domain", statusOffset, "Pet")),
             render("saved-invalid-name", planner.plan("rename-domain", statusOffset, "entity")),
             render(
@@ -57,9 +64,10 @@ class RenamePlanningDifferentialParityTest {
     }
 
     @Test
-    fun repeatedEvaluationIsDeterministic() {
+    fun repeatedAndReversedSourceEnumerationAreDeterministic() {
         val first = matrix()
         assertEquals(first, matrix())
+        assertEquals(first, matrix(sources().reversed()))
     }
 
     @Test
