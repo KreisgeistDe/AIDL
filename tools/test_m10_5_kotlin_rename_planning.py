@@ -12,14 +12,26 @@ ROOT = Path(__file__).resolve().parents[1]
 PARITY = ROOT / "compiler" / "kotlin" / "parity"
 DOMAIN = (PARITY / "canonical-ir-domain.source").read_text(encoding="utf-8")
 ENVELOPE = (PARITY / "canonical-ir-envelope.source").read_text(encoding="utf-8")
+AMBIGUITY = (PARITY / "rename-ambiguity.source").read_text(encoding="utf-8")
+PROVIDER_ONE = (PARITY / "rename-provider-one.source").read_text(encoding="utf-8")
+PROVIDER_TWO = (PARITY / "rename-provider-two.source").read_text(encoding="utf-8")
 
 
 class KotlinRenamePlanningParityTest(unittest.TestCase):
-    def _project(self, root: Path, domain_text: str = DOMAIN) -> Path:
-        domain = root / "rename-domain.aidl"
-        domain.write_text(domain_text, encoding="utf-8")
-        (root / "context-envelope.aidl").write_text(ENVELOPE, encoding="utf-8")
-        return domain
+    def _project(self, root: Path, domain_text: str = DOMAIN) -> dict[str, Path]:
+        paths = {
+            "rename-domain": root / "rename-domain.aidl",
+            "rename-ambiguity": root / "rename-ambiguity.aidl",
+            "rename-provider-one": root / "rename-provider-one.aidl",
+            "rename-provider-two": root / "rename-provider-two.aidl",
+            "context-envelope": root / "context-envelope.aidl",
+        }
+        paths["rename-domain"].write_text(domain_text, encoding="utf-8")
+        paths["rename-ambiguity"].write_text(AMBIGUITY, encoding="utf-8")
+        paths["rename-provider-one"].write_text(PROVIDER_ONE, encoding="utf-8")
+        paths["rename-provider-two"].write_text(PROVIDER_TWO, encoding="utf-8")
+        paths["context-envelope"].write_text(ENVELOPE, encoding="utf-8")
+        return paths
 
     def _render(self, label: str, result) -> str:
         target = result.target
@@ -40,9 +52,13 @@ class KotlinRenamePlanningParityTest(unittest.TestCase):
     def test_python_snapshot_oracle_matches_pinned_rename_signature(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            domain_path = self._project(root)
+            paths = self._project(root)
+            domain_path = paths["rename-domain"]
+            ambiguity_path = paths["rename-ambiguity"]
             snapshot = create_compiler_snapshot([root])
             status = DOMAIN.index("Status") + 1
+            ambiguous = AMBIGUITY.index("Shared") + 1
+            unresolved = AMBIGUITY.index("Missing") + 1
             shifted = "\n" + DOMAIN
             shifted_snapshot = create_compiler_snapshot([root], {domain_path: shifted})
             invalid = DOMAIN + "§"
@@ -50,6 +66,8 @@ class KotlinRenamePlanningParityTest(unittest.TestCase):
             actual = "\n".join(
                 (
                     self._render("saved-status", plan_snapshot_rename(snapshot, domain_path, status, "Renamed")),
+                    self._render("saved-ambiguous", plan_snapshot_rename(snapshot, ambiguity_path, ambiguous, "Renamed")),
+                    self._render("saved-unresolved", plan_snapshot_rename(snapshot, ambiguity_path, unresolved, "Renamed")),
                     self._render("saved-collision", plan_snapshot_rename(snapshot, domain_path, status, "Pet")),
                     self._render("saved-invalid-name", plan_snapshot_rename(snapshot, domain_path, status, "entity")),
                     self._render(
@@ -72,7 +90,7 @@ class KotlinRenamePlanningParityTest(unittest.TestCase):
     def test_saved_snapshot_plan_matches_non_applying_refactoring_plan(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            domain_path = self._project(root)
+            domain_path = self._project(root)["rename-domain"]
             offset = DOMAIN.index("Status") + 1
             snapshot = plan_snapshot_rename(create_compiler_snapshot([root]), domain_path, offset, "Renamed")
             saved = rename_project_symbol([root], domain_path, offset, "Renamed", apply=False)
@@ -91,7 +109,7 @@ class KotlinRenamePlanningParityTest(unittest.TestCase):
             for name in ("root-a", "root-b"):
                 root = base / name
                 root.mkdir()
-                domain_path = self._project(root)
+                domain_path = self._project(root)["rename-domain"]
                 offset = DOMAIN.index("Status") + 1
                 first = plan_snapshot_rename(create_compiler_snapshot([root]), domain_path, offset, "Renamed")
                 second = plan_snapshot_rename(create_compiler_snapshot([root]), domain_path, offset, "Renamed")
