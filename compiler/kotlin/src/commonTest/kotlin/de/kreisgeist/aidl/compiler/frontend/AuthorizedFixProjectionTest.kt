@@ -74,6 +74,39 @@ consumer Worker {
                 listOf(diagnostic(noTrailingLine)),
             ).fixes("authorized-fixes.aidl").isEmpty(),
         )
+        val lateBrace = "consumer Worker\n{\n"
+        assertTrue(
+            ProjectAuthorizedFixQuery.fromSnapshot(
+                listOf("authorized-fixes.aidl" to lateBrace),
+                listOf(diagnostic(lateBrace)),
+            ).fixes("authorized-fixes.aidl").isEmpty(),
+        )
+    }
+
+    @Test
+    fun staleOffsetsAndUnrelatedDiagnosticsFailClosed() {
+        val fix = listOf(ProjectedDiagnosticFix("insertClause", "idempotency: event.eventId retain 30d"))
+        val unrelated = ProjectedAuthorizedFixDiagnostic("AIDL-DIST411", "other.aidl", 0, fix)
+        val negative = ProjectedAuthorizedFixDiagnostic("AIDL-DIST411", "authorized-fixes.aidl", -1, fix)
+        val pastEnd = ProjectedAuthorizedFixDiagnostic("AIDL-DIST411", "authorized-fixes.aidl", source.length, fix)
+        val query = ProjectAuthorizedFixQuery.fromSnapshot(
+            listOf("authorized-fixes.aidl" to source),
+            listOf(unrelated, negative, pastEnd),
+        )
+        assertTrue(query.fixes("authorized-fixes.aidl").isEmpty())
+    }
+
+    @Test
+    fun insertionPreservesLeadingTabsAndSpaces() {
+        val indented = "\t consumer Worker {\nbody\n"
+        val query = ProjectAuthorizedFixQuery.fromSnapshot(
+            listOf("authorized-fixes.aidl" to indented),
+            listOf(diagnostic(indented)),
+        )
+        assertEquals(
+            "\t   idempotency: event.eventId retain 30d\n",
+            query.fixes("authorized-fixes.aidl").single().edit.replacement,
+        )
     }
 
     @Test
