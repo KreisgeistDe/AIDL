@@ -24,6 +24,23 @@ data class ProjectedRenameResult(
     val message: String? = null,
 )
 
+internal fun renameEditValidationError(
+    sourceById: Map<String, String>,
+    edits: List<ProjectedRenameTextEdit>,
+    oldName: String,
+): String? {
+    for (edit in edits) {
+        val text = sourceById[edit.sourceId] ?: return "rename edit is outside snapshot text"
+        if (edit.offset < 0 || edit.offset + edit.length > text.length) {
+            return "rename edit is outside snapshot text"
+        }
+        if (text.substring(edit.offset, edit.offset + edit.length) != oldName) {
+            return "snapshot text changed while planning rename"
+        }
+    }
+    return null
+}
+
 /**
  * Bounded M10.5-04 compiler-owned rename planning over one exact source snapshot.
  *
@@ -34,13 +51,16 @@ data class ProjectedRenameResult(
 class ProjectRenamePlanner private constructor(
     private val sources: List<Pair<String, String>>,
     private val sourceById: Map<String, String>,
-    private val resolver: ProjectNameResolver?,
-    private val referencesQuery: ProjectReferencesQuery?,
+    private val semanticState: SemanticState?,
 ) {
+    private data class SemanticState(
+        val resolver: ProjectNameResolver,
+        val referencesQuery: ProjectReferencesQuery,
+    )
+
     fun plan(sourceId: String, offset: Int, newName: String): ProjectedRenameResult {
-        if (resolver == null || referencesQuery == null) {
-            return ProjectedRenameResult(ProjectedRenameStatus.INVALID, message = "snapshot has compiler errors before rename")
-        }
+        val state = semanticState
+            ?: return ProjectedRenameResult(ProjectedRenameStatus.INVALID, message = "snapshot has compiler errors before rename")
         if (!validIdentifier(newName)) {
             return ProjectedRenameResult(ProjectedRenameStatus.INVALID_NAME, message = "new name must be a non-keyword AIDL identifier")
         }
@@ -50,8 +70,7 @@ class ProjectRenamePlanner private constructor(
             return ProjectedRenameResult(ProjectedRenameStatus.INVALID, message = "rename target is not uniquely resolved")
         }
 
-        val references = referencesQuery.references(sourceId, offset)
-        val target = references.target
+        val references = state.referencesQuery.references(sourceId, offset)
         when (references.status) {
             ProjectedReferencesStatus.INVALID ->
                 return ProjectedRenameResult(ProjectedRenameStatus.INVALID, message = "rename target is not uniquely resolved")
@@ -61,10 +80,7 @@ class ProjectRenamePlanner private constructor(
                 return ProjectedRenameResult(ProjectedRenameStatus.AMBIGUOUS, message = "rename target is not uniquely resolved")
             ProjectedReferencesStatus.RESOLVED -> Unit
         }
-        if (target == null) {
-            return ProjectedRenameResult(ProjectedRenameStatus.INVALID, message = "rename target is not uniquely resolved")
-        }
-
+        val target = references.target!!
         val oldName = target.fullyQualifiedName.substringAfterLast('.')
         if (newName == oldName) {
             return ProjectedRenameResult(
@@ -73,9 +89,8 @@ class ProjectRenamePlanner private constructor(
                 message = "new name must differ from current name",
             )
         }
-        val moduleName = target.fullyQualifiedName.substringBeforeLast('.', missingDelimiterValue = "")
-        val newFqn = if (moduleName.isEmpty()) newName else "$moduleName.$newName"
-        if (resolver.lookupFullyQualified(newFqn).isNotEmpty()) {
+        val newFqn = "${target.fullyQualifiedName.substringBeforeLast('.')}.$newName"
+        if (state.resolver.lookupFullyQualified(newFqn).isNotEmpty()) {
             return ProjectedRenameResult(
                 ProjectedRenameStatus.COLLISION,
                 target = target,
@@ -92,15 +107,9 @@ class ProjectRenamePlanner private constructor(
         }.distinctBy { it.sourceId to it.offset }
             .sortedWith(compareBy<ProjectedRenameTextEdit>({ it.sourceId }, { it.offset }))
 
-        for (edit in edits) {
-            val text = sourceById[edit.sourceId]
-                ?: return ProjectedRenameResult(ProjectedRenameStatus.INVALID, target = target, message = "rename edit is outside snapshot text")
-            if (edit.offset < 0 || edit.offset + edit.length > text.length) {
-                return ProjectedRenameResult(ProjectedRenameStatus.INVALID, target = target, message = "rename edit is outside snapshot text")
-            }
-            if (text.substring(edit.offset, edit.offset + edit.length) != oldName) {
-                return ProjectedRenameResult(ProjectedRenameStatus.INVALID, target = target, message = "snapshot text changed while planning rename")
-            }
+        val validationError = renameEditValidationError(sourceById, edits, oldName)
+        if (validationError != null) {
+            return ProjectedRenameResult(ProjectedRenameStatus.INVALID, target = target, message = validationError)
         }
         return ProjectedRenameResult(ProjectedRenameStatus.READY, target, newFqn, edits)
     }
@@ -138,17 +147,19 @@ class ProjectRenamePlanner private constructor(
             val stableSources = sources.toList()
             val sourceById = stableSources.toMap()
             if (stableSources.any { it.first.isBlank() } || sourceById.size != stableSources.size) {
-                return ProjectRenamePlanner(stableSources, sourceById, null, null)
+                return ProjectRenamePlanner(stableSources, sourceById, null)
             }
             return try {
                 ProjectRenamePlanner(
                     stableSources,
                     sourceById,
-                    ProjectNameResolver.fromSources(stableSources),
-                    ProjectReferencesQuery.fromSources(stableSources),
+                    SemanticState(
+                        ProjectNameResolver.fromSources(stableSources),
+                        ProjectReferencesQuery.fromSources(stableSources),
+                    ),
                 )
             } catch (_: IllegalArgumentException) {
-                ProjectRenamePlanner(stableSources, sourceById, null, null)
+                ProjectRenamePlanner(stableSources, sourceById, null)
             }
         }
     }
