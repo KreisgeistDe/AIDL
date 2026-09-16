@@ -1,0 +1,7 @@
+saved-local|ready|demo.consumer.Local|demo.consumer.Renamed|references-consumer:75:5:Renamed,references-consumer:107:5:Renamed
+saved-imported|ready|demo.shared.Public|demo.shared.Renamed|references-consumer:40:6:Renamed,references-consumer:125:6:Renamed,references-consumer:157:6:Renamed,resolution-provider-a:32:6:Renamed
+saved-ambiguous|ambiguous|||
+saved-collision|collision|demo.shared.Public|demo.shared.Other|
+saved-invalid-name|invalidName|||
+memory-shifted-imported|ready|demo.shared.Public|demo.shared.Renamed|references-consumer:41:6:Renamed,references-consumer:126:6:Renamed,references-consumer:158:6:Renamed,resolution-provider-a:32:6:Renamed
+memory-lexical-failure|invalid|||
