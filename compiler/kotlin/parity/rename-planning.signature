@@ -1,0 +1,7 @@
+saved-status|ready|parity.ir.domain.Status|parity.ir.domain.Renamed|rename-domain:37:6:Renamed,rename-domain:124:6:Renamed,rename-domain:224:6:Renamed
+saved-ambiguous|ambiguous|||
+saved-unresolved|unresolved|||
+saved-collision|collision|parity.ir.domain.Status|parity.ir.domain.Pet|
+saved-invalid-name|invalidName|||
+memory-shifted-status|ready|parity.ir.domain.Status|parity.ir.domain.Renamed|rename-domain:38:6:Renamed,rename-domain:125:6:Renamed,rename-domain:225:6:Renamed
+memory-lexical-failure|invalid|||

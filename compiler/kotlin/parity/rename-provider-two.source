@@ -1,0 +1,2 @@
+module parity.two
+export enum Shared { two }
