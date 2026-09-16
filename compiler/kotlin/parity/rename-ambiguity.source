@@ -1,0 +1,8 @@
+module parity.rename
+import parity.one.*
+import parity.two.*
+
+export value Holder {
+  Shared: string required
+  Missing: string required
+}
