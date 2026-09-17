@@ -1,0 +1,191 @@
+{
+  "schema_version": "aidl.maintenance-recovery/v1",
+  "document_type": "maintenance_recovery_plan",
+  "id": "project-recovery-2026-09",
+  "title": "Project authority and roadmap recovery",
+  "status": "active",
+  "authority": {
+    "kind": "maintenance_plan",
+    "is_roadmap_authority": false,
+    "roadmap_authority": "roadmap/v1",
+    "purpose": "Record the temporary recovery sequence required to finish roadmap migration, reconcile language authority, simplify orchestration, and resume ordinary roadmap execution."
+  },
+  "goals": [
+    "Finish the machine-readable roadmap migration so current and future work can be selected deterministically.",
+    "Reconcile historical language-design initiatives so only the current Core-owned language authority governs future implementation.",
+    "Remove stale blocking authority from superseded planning gates without deleting useful historical evidence.",
+    "Restore thin orchestration in which workflow state, roadmap state, and the previous validated handoff can be consumed without broad repository reinterpretation.",
+    "Complete the end-to-end projection of the self-described Core language only after authority recovery is complete."
+  ],
+  "audit": [
+    {
+      "id": "machine-readable-roadmap",
+      "status": "partial",
+      "disposition": "finish_rollout",
+      "summary": "roadmap/v1 exists and is validated, but only M10, M10.1, M10.2, and M10.3 are authoritative JSON milestones; later active milestones remain pending migration."
+    },
+    {
+      "id": "revision-4-language-freeze",
+      "status": "complete_historical_scope",
+      "disposition": "compatibility_evidence",
+      "summary": "M10.1 through M10.3 remain useful compatibility, migration, and conformance evidence but are no longer the permanent semantic language authority after the Core authority transition."
+    },
+    {
+      "id": "self-describing-core-authority",
+      "status": "current_normative_direction",
+      "disposition": "preserve_and_complete_rollout",
+      "summary": "The accepted Core Language Authority Gate and subsequent binding self-description correction establish direct Core/Core-authored modules as the permanent semantic authority."
+    },
+    {
+      "id": "m16.5-language-surface-normalization",
+      "status": "historical",
+      "disposition": "superseded_as_blocking_authority_where_conflicting",
+      "summary": "M16.5 remains useful design and evaluation evidence, but its historical blocking rules must not override later accepted Core authority decisions."
+    }
+  ],
+  "packages": [
+    {
+      "id": "R1",
+      "title": "Complete roadmap/v1 migration",
+      "priority": "P0",
+      "status": "open",
+      "depends_on": [],
+      "goal": "Make the current project roadmap deterministically queryable without requiring the orchestrator to reinterpret TODO/backlog prose.",
+      "work": [
+        "Extend roadmap/v1 to cover all current milestone authorities, at minimum M10.5 through M21 including M16.5.",
+        "Preserve existing milestone and work-package IDs, status, order, priority, dependencies, evidence, references, and terminal dispositions conservatively.",
+        "Add schema support for explicit authority or supersession relationships where needed.",
+        "Keep blocked state derived from status plus dependency graph.",
+        "Update tools/roadmap.py and tests only where required to query the completed graph deterministically.",
+        "Bind TODO/backlog status projections to JSON authority with deterministic drift checks."
+      ],
+      "acceptance_criteria": [
+        "Every active milestone is represented in roadmap/v1 or intentionally excluded with an explicit terminal disposition.",
+        "python3 tools/roadmap.py validate succeeds on the complete current graph.",
+        "python3 tools/roadmap.py next identifies the actual dependency-ready current work including the active M10.5 sequence.",
+        "Unknown IDs, cycles, duplicate IDs or order, invalid supersession, and Markdown/JSON status drift fail deterministically.",
+        "No project semantics, parser behavior, runtime behavior, or compiler behavior changes in this package."
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "Reconcile the language-authority chain",
+      "priority": "P0",
+      "status": "open",
+      "depends_on": ["R1"],
+      "goal": "Make the accepted language authority unambiguous across roadmap, specification, grammar, and historical design gates.",
+      "authority_chain": [
+        "Revision-4 M10.1/M10.2/M10.3 artifacts are historical compatibility, migration, and conformance evidence.",
+        "The accepted Core Language Authority Gate and binding self-description correction govern current semantic authority.",
+        "M16.5 remains historical design and evaluation evidence and does not independently block a later accepted Core authority decision.",
+        "Generated projections and meta-IR remain derived and non-authoritative."
+      ],
+      "work": [
+        "Record explicit supersedes or superseded_by relationships in the machine-readable roadmap or authority model.",
+        "Correct stale durable documentation claims that still present revision-4 spec/language-surface-v1.json as current semantic authority.",
+        "Preserve revision-4 material for compatibility and regression evidence.",
+        "Make M16.5 distinguish historical design gates from current blocking authority."
+      ],
+      "acceptance_criteria": [
+        "No durable project document claims that revision 4 and direct Core are simultaneous permanent semantic authorities.",
+        "Current authority can be determined without interpreting chronological SpecialTask history.",
+        "Historical compatibility and evaluation evidence remains available and referenced.",
+        "Repository validation detects contradictory authority markers where practical."
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "Add deterministic roadmap context projection for agents",
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["R1", "R2"],
+      "goal": "Give orchestrators and executors a compact read-only view of relevant project roadmap state analogous to existing Channel workflow projections.",
+      "work": [
+        "Extend tools/roadmap.py or add a small read-only wrapper with stable JSON output for one current item or initiative.",
+        "Include direct dependencies, transitive blockers, next dependency-ready candidates, authority and supersession information, remaining acceptance criteria, and evidence/reference paths.",
+        "Do not make strategic language decisions inside the tool; decisions must already exist in authoritative project data.",
+        "Keep output deterministic, bounded, offline, and suitable for LLM consumption."
+      ],
+      "acceptance_criteria": [
+        "An orchestrator can obtain current roadmap context without rereading all of TODO/backlog.",
+        "The projection never invents state not present in authoritative roadmap data.",
+        "Stable tests cover ready, blocked, superseded, terminal, and invalid graph cases."
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "Restore thin orchestration semantics",
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["R3"],
+      "goal": "Return the orchestrator to routing and bounded decision-making rather than broad project-state reconstruction.",
+      "normal_inputs": [
+        "current Channel orchestrator-context and admission state",
+        "current roadmap context and next dependency-ready work",
+        "previous validated result and its next_task when present",
+        "explicit active SpecialTask or initiative only when it intentionally overrides ordinary roadmap sequencing"
+      ],
+      "rules": [
+        "Prefer an explicit valid next_task from the previous result when it remains consistent with current authoritative project state.",
+        "Use roadmap dependency order as the ordinary fallback.",
+        "Escalate to broad architecture or planning analysis only when the handoff is absent, blocked, contradictory, or an active SpecialTask intentionally changes direction.",
+        "A newer accepted initiative must explicitly supersede conflicting older gates rather than silently coexist with them."
+      ],
+      "acceptance_criteria": [
+        "Routine completed work advances without a full repository-wide planning pass.",
+        "SpecialTask-driven direction changes leave durable authority or supersession state in the project.",
+        "Workflow safety checks remain deterministic and separate from semantic project decisions."
+      ]
+    },
+    {
+      "id": "R5",
+      "title": "Complete the self-described Core public-language rollout",
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["R1", "R2", "R3", "R4"],
+      "goal": "Finish the already accepted Core architecture end-to-end instead of starting another competing language-design initiative.",
+      "work": [
+        "Treat the current self-described Core and Bootstrap boundary as the starting authority.",
+        "Reconcile normative grammar documentation with that authority.",
+        "Migrate positive examples, reference applications, and fixtures to the intended current language surface or explicitly classify them as compatibility, rejection, or historical evidence.",
+        "Align parser, AST, IR, resolver, type checking, diagnostics, formatter, and IDE surfaces only as required by the accepted Core language contract.",
+        "Add deterministic drift and conformance checks between Core authority, grammar projection, examples, and implementation behavior.",
+        "Preserve revision-4 compatibility paths only where explicitly required."
+      ],
+      "acceptance_criteria": [
+        "docs/06-grammar.md is a projection of the current Core-owned language rather than an independent revision-4 authority.",
+        "Representative Core declaration kinds and examples are accepted end-to-end by the intended implementation path.",
+        "Positive examples no longer teach syntax that conflicts with current Core authority.",
+        "Historical or compatibility syntax is explicitly classified and tested as such.",
+        "No unresolved permanent dual-authority language model remains."
+      ]
+    },
+    {
+      "id": "R6",
+      "title": "Resume ordinary milestone execution",
+      "priority": "P1",
+      "status": "open",
+      "depends_on": ["R5"],
+      "goal": "Return to normal roadmap-driven product development.",
+      "work": [
+        "Recompute the next dependency-ready work from the complete machine-readable roadmap.",
+        "Resume M10.5 and later milestones only against the reconciled language authority.",
+        "Continue focused implementation, independent validation where applicable, unchanged-head integration, and deterministic CI."
+      ],
+      "acceptance_criteria": [
+        "Project progression is determined by machine-readable roadmap state plus explicit active initiatives, not historical conversation or SpecialTask reconstruction.",
+        "Future SpecialTasks either complete their rollout or leave an explicit supersession or follow-up package in the roadmap before they are considered closed."
+      ]
+    }
+  ],
+  "invariants": [
+    "Do not create another independent roadmap or language authority.",
+    "Do not discard useful historical evidence merely because its authority role changed.",
+    "Do not let a planning or evaluation gate silently override a later accepted architecture decision.",
+    "Every direction-changing initiative must explicitly record what it supersedes.",
+    "Every partially migrated authority must have an explicit remaining migration package.",
+    "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
+    "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
+  ],
+  "next_package": "R1"
+}
