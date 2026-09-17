@@ -29,7 +29,8 @@
       "compilerTests": [
         "tools/test_compiler_refactoring.py",
         "tools/test_m10_5_kotlin_references_query.py",
-        "tools/test_m10_5_kotlin_rename_planning.py"
+        "tools/test_m10_5_kotlin_rename_planning.py",
+        "tools/test_m10_5_kotlin_authorized_fix_planning.py"
       ],
       "cliCommands": ["rename", "usages"],
       "cliTests": ["tools/test_aidl_refactoring_cli.py"]
