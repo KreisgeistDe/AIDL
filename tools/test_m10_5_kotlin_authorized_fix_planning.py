@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import tools.compiler_refactoring as compiler_refactoring
 from tools.compiler_diagnostics import CompilerAnalysis, CompilerDiagnosticFix
 from tools.compiler_snapshot import CompilerSnapshot, create_compiler_snapshot
 from tools.compiler_snapshot_editing import authorized_snapshot_fixes
@@ -36,6 +37,7 @@ class KotlinAuthorizedFixPlanningParityTest(unittest.TestCase):
         return f"{label}|{rendered}"
 
     def test_python_snapshot_oracle_matches_pinned_authorized_fix_signature(self) -> None:
+        self.assertTrue(hasattr(compiler_refactoring, "rename_project_symbol"))
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             source = root / "fix.aidl"
