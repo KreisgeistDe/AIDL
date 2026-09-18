@@ -1,6 +1,6 @@
 # Offline-Kalender
 
-> **M10.3 Calendar-Slice:** Dieses Referenzbeispiel wird schrittweise von `legacy-readable-compatibility` auf die eingefrorene Revision-4-Zielsprache migriert. Parser-Lesbarkeit, kanonische Zielsyntax, Production Admission, runnable/generated Support und erwartete Ablehnung bleiben getrennte Aussagen. Dieser Calendar-only-Slice ändert weder den eingefrorenen Contract noch Python-Semantik, Production Admission oder zentrale Tooling-Logik.
+> **Recovery R5 Authority:** Dieses Referenzbeispiel ist weiterhin ausdrückliche historische/Compatibility-Evidenz. Die aktive semantische Sprach-Authority ist `spec/core-self-description-v1.aidl`, interpretiert über `spec/bootstrap-kernel-v1.json`. Die nachfolgenden M10.3-/Revision-4-Dispositionen dokumentieren historische Kompatibilitäts- und Production-Grenzen; sie definieren keine aktuelle Core-Syntax. In diesem Slice wird keine `.aidl`-Quelle migriert.
 
 Dieses Beispiel prüft Server-koordinierte Multi-Writer-Synchronisation:
 
