@@ -141,7 +141,7 @@
       "id": "R5",
       "title": "Complete the self-described Core public-language rollout",
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["R1", "R2", "R3", "R4"],
       "goal": "Finish the already accepted Core architecture end-to-end instead of starting another competing language-design initiative.",
       "work": [
@@ -187,5 +187,5 @@
     "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
     "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
   ],
-  "next_package": "R5"
+  "next_package": "R6"
 }
