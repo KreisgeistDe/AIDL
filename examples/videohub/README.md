@@ -1,6 +1,6 @@
 # VideoHub
 
-> **M10.3 VideoHub-Slice:** Dieses Referenzbeispiel wird schrittweise von `legacy-readable-compatibility` auf die eingefrorene Revision-4-Zielsprache migriert. Parser-Lesbarkeit, kanonische Quellform, Production Admission, runnable/generated Support und Produktstory bleiben getrennte Aussagen. Dieser VideoHub-only-Slice ändert weder den eingefrorenen Contract noch Python-Semantik, Production Admission, Canonical IR oder zentrale Tooling-Logik.
+> **Recovery R5 Authority:** Dieses Referenzbeispiel ist weiterhin ausdrückliche historische/Compatibility-Evidenz. Die aktive semantische Sprach-Authority ist `spec/core-self-description-v1.aidl`, interpretiert über `spec/bootstrap-kernel-v1.json`. Die nachfolgenden M10.3-/Revision-4-Dispositionen dokumentieren historische Kompatibilitäts- und Production-Grenzen; sie definieren keine aktuelle Core-Syntax. In diesem Slice wird keine `.aidl`-Quelle migriert.
 
 VideoHub ist ein Architektur- und Konformitätsbeispiel für eine
 YouTube-ähnliche Anwendung. Es demonstriert:
