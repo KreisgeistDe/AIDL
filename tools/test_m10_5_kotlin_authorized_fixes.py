@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tools.compiler_refactoring import rename_project_symbol  # noqa: F401
 from tools.compiler_snapshot import create_compiler_snapshot
 from tools.compiler_snapshot_editing import authorized_snapshot_fixes
 
