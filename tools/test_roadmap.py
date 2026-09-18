@@ -9,9 +9,23 @@ class RoadmapTest(unittest.TestCase):
     def temp_repo(self):
         td=tempfile.TemporaryDirectory(); root=Path(td.name)
         shutil.copytree(ROOT/"roadmap",root/"roadmap")
-        (root/"spec").mkdir(); shutil.copy2(ROOT/"spec/roadmap-v1.schema.json",root/"spec/roadmap-v1.schema.json")
         shutil.copytree(ROOT/"backlog",root/"backlog")
         shutil.copy2(ROOT/"TODO.md",root/"TODO.md")
+        index=json.loads((root/"roadmap/v1/index.json").read_text())
+        refs={"spec/roadmap-v1.schema.json"}
+        for entry in index["milestones"]:
+            milestone=json.loads((root/entry["path"]).read_text())
+            source=milestone.get("source")
+            if isinstance(source,dict) and source.get("kind") in {"path","test","schema"}: refs.add(source["ref"])
+            projection=milestone.get("status_projection")
+            if isinstance(projection,dict): refs.add(projection["path"])
+            for package in milestone["packages"]:
+                for link in [*package["evidence"],*package["references"]]:
+                    if link["kind"] in {"path","test","schema"}: refs.add(link["ref"])
+        for ref in sorted(refs):
+            source=ROOT/ref; target=root/ref
+            if target.exists() or not source.is_file(): continue
+            target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,target)
         return td,root
 
     def write(self,root,path,data):
