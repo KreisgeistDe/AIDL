@@ -1,6 +1,6 @@
 # Petstore
 
-> **M10.3 Petstore continuation:** Nach Integration der Shared-Foundation sind die nachweislich äquivalenten Revision-4-Source-Formen für App-Profile und Entity-Fields dort kanonisiert, wo die bestehenden Petstore-Validierungspfade sie tatsächlich tragen. Die exhaustive dateiweise Disposition und die weiterhin fail-closed Grenzen stehen in [`M10.3.md`](./M10.3.md). Diese partielle Quellmigration ist keine pauschale Production-Admission.
+> **Recovery R5 Authority:** Dieses Referenzbeispiel ist weiterhin ausdrückliche historische/Compatibility-Evidenz. Die aktive semantische Sprach-Authority ist `spec/core-self-description-v1.aidl`, interpretiert über `spec/bootstrap-kernel-v1.json`. Die nachfolgenden M10.3-/Revision-4-Dispositionen dokumentieren historische Kompatibilitäts- und Production-Grenzen; sie definieren keine aktuelle Core-Syntax. In diesem Slice wird keine `.aidl`-Quelle migriert.
 
 Das Beispiel ist ein modularer, horizontal replizierbarer Petstore mit einer
 lokalen SQL-Transaktionsgrenze.
@@ -25,7 +25,7 @@ eine Saga erfordern und für dieses Beispiel keinen fachlichen Nutzen bringen.
 
 ## M10.3 Support-Grenze
 
-Frozen M10.1 revision 4 bleibt die semantische Authority. Die integrierte M10.3-Shared-Disposition erlaubt am Shared-Parser/Lint-Boundary drei äquivalente Source-Formen: kanonische App-Profile, explizite Entity-`field`-Slots und benannte Query/Mutation-`parameters`-HeaderArgs. Dieser Petstore-Slice migriert App-Profile in `app.aidl` sowie Entity-Fields in `domain/adoptions.aidl` und `domain/pets.aidl`.
+Für diese historische M10.3-Kompatibilitätsinventur bleibt Frozen M10.1 Revision 4 die Bezugsbasis; sie ist **nicht** die aktive semantische Sprach-Authority. Die aktive Authority ist die aktuelle Core-Selbstbeschreibung. Die integrierte M10.3-Shared-Disposition erlaubt am historischen Shared-Parser/Lint-Boundary drei äquivalente Source-Formen: kanonische App-Profile, explizite Entity-`field`-Slots und benannte Query/Mutation-`parameters`-HeaderArgs. Dieser Petstore-Slice migriert App-Profile in `app.aidl` sowie Entity-Fields in `domain/adoptions.aidl` und `domain/pets.aidl`.
 
 Der historische runnable Slice `m4-app/app.aidl` bleibt absichtlich unverändert: Exact-Head-CI zeigte, dass sein bestehender Production-Compiler-Pfad kanonische App-Profile noch mit `AIDL-DIST414` ablehnt. Shared Parser/Lint-Äquivalenz wird daher nicht fälschlich auf diesen Runtime-Pfad übertragen.
 
