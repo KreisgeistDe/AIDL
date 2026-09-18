@@ -21,28 +21,25 @@ class LanguageSurfaceClassificationTest(unittest.TestCase):
         self.assertGreater(first["source_classes"]["legacy-readable-compatibility"], 0)
         self.assertGreater(first["source_classes"]["negative-rejection-fixture"], 0)
 
-    def test_canonical_operation_header_tracks_frozen_parameters_header_arg(self) -> None:
+    def test_revision4_operation_contract_is_historical_not_active_grammar(self) -> None:
         contract = json.loads(
             (classification.ROOT / "spec/language-surface-v1.json").read_text(encoding="utf-8")
         )
+        transition = json.loads(
+            (classification.ROOT / "spec/core-authority-transition-v1.json").read_text(encoding="utf-8")
+        )
         grammar = (classification.ROOT / "docs/06-grammar.md").read_text(encoding="utf-8")
-        operation_section = grammar.split("### Query and mutation", 1)[1].split(
-            "### Consumer, projection, client, migration", 1
-        )[0]
-
         declarations = {item["kind"]: item for item in contract["declaration_kinds"]}
         for kind in ("query", "mutation"):
             self.assertEqual(
                 [item["name"] for item in declarations[kind]["header_args"]],
                 ["parameters"],
             )
-            self.assertEqual(declarations[kind]["header_args"][0]["value_mode"], "parameter_list")
-            self.assertIn(f'{kind} name(params) -> Type', declarations[kind]["legacy_forms"])
-
-        self.assertIn('operationHeaderArguments = "(" "parameters" ":" parameterList ")" ;', operation_section)
-        self.assertIn('parameterList = "[" [ parameter { "," parameter } ] "]" ;', operation_section)
-        self.assertNotIn('identifier [ parameterList ] "->" typeRef', operation_section)
-        self.assertIn("contract-declared legacy operation-signature form", operation_section)
+        historical = {item["path"]: item for item in transition["historicalAuthorities"]}
+        self.assertFalse(historical["spec/language-surface-v1.json"]["activeLanguageAuthority"])
+        self.assertIn("historical", historical["spec/m10-2-language-surface-classification.json"]["currentRole"])
+        self.assertNotIn("### Query and mutation", grammar)
+        self.assertIn("P2+ migration boundary", grammar)
 
     def test_new_unclassified_aidl_file_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

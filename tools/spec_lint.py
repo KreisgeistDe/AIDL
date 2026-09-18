@@ -133,6 +133,25 @@ class Report:
             self.warnings.append(message)
 
 
+def _breaking_core_p1(root: Path) -> bool:
+    """True when the historical example corpus is intentionally outside active grammar authority."""
+    path = root / "spec" / "core-authority-transition-v1.json"
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    authority = data.get("activeLanguageAuthority")
+    legacy = data.get("legacyCorpusBoundary")
+    return (
+        data.get("phase") == "breaking-language-reset-p1-authority-substrate"
+        and isinstance(authority, dict)
+        and authority.get("path") == "spec/core-self-description-v1.aidl"
+        and isinstance(legacy, dict)
+        and legacy.get("mayDefineActiveLanguage") is False
+        and legacy.get("compatibilityFallbackForCore") is False
+    )
+
+
 def mask_strings_and_comments(text: str) -> str:
     """Replace strings/comments with spaces while preserving offsets/newlines."""
 
@@ -387,24 +406,28 @@ def check_aidl_files(root: Path, files: dict[Path, str], report: Report) -> None
 
     check_imports(files, modules, module_symbols, report)
 
-    grammar = (root / "docs" / "06-grammar.md").read_text(encoding="utf-8")
-    used_kinds: set[str] = set()
-    declaration_pattern = "|".join(
-        re.escape(kind) for kind in sorted(DECLARATION_KINDS, key=len, reverse=True)
-    )
-    for text in files.values():
-        used_kinds.update(
-            re.findall(
-                rf"(?m)^(?:export\s+)?({declaration_pattern})\b",
-                mask_strings_and_comments(text),
+    # During Breaking-Core P1 the committed examples are an explicitly historical
+    # P2+ migration corpus. Their old declaration-token inventory must not force
+    # those tokens back into the new active grammar, which is Core-derived.
+    if not _breaking_core_p1(root):
+        grammar = (root / "docs" / "06-grammar.md").read_text(encoding="utf-8")
+        used_kinds: set[str] = set()
+        declaration_pattern = "|".join(
+            re.escape(kind) for kind in sorted(DECLARATION_KINDS, key=len, reverse=True)
+        )
+        for text in files.values():
+            used_kinds.update(
+                re.findall(
+                    rf"(?m)^(?:export\s+)?({declaration_pattern})\b",
+                    mask_strings_and_comments(text),
+                )
             )
-        )
-    for kind in sorted(used_kinds):
-        tokens = kind.split()
-        report.check(
-            all(f'"{token}"' in grammar for token in tokens),
-            f"grammar does not declare example declaration kind {kind}",
-        )
+        for kind in sorted(used_kinds):
+            tokens = kind.split()
+            report.check(
+                all(f'"{token}"' in grammar for token in tokens),
+                f"grammar does not declare example declaration kind {kind}",
+            )
 
 
 def check_project(project: Path, report: Report) -> None:
@@ -748,14 +771,19 @@ def check_project(project: Path, report: Report) -> None:
             data.get("standardLibrary") == "aidl.std",
             f"{lock}: standard library identity must be aidl.std",
         )
-        grammar_bytes = (
-            project.parent.parent / "docs" / "06-grammar.md"
-        ).read_bytes()
-        grammar_hash = "sha256:" + hashlib.sha256(grammar_bytes).hexdigest()
-        report.check(
-            data.get("grammar") == grammar_hash,
-            f"{lock}: grammar hash is stale; expected {grammar_hash}",
-        )
+        # P1 deliberately does not rewrite the historical example/reference corpus.
+        # Its lockfile grammar hashes remain historical until the serial P2+ source
+        # migration; requiring the new grammar hash here would make those examples
+        # an implicit active-language fallback or prematurely mutate corpus state.
+        if not _breaking_core_p1(project.parent.parent):
+            grammar_bytes = (
+                project.parent.parent / "docs" / "06-grammar.md"
+            ).read_bytes()
+            grammar_hash = "sha256:" + hashlib.sha256(grammar_bytes).hexdigest()
+            report.check(
+                data.get("grammar") == grammar_hash,
+                f"{lock}: grammar hash is stale; expected {grammar_hash}",
+            )
 
         app_profiles: dict[str, int] = {}
         for text in files.values():
