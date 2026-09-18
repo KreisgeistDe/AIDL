@@ -1,159 +1,119 @@
 from __future__ import annotations
-
-import json
-import shutil
-import tempfile
-import unittest
+import json, shutil, tempfile, unittest
 from pathlib import Path
-
 from tools import roadmap
 
-ROOT = Path(__file__).resolve().parents[1]
-COPIED = (
-    "spec/roadmap-v1.schema.json",
-    "roadmap/v1/index.json",
-    "roadmap/v1/milestones/m10.json",
-    "roadmap/v1/milestones/m10.1.json",
-    "roadmap/v1/milestones/m10.2.json",
-    "roadmap/v1/milestones/m10.3.json",
-    "TODO.md",
-    "backlog/m9-m10-release-conformance.md",
-    "backlog/m10-1-language-freeze.md",
-    "backlog/m10-2-m10-3-language-example-migration.md",
-    "spec/conformance-manifest.json",
-    "docs/m10-1-language-surface-freeze.md",
-    "docs/m10-1-closure-certification.md",
-    "docs/m10-2-language-surface-classification.md",
-    "docs/m10-3-closure-certification.md",
-    "docs/06-grammar.md",
-    "spec/language-surface-v1.json",
-    "spec/m10-2-language-surface-classification.json",
-    "spec/m10-3-shared-disposition.json",
-    "spec/m10-3-closure-certification.json",
-    "examples/calendar-offline/README.md",
-    "examples/petstore/M10.3.md",
-    "examples/videohub/README.md",
-    "tools/compiler_language_surface_certification.py",
-    "tools/m10_2_language_surface_classification.py",
-    "tools/m10_3_closure_certification.py",
-    "tools/test_m10_1_language_surface_certification.py",
-    "tools/test_m10_2_language_surface_classification.py",
-    "tools/test_m10_3_closure_certification.py",
-)
-
+ROOT=Path(__file__).resolve().parents[1]
 
 class RoadmapTest(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.root = Path(self.temp.name)
-        for relative in COPIED:
-            source = ROOT / relative
-            target = self.root / relative
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
+    def temp_repo(self):
+        td=tempfile.TemporaryDirectory(); root=Path(td.name)
+        shutil.copytree(ROOT/"roadmap",root/"roadmap")
+        shutil.copytree(ROOT/"backlog",root/"backlog")
+        shutil.copy2(ROOT/"TODO.md",root/"TODO.md")
+        index=json.loads((root/"roadmap/v1/index.json").read_text())
+        refs={"spec/roadmap-v1.schema.json"}
+        for entry in index["milestones"]:
+            milestone=json.loads((root/entry["path"]).read_text())
+            source=milestone.get("source")
+            if isinstance(source,dict) and source.get("kind") in {"path","test","schema"}: refs.add(source["ref"])
+            projection=milestone.get("status_projection")
+            if isinstance(projection,dict): refs.add(projection["path"])
+            for package in milestone["packages"]:
+                for link in [*package["evidence"],*package["references"]]:
+                    if link["kind"] in {"path","test","schema"}: refs.add(link["ref"])
+        for ref in sorted(refs):
+            source=ROOT/ref; target=root/ref
+            if target.exists() or not source.is_file(): continue
+            target.parent.mkdir(parents=True,exist_ok=True); shutil.copy2(source,target)
+        return td,root
 
-    def tearDown(self) -> None:
-        self.temp.cleanup()
+    def write(self,root,path,data):
+        (root/path).write_text(json.dumps(data,indent=2)+"\n",encoding="utf-8")
 
-    def load(self, relative: str) -> dict:
-        return json.loads((self.root / relative).read_text(encoding="utf-8"))
+    def test_complete_repository_and_current_ready_work(self):
+        self.assertEqual([],roadmap.validate_repository(ROOT))
+        summary=roadmap.summary_data(ROOT)
+        self.assertEqual(26,summary["milestones"])
+        self.assertEqual([],summary["pending_migration"])
+        self.assertEqual("M10.5-04",roadmap.next_data(ROOT)["next"]["id"])
+        self.assertEqual(["M10.5-06"],[x["id"] for x in roadmap.blockers_data("M11-04.1",ROOT)["blockers"]])
+        completed={x["id"] for x in roadmap.completed_data(ROOT)["completed"]}
+        self.assertIn("M9-06",completed);self.assertIn("M9-08",completed)
 
-    def write(self, relative: str, value: dict) -> None:
-        (self.root / relative).write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    def test_context_is_bounded_and_deterministic(self):
+        a=roadmap.context_data(ROOT,limit=3);b=roadmap.context_data(ROOT,limit=3)
+        self.assertEqual(a,b);self.assertEqual(3,len(a["items"]));self.assertTrue(a["truncated"])
+        self.assertEqual("M10.5-04",a["next"]["id"])
 
-    def codes(self) -> list[str]:
-        return [item["code"] for item in roadmap.validate_repository(self.root)]
+    def test_ids_cover_dotted_and_experiment_forms(self):
+        _,_,packages,_=roadmap.load_authority(ROOT)
+        self.assertIn("M11-04.1",packages);self.assertIn("M11.5",packages);self.assertIn("M16.5-E9",packages)
 
-    def test_valid_data_and_queries(self) -> None:
-        self.assertEqual(roadmap.validate_repository(self.root), [])
-        summary = roadmap.summary_data(self.root)
-        self.assertEqual(summary["milestones"], 4)
-        self.assertEqual(summary["packages"], 19)
-        self.assertEqual(summary["status_counts"]["complete"], 19)
-        self.assertEqual(summary["status_counts"]["open"], 0)
-        self.assertEqual(summary["blocked"], 0)
-        self.assertEqual(summary["ready"], 0)
-        self.assertIsNone(roadmap.next_data(self.root))
-        _, _, packages = roadmap.load_authority(self.root)
-        self.assertEqual(roadmap.blocker_ids(packages, "M10.2-01", False), [])
-        self.assertEqual(roadmap.blocker_ids(packages, "M10.3-01", False), [])
-        self.assertEqual(roadmap.blocker_ids(packages, "M10.3-01", True), [])
-        completed = roadmap.completed_data(self.root)
-        self.assertIn("M10", completed["complete_milestones"])
-        self.assertIn("M10.1", completed["complete_milestones"])
-        self.assertIn("M10.2", completed["complete_milestones"])
-        self.assertIn("M10.3", completed["complete_milestones"])
+    def test_unknown_self_and_dependency_cycle_fail(self):
+        for mode,code in (("unknown","ROADMAP-E003"),("self","ROADMAP-E004"),("cycle","ROADMAP-E005")):
+            td,root=self.temp_repo()
+            try:
+                p=Path("roadmap/v1/milestones/m10.5.json");d=json.loads((root/p).read_text())
+                if mode=="unknown":d["packages"][3]["depends_on"]=["M404-01"]
+                elif mode=="self":d["packages"][3]["depends_on"]=["M10.5-04"]
+                else:
+                    d["packages"][2]["depends_on"]=["M10.5-04"];d["packages"][3]["depends_on"]=["M10.5-03"]
+                self.write(root,p,d)
+                self.assertIn(code,{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+            finally:td.cleanup()
 
-    def test_terminal_dispositions_satisfy_dependencies(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.1.json")
-        data["packages"][5]["status"] = "not_applicable"
-        data["packages"][5]["disposition_reason"] = "Explicitly not applicable for this compatibility profile."
-        data["packages"][6]["status"] = "excluded"
-        data["packages"][6]["disposition_reason"] = "Explicitly excluded from the frozen v1 surface."
-        packages = {package["id"]: package for package in data["packages"]}
-        self.assertFalse(roadmap.is_blocked(data["packages"][7], packages))
+    def test_duplicate_ids_and_orders_fail(self):
+        td,root=self.temp_repo()
+        try:
+            p=Path("roadmap/v1/milestones/m10.5.json");d=json.loads((root/p).read_text())
+            d["packages"][1]["id"]=d["packages"][0]["id"];d["packages"][2]["order"]=d["packages"][1]["order"];self.write(root,p,d)
+            self.assertIn("ROADMAP-E002",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+        finally:td.cleanup()
 
-    def test_schema_violation(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.json")
-        data["packages"][0]["status"] = "done"
-        self.write("roadmap/v1/milestones/m10.json", data)
-        self.assertIn("ROADMAP-E001", self.codes())
+    def test_supersession_valid_and_invalid_cases(self):
+        td,root=self.temp_repo()
+        try:
+            p=Path("roadmap/v1/milestones/m10.5.json");d=json.loads((root/p).read_text())
+            old,new=d["packages"][4],d["packages"][5]
+            old["status"]="superseded";old["disposition_reason"]="replaced by later accepted package";old["superseded_by"]=[new["id"]];new["supersedes"]=[old["id"]]
+            self.write(root,p,d)
+            self.assertEqual([],roadmap.validate_repository(root,check_markdown=False))
+            view=roadmap.superseded_data(root);self.assertEqual("M10.5-05",view["packages"][0]["id"])
+            new["supersedes"]=["M404-01"];self.write(root,p,d)
+            self.assertIn("ROADMAP-E010",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+        finally:td.cleanup()
 
-    def test_duplicate_id_and_order(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.json")
-        data["packages"][1]["id"] = data["packages"][0]["id"]
-        data["packages"][1]["order"] = data["packages"][0]["order"]
-        self.write("roadmap/v1/milestones/m10.json", data)
-        self.assertIn("ROADMAP-E002", self.codes())
+    def test_supersession_reciprocity_and_cycle_fail(self):
+        td,root=self.temp_repo()
+        try:
+            p=Path("roadmap/v1/milestones/m10.5.json");d=json.loads((root/p).read_text())
+            a,b=d["packages"][4],d["packages"][5]
+            a["status"]="superseded";a["disposition_reason"]="historical";a["superseded_by"]=[b["id"]]
+            self.write(root,p,d)
+            self.assertIn("ROADMAP-E011",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+            b["supersedes"]=[a["id"]];b["superseded_by"]=[a["id"]];a["supersedes"]=[b["id"]]
+            self.write(root,p,d)
+            self.assertIn("ROADMAP-E012",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+        finally:td.cleanup()
 
-    def test_unknown_and_self_dependency(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.1.json")
-        data["packages"][5]["depends_on"] = ["M10.1-99"]
-        self.write("roadmap/v1/milestones/m10.1.json", data)
-        self.assertIn("ROADMAP-E003", self.codes())
-        data["packages"][5]["depends_on"] = ["M10.1-06"]
-        self.write("roadmap/v1/milestones/m10.1.json", data)
-        self.assertIn("ROADMAP-E004", self.codes())
+    def test_projection_drift_fails(self):
+        td,root=self.temp_repo()
+        try:
+            p=root/"backlog/m17-m21-full-language-coverage.md";text=p.read_text();text=text.replace("- [ ] **P1**","- [x] **P1**",1);p.write_text(text)
+            self.assertIn("ROADMAP-E008",{e["code"] for e in roadmap.validate_repository(root)})
+        finally:td.cleanup()
 
-    def test_cycle(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.1.json")
-        data["packages"][0]["depends_on"] = ["M10.1-02"]
-        self.write("roadmap/v1/milestones/m10.1.json", data)
-        self.assertIn("ROADMAP-E005", self.codes())
+    def test_index_migration_partition_and_link_validation_fail_closed(self):
+        td,root=self.temp_repo()
+        try:
+            ip=Path("roadmap/v1/index.json");idx=json.loads((root/ip).read_text());idx["migration"]["pending_milestones"]=["M21"];self.write(root,ip,idx)
+            self.assertIn("ROADMAP-E009",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+        finally:td.cleanup()
+        td,root=self.temp_repo()
+        try:
+            p=Path("roadmap/v1/milestones/m10.5.json");d=json.loads((root/p).read_text());d["packages"][0]["evidence"]=[{"kind":"path","ref":"missing.md"}];self.write(root,p,d)
+            self.assertIn("ROADMAP-E006",{e["code"] for e in roadmap.validate_repository(root,check_markdown=False)})
+        finally:td.cleanup()
 
-    def test_index_file_mismatch(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.json")
-        data["title"] = "Drifted"
-        self.write("roadmap/v1/milestones/m10.json", data)
-        self.assertIn("ROADMAP-E007", self.codes())
-
-    def test_invalid_evidence_path(self) -> None:
-        data = self.load("roadmap/v1/milestones/m10.json")
-        data["packages"][0]["evidence"] = [{"kind": "path", "ref": "../outside"}]
-        self.write("roadmap/v1/milestones/m10.json", data)
-        self.assertIn("ROADMAP-E006", self.codes())
-
-    def test_markdown_json_drift(self) -> None:
-        path = self.root / "TODO.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("- [x] **M10.2-01", "- [ ] **M10.2-01"), encoding="utf-8")
-        self.assertIn("ROADMAP-E008", self.codes())
-
-    def test_backlog_projection_drift(self) -> None:
-        path = self.root / "backlog/m10-2-m10-3-language-example-migration.md"
-        path.write_text(path.read_text(encoding="utf-8").replace("- [x] **M10.3-01", "- [ ] **M10.3-01"), encoding="utf-8")
-        self.assertIn("ROADMAP-E008", self.codes())
-
-    def test_migration_scope_violation(self) -> None:
-        index = self.load("roadmap/v1/index.json")
-        index["migration"]["pending_milestones"].append("M10")
-        self.write("roadmap/v1/index.json", index)
-        self.assertIn("ROADMAP-E009", self.codes())
-
-    def test_machine_output_is_byte_stable(self) -> None:
-        first = json.dumps(roadmap.summary_data(self.root), sort_keys=True, separators=(",", ":"))
-        second = json.dumps(roadmap.summary_data(self.root), sort_keys=True, separators=(",", ":"))
-        self.assertEqual(first, second)
-
-
-if __name__ == "__main__":
-    unittest.main()
+if __name__=="__main__":unittest.main()
