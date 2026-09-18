@@ -97,7 +97,7 @@
       "id": "R3",
       "title": "Add deterministic roadmap context projection for agents",
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["R1", "R2"],
       "goal": "Give orchestrators and executors a compact read-only view of relevant project roadmap state analogous to existing Channel workflow projections.",
       "work": [
@@ -187,5 +187,5 @@
     "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
     "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
   ],
-  "next_package": "R3"
+  "next_package": "R4"
 }
