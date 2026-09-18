@@ -1,153 +1,56 @@
 # 6. Normative grammar
 
-## Authority and support tiers
+## Authority
 
-This chapter is the human-readable grammar projection of the frozen M10.1 language-surface contract in `spec/language-surface-v1.json`, currently revision 4. The JSON contract remains the machine-readable semantic authority if this prose and the contract ever disagree.
+The active AIDL language authority is `spec/core-self-description-v1.aidl`, interpreted through the finite host bootstrap contract in `spec/bootstrap-kernel-v1.json`. This chapter is a deterministic human-readable projection of that authority. It does not independently define declaration kinds, name policies, body slots, cardinalities, modifiers, or type relationships.
 
-The **canonical target language** and **current production admission** are separate concepts. Revision 4 defines the canonical representation for the complete frozen declaration surface, while Production Normalization currently admits only the declaration families certified by M10.1. Canonical syntax therefore does not imply production support. Parser-readable historical spellings are compatibility input only and are not part of the normative target grammar below.
+`spec/language-surface-v1.json`, revision 4, M10.1/M10.2/M10.3 classification artifacts, and compatibility shells are historical migration/certification evidence after the Breaking Language Reset. They must not be used to admit syntax or semantics into the active language.
 
-The repository-wide support tiers are:
+<!-- BEGIN GENERATED CORE GRAMMAR -->
+Core source SHA-256: `465f22f2a436f6948b4ecb5e01419c922bb0537065fd1d6f5556054ca3dedcbc`
 
-- **production-admitted canonical** — canonical target syntax with certified Production Normalization evidence;
-- **canonical-but-not-yet-admitted** — canonical target syntax frozen by M10.1 but intentionally fail-closed in current production admission;
-- **legacy-readable compatibility** — historical source accepted for compatibility and migration, never a second canonical grammar;
-- **negative/rejection fixture** — input whose rejection/diagnostic behavior is the evidence;
-- **illustrative/aspirational** — explanatory material that does not itself make a production support claim.
+```ebnf
+program        = moduleDirective { importDirective } { declaration } ;
+moduleDirective= "module" qualifiedName statementEnd ;
+importDirective= "import" qualifiedName [ "as" identifier ] statementEnd ;
+declaration    = [ "export" ] typeRef identifier [ genericParameters ]
+                 [ namedArguments ] [ "->" typeRef ] [ declarationBody ] statementEnd? ;
+namedArguments = "(" namedArgument { "," namedArgument } ")" ;
+namedArgument  = identifier [ "?" ] ":" ( typeRef | value ) ;
+declarationBody= "{" { bodyEntry } "}" ;
+bodyEntry      = qualifiedName [ identifier ] [ ":" value ] { modifierCall } statementEnd? ;
+modifierCall   = "@" identifier [ "(" [ modifierArgument { "," modifierArgument } ] ")" ] ;
+modifierArgument = [ identifier ":" ] value ;
+typeRef        = qualifiedName [ "<" typeRef { "," typeRef } ">" ] [ "?" ] ;
+```
 
-`spec/m10-2-language-surface-classification.json` classifies the committed source/documentation corpus into these tiers. M10.3, not this chapter, owns executable migration of intended reference applications and resolution of any product requirement that would need new Python semantics or production admission.
+Concrete declaration contracts are read from `spec/core-self-description-v1.aidl`;
+the Bootstrap Kernel owns only the finite structural syntax above.
+Current Core-declared kinds/aliases: compatibilityProjection, declaration, entity, enum, query, type.
+<!-- END GENERATED CORE GRAMMAR -->
 
-## Canonical program shape
+## Core-owned structure
 
-The canonical language uses one uniform declaration envelope:
+Every declaration uses the same envelope:
 
-~~~ebnf
-program         = { directive | declaration } ;
-directive       = moduleDirective | importDirective ;
-moduleDirective = "module" qualifiedName newline ;
-importDirective = "import" qualifiedName [ "." "*" ] newline ;
+`[export] <declaration-type> <identifier> [<generic-parameters>] [(<named-args>)] [-> <result-type>] { ... }`
 
-declaration     = { annotation } [ "export" ] kind [ name ]
-                  [ headerArguments ] [ "->" typeRef ]
-                  "{" { bodySlot } "}" ;
-headerArguments = "(" [ namedArgument { "," namedArgument } ] ")" ;
-namedArgument   = identifier ":" value ;
-bodySlot        = slotKeyword [ slotName ] slotValue newline
-                | slotKeyword [ slotName ] "{" { bodySlot } "}" ;
-~~~
+The Bootstrap Kernel recognizes only structural framing: identifiers and qualified names, literals and expressions, generic/nullable `TypeRef` syntax, named declaration arguments, the arrow result position, body-entry framing, modifier-call tokenization, delimiters, comments, strings and statement termination. It does not contain a concrete declaration-kind catalog.
 
-The exact name policy, permitted header arguments, result-type allowance, body-slot vocabulary, occurrence bounds, ordering, reference-kind constraints and legacy spellings for each declaration are defined by the frozen contract. A spelling not represented by that contract is not added to the target grammar by examples or older prose.
+The direct Core source determines the concrete language contracts. A `declaration` declaration defines a declaration-kind contract. `type` is a Core-authored alias of `declaration`, not a second host type hierarchy. Body entries are interpreted by Core-declared slot contracts, including name policy, value type, cardinality and permitted modifiers. Generic TypeRefs, `ref<...>` and `expression<...>` use the same recursive TypeRef structure; their semantic meaning is Core metadata rather than parser grammar.
 
-## Frozen canonical declaration kinds
+## Fail-closed rules
 
-Revision 4 freezes these canonical declaration kinds:
+The active Core path fails closed when the Bootstrap Kernel or self-description is inconsistent, a declaration kind has no Core contract, a Core alias is cyclic or shape-incompatible, a TypeRef cannot resolve under Core rules, a body slot is undeclared, a required/forbidden slot name is violated, cardinality is violated, or a modifier is not declared for its slot. Generated semantic meta-IR is accepted only when it is an exact derivation of the direct Core source and declares itself non-authoritative.
 
-`app`, `auth`, `a11y`, `privacy`, `enum`, `alias`, `value`, `union`, `error`, `entity`, `view`, `api`, `policy`, `query`, `mutation`, `event`, `topic`, `queue`, `consumer`, `projection`, `workflow`, `saga`, `task`, `schedule`, `system`, `service`, `client`, `tenant`, `channel`, `resource`, `media`, `rendition`, `sync`, `migration`, `deployment`, `frontend`, `theme`, `component`, `page`, `form`, `action`, `syncStatus`, `seo`, `nativeFunction`, `nativeComponent`, `fixture`, `test`, and `scenario`.
+`tools/core_language.py` is the P1 authority/substrate entry point. It composes the generic Bootstrap parser, the direct Core compiler, the exact derived semantic registry, and this grammar projection. `tools/core_bootstrap.py` is deliberately independent of `tools/aidl_parser.py` declaration-token tables.
 
-Only the M10.1-certified subset is production-admitted today. All other canonical kinds remain fail-closed until an explicit versioned admission decision and certification says otherwise.
+## P2+ migration boundary
 
-## Canonical forms with revision-4 structural detail
+Repository-wide source migration is intentionally not part of P1. `tools/aidl_parser.py` and revision-4 classification/compatibility tooling remain temporarily present only to inventory and process the unmigrated historical corpus during the later serial P2+ packages. They are not an active language authority and must not be consulted by the P1 Core parser/semantic path to admit a declaration kind or body slot.
 
-The following forms are normative projections of contract-owned structure, not independent language rules.
+Until P2 migrates a historical source, that source is not evidence that its syntax belongs to the new language. No compatibility alias is introduced by P1 to keep old positive sources valid. Later packages must either migrate those sources to Core-described syntax or retain them solely as explicit rejection/historical evidence.
 
-### App
+## Drift checks
 
-~~~ebnf
-appDecl      = [ "export" ] "app" identifier "{" profileSlot { profileSlot } "}" ;
-profileSlot  = "profile" identifier "{" "version" integer "}" ;
-~~~
-
-### Enum
-
-Canonical enum members are explicit `case` slots:
-
-~~~ebnf
-enumDecl = [ "export" ] "enum" identifier "{" caseSlot { caseSlot } "}" ;
-caseSlot = "case" identifier [ "=" literal ] newline ;
-~~~
-
-Comma-separated bare enum cases are legacy-readable compatibility syntax only.
-
-### Alias
-
-~~~ebnf
-aliasDecl = [ "export" ] "alias" identifier "=" typeRef newline ;
-~~~
-
-`opaque Name = Type` is a legacy alias spelling, not a canonical declaration kind.
-
-### Entity
-
-Canonical entity members use explicit semantic slots:
-
-~~~ebnf
-entityDecl = [ "export" ] "entity" identifier "{" { fieldSlot | indexSlot } "}" ;
-fieldSlot  = "field" identifier ":" typeRef { fieldModifier } newline ;
-indexSlot  = "index" identifier slotValue newline ;
-~~~
-
-Unprefixed `name: Type` entity members are compatibility input only.
-
-### Query and mutation
-
-Revision 4 models operation parameters as the named HeaderArg `parameters`; the parameter list is that argument's value, not a positional declaration signature.
-
-~~~ebnf
-queryDecl    = [ "export" ] "query" identifier [ operationHeaderArguments ] "->" typeRef
-               "{" { querySlot } "}" ;
-mutationDecl = [ "export" ] "mutation" identifier [ operationHeaderArguments ] "->" typeRef
-               "{" { mutationSlot } "}" ;
-operationHeaderArguments = "(" "parameters" ":" parameterList ")" ;
-parameterList = "[" [ parameter { "," parameter } ] "]" ;
-parameter     = identifier ":" typeRef [ "default" value ] ;
-querySlot     = "read" value newline
-              | "allow" value newline
-              | "errors" typeRefList newline
-              | "timeout" duration newline ;
-mutationSlot  = "allow" value newline
-              | "errors" typeRefList newline
-              | "call" value newline
-              | "audit" value newline
-              | "timeout" duration newline ;
-~~~
-
-The frozen HeaderArg occurrence is optional and singular for both operations. A source spelling such as `query name(param: Type) -> Result` or `mutation name(param: Type) -> Result` is the contract-declared legacy operation-signature form and is not canonical target syntax.
-
-Legacy operation source may contain additional readable clauses. Clauses not represented by revision-4 BodySlots remain explicit fail-closed compatibility facts; they are not normative target slots merely because the parser can read them.
-
-### Consumer, projection, client, migration
-
-These families use named canonical header arguments rather than positional special-case headers:
-
-~~~ebnf
-consumerDecl   = [ "export" ] "consumer" identifier
-                 "(" "topic" ":" declarationRef "," "messageType" ":" typeRef ")"
-                 "{" { bodySlot } "}" ;
-projectionDecl = [ "export" ] "projection" identifier
-                 "(" "sources" ":" typeRef "," "target" ":" declarationRef ")"
-                 "{" { bodySlot } "}" ;
-clientDecl     = [ "export" ] "client" identifier
-                 "(" "service" ":" declarationRef ")" "{" { bodySlot } "}" ;
-migrationDecl  = [ "export" ] "migration" identifier
-                 "(" "fromVersion" ":" string "," "toVersion" ":" string ")"
-                 "{" { bodySlot } "}" ;
-~~~
-
-Historical `on/from`, `from/into`, `for`, and `from "a" to "b"` headers are compatibility spellings only.
-
-## Type references, modifiers, annotations and cardinality
-
-The canonical type-reference model is contract-owned. A TypeRef carries its base kind/name plus optionality and only the modifiers frozen by revision 4. M10.1 certification proves current production parity for the admitted TypeRef/reference-projection facts and fail-closed behavior for unsupported generic/non-range constraint shapes.
-
-Annotations are source metadata only where the frozen contract permits them; an annotation does not create a new declaration or body-slot meaning. Occurrence/cardinality is defined per contract node through `min`/`max`, including required singleton slots, optional singletons and ordered repeated slots. Documentation must not replace those bounds with a looser parser-oriented rule.
-
-## Compatibility grammar is non-normative
-
-The Python parser intentionally remains able to read historical source forms required for compatibility and migration evidence. Those forms include, among others, bare enum cases, `opaque` aliases, unprefixed entity fields, positional operation/consumer/projection/client/migration headers, and legacy clauses whose facts are rejected by current Production Normalization.
-
-For repository-lint compatibility only, the parser-readable declaration-token registry is recorded here as non-normative data: "app", "auth", "a11y", "privacy", "enum", "alias", "opaque", "value", "union", "error", "entity", "view", "api", "policy", "query", "mutation", "event", "topic", "queue", "consumer", "projection", "workflow", "saga", "task", "schedule", "system", "service", "client", "tenant", "channel", "resource", "media", "rendition", "sync", "migration", "deployment", "frontend", "theme", "component", "page", "form", "action", "syncStatus", "seo", "native", "function", "fixture", "test", and "scenario". The canonical contract kinds remain the camel-cased `nativeFunction` and `nativeComponent`; this quoted registry exists solely so compatibility examples can be linted without pretending their historical spellings are target-grammar productions.
-
-Compatibility readability is not production admission and not a permanent parallel grammar. Existing reference applications and compatibility fixtures remain in that source form during M10.2 and are classified explicitly. M10.3 owns their intended migration/disposition.
-
-## Validation and drift
-
-`python3 -m tools.m10_2_language_surface_classification` deterministically inventories every committed `.aidl` file and validates the required documentation classification against frozen revision 4. New unclassified source files, duplicate source-rule matches, document-index drift, classification-vocabulary drift, or frozen-contract identity drift fail closed. Focused negative regressions live in `tools/test_m10_2_language_surface_classification.py`.
+`tools.core_language.check_grammar_projection()` requires the generated block in this document to match the exact direct Core source. `load_core_authority()` validates the finite bootstrap firewall before compiling Core, and `validate_core_language_source()` parses with the generic bootstrap grammar and validates semantics derived from the direct Core. P1 tests additionally prove that mutating the legacy parser declaration-kind table cannot change the active Core path.
