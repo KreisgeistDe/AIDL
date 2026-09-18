@@ -1,147 +1,103 @@
 {
-  "schemaVersion": 1,
-  "phase": "binding-core-ebnf-correction-integrated",
-  "completedPhases": ["D0", "I1", "I2", "V1", "G1"],
-  "coreSource": {
-    "path": "spec/core.aidl",
-    "role": "legacy-definition-object-migration-evidence-only",
-    "projectWideAuthorityFlipComplete": true,
-    "directDeclarationKindContractsTarget": false,
-    "permanentAuthorityAfterCorrection": false,
-    "runtimeSemanticAuthority": false
+  "schemaVersion": 2,
+  "phase": "breaking-language-reset-p1-authority-substrate",
+  "breakingReset": {
+    "authorized": true,
+    "compatibilityRequired": false,
+    "sourceMigratorRequired": false,
+    "p1Scope": "authority-and-substrate-only",
+    "p2PlusCorpusMigrationDeferred": true
   },
-  "coreSelfDescription": {
+  "activeLanguageAuthority": {
     "path": "spec/core-self-description-v1.aidl",
-    "role": "normative-direct-self-described-core",
-    "compiler": "tools/core_self_description.py",
-    "usesOnlyFiniteBootstrapMetaCombinators": true,
+    "role": "sole-normative-self-described-language-authority",
+    "bootstrapBoundary": "spec/bootstrap-kernel-v1.json",
+    "parserEntryPoint": "tools/core_language.py",
+    "directCompiler": "tools/core_self_description.py",
+    "semanticRuntime": "tools/core_semantics.py",
+    "grammarProjection": "docs/06-grammar.md",
     "concreteDeclarationKindCatalogInHost": false,
-    "permanentDefinitionObjectAuthority": false,
+    "separateHostTypeHierarchy": false,
     "centralMetaClass": "declaration",
-    "typeSurface": "direct-core-authored-alias-of-declaration",
-    "argumentAbsence": "closed-zero-parameter-contract",
-    "explicitEmptyDeclarationArguments": "invalid-syntax",
-    "openArgumentSyntax": "identifier?: ...",
-    "returnAbsence": "no-result-position-for-specialized-kind",
-    "returnMechanism": "declaration-arrow-result-only",
-    "typeIdentity": "every-visible-named-declaration-symbol"
-  },
-  "coreMetaIr": {
-    "path": "spec/core-meta-ir-v1.json",
-    "role": "derived-non-authoritative-runtime-meta-ir",
-    "authorityInput": false,
-    "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
-    "runtimeLoader": "tools/core_semantics.py",
-    "schemaVersion": 3,
-    "typeIdentityField": "predeclaredTypeSymbols",
-    "kindAliasField": "kindAliases"
-  },
-  "coreDomain": {
-    "path": "spec/core.domain.aidl",
-    "role": "compatibility-shell-no-definition-object-authority",
-    "semanticValidation": "tools/core_semantics.py",
-    "migrationToDirectSelfDescription": "p3-integrated-binding-ebnf-correction-complete"
-  },
-  "coreAuthority": {
-    "path": "spec/core.authority.aidl",
-    "role": "compatibility-shell-contract-moved-to-direct-core"
-  },
-  "coreCompatibility": {
-    "path": "spec/core.compatibility.aidl",
-    "role": "core-authored-exact-compatibility-binding",
-    "productionGate": "tools/core_authority.py"
+    "typeSurface": "core-authored-alias-of-declaration"
   },
   "bootstrapKernel": {
     "path": "spec/bootstrap-kernel-v1.json",
     "role": "finite-versioned-irreducible-host-bootstrap-contract",
-    "bindingCoreEbnf": true,
-    "concreteDeclarationKindsOwnedByHost": false,
+    "ownsOnlyStructuralSyntax": true,
     "finiteStructuralMetaCombinators": ["name", "args", "body", "cardinal", "modifier"],
-    "producesPresent": false,
-    "typePositionPresent": false,
+    "concreteDeclarationKindsOwnedByHost": false,
     "separateHostTypeHierarchy": false,
-    "typeIdentityRule": "visible named declaration symbol identity"
+    "generatedRegistryIsAuthorityInput": false
   },
-  "generatedProjection": {
-    "path": "spec/core-registry-v1.json",
-    "role": "legacy-definition-object-migration-evidence-only",
+  "derivedSemanticProjection": {
+    "path": "spec/core-meta-ir-v1.json",
+    "role": "derived-non-authoritative-runtime-meta-ir",
     "authorityInput": false,
-    "runtimeAuthorityInput": false
+    "exactDerivation": "tools.core_self_description.semantic_meta_ir_text",
+    "runtimeLoader": "tools/core_semantics.py"
   },
-  "revision4": {
-    "path": "spec/language-surface-v1.json",
-    "role": "core-authorized-compatibility-and-migration-projection",
-    "permanentSemanticAuthority": false,
-    "productionUseRequiresCoreAuthorization": true,
-    "authorityBinding": "spec/core.compatibility.aidl"
+  "historicalAuthorities": [
+    {
+      "path": "spec/language-surface-v1.json",
+      "formerRole": "revision-4-language-surface-contract",
+      "currentRole": "historical-non-authoritative-migration-and-certification-evidence",
+      "activeLanguageAuthority": false
+    },
+    {
+      "path": "spec/core.compatibility.aidl",
+      "formerRole": "compatibility-binding",
+      "currentRole": "historical-non-authoritative-compatibility-evidence",
+      "activeLanguageAuthority": false
+    },
+    {
+      "path": "spec/m10-2-language-surface-classification.json",
+      "formerRole": "revision-4-source-classification",
+      "currentRole": "historical-corpus-inventory-for-p2-plus-migration",
+      "activeLanguageAuthority": false
+    },
+    {
+      "path": "spec/core-registry-v1.json",
+      "formerRole": "generated-registry",
+      "currentRole": "legacy-definition-object-migration-evidence-only",
+      "activeLanguageAuthority": false
+    }
+  ],
+  "legacyCorpusBoundary": {
+    "parser": "tools/aidl_parser.py",
+    "status": "temporarily-retained-historical-corpus-adapter-pending-p2-plus",
+    "mayDefineActiveLanguage": false,
+    "mayAuthorizeDeclarationKinds": false,
+    "mayAuthorizeBodySlots": false,
+    "compatibilityFallbackForCore": false,
+    "removalOrMigration": "serial-p2-plus"
   },
-  "authorityCorrection": {
-    "supersedesPermanentDefinitionObjectAuthorityDesign": true,
-    "status": "binding-core-ebnf-reviewed-and-integrated",
-    "historicalP1": {
-      "implementationPr": 100,
-      "mainCommit": "755b38f6edd4ebb2ad4a9be5da0195082b0a3cb9",
-      "obsoleteAssumptionsBeingRemoved": ["produces-carrier-capability", "type-position-marker"]
-    },
-    "historicalP2": {
-      "implementationPr": 101,
-      "mainCommit": "7280f01a2c97b004c79cd0a2e598513bfa183ac0",
-      "obsoleteAssumptionsBeingRemoved": ["produces(type)-type-carrier-rule", "separate-type-kind-semantics"]
-    },
-    "historicalP3": {
-      "implementationPr": 102,
-      "implementationHead": "4992c896cf9818ab51c6ade60fd2a58c657461fe",
-      "mainCommit": "ca87cdc2ef0ce6e00808512897144ea99ef59293",
-      "independentlyValidated": true,
-      "legacyDefinitionObjectRuntimeAuthority": false
-    },
-    "durableStateReconciliation": {
-      "implementationPr": 103,
-      "mainCommit": "bb8fb6ff9eb18429c94e9982a9e8d3e03a7ef48d",
-      "statusFactsRetained": true,
-      "p4NextWordingSupersededByCorrectionGate": true
-    },
-    "semanticCorrection": {
-      "id": "binding-core-ebnf",
-      "status": "reviewed-and-integrated",
-      "implementationPr": 104,
-      "reviewedHead": "9efde375636bb7deed1c901842087169cb5b2763",
-      "mainCommit": "363f2a7a20f75d9fa7f46aea19e015bcdf121c33",
-      "independentlyValidated": true,
-      "producesRemoved": true,
-      "typePositionRemoved": true,
-      "typeIsAliasOfDeclaration": true,
-      "declarationIsTypeObject": true,
-      "allVisibleNamedDeclarationsTypeRefAddressable": true,
-      "argsAbsenceEqualsClosedZeroParameterSet": true,
-      "explicitEmptyDeclarationArgumentsRejected": true,
-      "openArgsUseFreeBinder": true,
-      "nullableGenericTypeRefs": true,
-      "bodyValuesAreExpressions": true,
-      "indentationIsNonSemantic": true,
-      "grammarIncompleteNewlineContinuation": true,
-      "nestedComments": true,
-      "stringInterpolationAndRawMultiline": true,
-      "returnUsesArrowOnly": true,
-      "specializedDeclaredResultIsRequired": true,
-      "typeRefCarrierIdentity": "generic-visible-named-declaration-symbol",
-      "generatedMetaIrAuthority": false
-    },
-    "p4": {
-      "id": "downstream-surfaces-and-kotlin-parity-rebase",
-      "status": "frozen-by-downstream-roadmap-gates"
-    },
-    "semanticsDependentKotlinFrozen": false,
-    "frozenKotlinWorkIncludes": []
+  "p1Invariants": [
+    "core-self-description-compiles-through-finite-bootstrap",
+    "invalid-or-inconsistent-core-fails-closed",
+    "active-core-parser-has-no-concrete-declaration-kind-table",
+    "grammar-projection-is-derived-from-core",
+    "revision-4-is-not-active-language-authority",
+    "generic-declaration-envelope-is-bootstrap-owned",
+    "concrete-kind-slot-and-semantic-contracts-are-core-owned"
+  ],
+  "deferred": {
+    "phase": "P2+",
+    "items": [
+      "repository-wide-aidl-source-migration",
+      "reference-app-example-and-fixture-migration",
+      "broad-revision-4-compatibility-code-removal",
+      "kotlin-compiler-rewrite",
+      "full-roadmap-rebase"
+    ],
+    "rule": "deferred historical syntax is not active language authority and receives no compatibility alias from P1"
   },
-  "nextGate": {
-    "id": "M10.5-04",
-    "status": "bounded-canonical-ir-parity-in-progress",
-    "laterSemanticKotlinBlockedUntilComplete": true
+  "kotlin": {
+    "semanticsDependentWorkFrozenUntilBaselineIntegrated": true,
+    "compilerRewriteInP1": false
   },
-  "nextAction": {
-    "id": "M10.5-04-CANONICAL-IR-DOMAIN-SLICE",
-    "status": "bounded-first-package",
-    "reason": "M10.5-03 Gate 03 was independently certified complete on exact main 7bd092ed81906dd471c198792eadd96bcd1853d7 after integration of PR #113. Only bounded M10.5-04 Canonical-IR parity is now eligible; Gate 04 remains incomplete, Python remains the migration reference/conformance implementation, and no M10.5-05+ or downstream semantic ownership is authorized."
+  "openLegacyPrs": {
+    "121": "must-be-re-evaluated-against-breaking-baseline-after-p1",
+    "123": "must-be-re-evaluated-against-breaking-baseline-after-p1"
   }
 }
