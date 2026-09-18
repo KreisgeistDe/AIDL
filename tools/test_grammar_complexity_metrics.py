@@ -11,37 +11,33 @@ class GrammarComplexityMetricsTests(unittest.TestCase):
         first = measure(GRAMMAR)
         second = measure(GRAMMAR)
         self.assertEqual(first, second)
-        self.assertEqual(4, first["contract_revision"])
+        self.assertIsNone(first["contract_revision"])
+        self.assertEqual("spec/core-self-description-v1.aidl", first["authority"])
         self.assertGreater(first["ebnf_sections"], 0)
         self.assertGreater(first["productions"], 0)
         self.assertGreater(first["production_alternatives"], 0)
-        self.assertGreater(first["surface_signatures"], 0)
-        self.assertEqual(48, first["top_level_declaration_productions"])
-        self.assertEqual(48, first["concrete_top_level_forms"])
-        self.assertEqual(48, len(first["declaration_productions"]))
-        self.assertIn("alias", first["declaration_productions"])
+        self.assertEqual(0, first["concrete_top_level_forms"])
+        self.assertIn("declaration", first["declaration_productions"])
+        self.assertIn("type", first["declaration_productions"])
         self.assertIn("entity", first["declaration_productions"])
         self.assertIn("query", first["declaration_productions"])
-        self.assertIn("mutation", first["declaration_productions"])
-        self.assertNotIn("opaque", first["declaration_productions"])
+        self.assertNotIn("mutation", first["declaration_productions"])
         print("GRAMMAR_COMPLEXITY_METRICS=" + json.dumps(first, sort_keys=True))
 
-    def test_canonical_projection_productions_are_counted(self) -> None:
+    def test_core_projection_productions_are_counted(self) -> None:
         parsed = productions(ebnf_sections(GRAMMAR.read_text(encoding="utf-8")))
         for name in (
             "program",
+            "moduleDirective",
+            "importDirective",
             "declaration",
-            "headerArguments",
-            "bodySlot",
-            "enumDecl",
-            "aliasDecl",
-            "entityDecl",
-            "queryDecl",
-            "mutationDecl",
-            "consumerDecl",
-            "projectionDecl",
-            "clientDecl",
-            "migrationDecl",
+            "namedArguments",
+            "namedArgument",
+            "declarationBody",
+            "bodyEntry",
+            "modifierCall",
+            "modifierArgument",
+            "typeRef",
         ):
             self.assertIn(name, parsed)
 
