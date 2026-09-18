@@ -56,6 +56,13 @@ class RoadmapContextTest(unittest.TestCase):
         self.assertTrue(value["next_candidates"]["items"])
         self.assertTrue(all(row["state"] in {"ready", "in_progress"} for row in value["next_candidates"]["items"]))
 
+    def test_milestone_context_includes_external_blocker_ready_candidate(self):
+        value = roadmap_context.context_data("M11", ROOT)
+        candidates = value["next_candidates"]["items"]
+        self.assertEqual(["M10.5-04"], [row["id"] for row in candidates])
+        self.assertEqual("M10.5", candidates[0]["milestone"])
+        self.assertEqual("in_progress", candidates[0]["state"])
+
     def test_historical_supersession_is_copied_without_new_authority(self):
         value = roadmap_context.context_data("M16.5-E3", ROOT)
         self.assertEqual("terminal", value["selected"]["state"])
@@ -81,6 +88,45 @@ class RoadmapContextTest(unittest.TestCase):
         for key in ("direct_dependencies", "transitive_blockers", "next_candidates", "remaining_acceptance_criteria", "evidence", "references"):
             self.assertLessEqual(len(first[key]["items"]), 2)
         self.assertEqual(2, first["limits"]["requested"])
+
+    def test_nested_package_lists_honor_limit_deterministically(self):
+        td, root = self.temp_repo()
+        try:
+            path = root / "roadmap/v1/milestones/m10.5.json"
+            data = json.loads(path.read_text())
+            package = next(row for row in data["packages"] if row["id"] == "M10.5-06")
+            package["depends_on"] = ["M10.5-04", "M10.5-05"]
+            path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            first = roadmap_context.context_data("M10.5-06", root, limit=1)
+            second = roadmap_context.context_data("M10.5-06", root, limit=1)
+            self.assertEqual(first, second)
+            self.assertEqual(["M10.5-04"], first["selected"]["depends_on"])
+            self.assertEqual(["M10.5-04"], first["selected"]["blocked_by"])
+            for envelope in ("direct_dependencies", "transitive_blockers", "next_candidates"):
+                for row in first[envelope]["items"]:
+                    self.assertLessEqual(len(row["depends_on"]), 1)
+                    self.assertLessEqual(len(row["blocked_by"]), 1)
+        finally:
+            td.cleanup()
+
+    def test_nested_authority_lists_honor_limit_deterministically(self):
+        value = {
+            "authority_status": "historical_nonblocking",
+            "supersedes": ["M2", "M1"],
+            "superseded_by": ["M4", "M3"],
+            "superseded_by_authority": [
+                {"kind": "commit", "ref": "bbb"},
+                {"kind": "commit", "ref": "aaa"},
+            ],
+        }
+        first = roadmap_context._authority(value, 1)
+        second = roadmap_context._authority(value, 1)
+        self.assertEqual(first, second)
+        self.assertEqual(["M2"], first["supersedes"])
+        self.assertEqual(["M4"], first["superseded_by"])
+        self.assertEqual([{"kind": "commit", "ref": "aaa"}], first["superseded_by_authority"])
+        for key in ("supersedes", "superseded_by", "superseded_by_authority"):
+            self.assertLessEqual(len(first[key]), 1)
 
     def test_unknown_selector_fails_closed(self):
         with self.assertRaises(KeyError):
