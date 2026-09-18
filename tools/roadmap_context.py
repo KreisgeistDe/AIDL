@@ -21,20 +21,24 @@ def _bounded(values: list[Any], limit: int) -> dict[str, Any]:
     return {"items": values[:limit], "total": len(values), "truncated": len(values) > limit}
 
 
+def _bounded_list(values: list[Any], limit: int) -> list[Any]:
+    return values[:limit]
+
+
 def _links(values: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return sorted((dict(value) for value in values), key=lambda value: (value.get("kind", ""), value.get("ref", ""), value.get("note", "")))
 
 
-def _authority(value: dict[str, Any]) -> dict[str, Any]:
+def _authority(value: dict[str, Any], limit: int) -> dict[str, Any]:
     return {
         "authority_status": value.get("authority_status"),
-        "supersedes": list(value.get("supersedes", [])),
-        "superseded_by": list(value.get("superseded_by", [])),
-        "superseded_by_authority": _links(value.get("superseded_by_authority", [])),
+        "supersedes": _bounded_list(list(value.get("supersedes", [])), limit),
+        "superseded_by": _bounded_list(list(value.get("superseded_by", [])), limit),
+        "superseded_by_authority": _bounded_list(_links(value.get("superseded_by_authority", [])), limit),
     }
 
 
-def _package_row(package: dict[str, Any], packages: dict[str, dict[str, Any]], owners: dict[str, str]) -> dict[str, Any]:
+def _package_row(package: dict[str, Any], packages: dict[str, dict[str, Any]], owners: dict[str, str], limit: int) -> dict[str, Any]:
     blocked_by = [dep for dep in package["depends_on"] if packages[dep]["status"] not in roadmap.TERMINAL_SATISFIED]
     if package["status"] in roadmap.TERMINAL_SATISFIED:
         state = "terminal"
@@ -52,8 +56,8 @@ def _package_row(package: dict[str, Any], packages: dict[str, dict[str, Any]], o
         "status": package["status"],
         "state": state,
         "priority": package["priority"],
-        "depends_on": list(package["depends_on"]),
-        "blocked_by": blocked_by,
+        "depends_on": _bounded_list(list(package["depends_on"]), limit),
+        "blocked_by": _bounded_list(blocked_by, limit),
     }
 
 
@@ -96,14 +100,14 @@ def context_data(selector: str, root: Path = ROOT, limit: int = DEFAULT_LIMIT) -
     if selector in packages:
         package = packages[selector]
         milestone = milestone_by_id[owners[selector]]
-        selected = _package_row(package, packages, owners) | {"authority": _authority(package)}
+        selected = _package_row(package, packages, owners, limit) | {"authority": _authority(package, limit)}
         start_ids = [selector]
         direct_ids = list(package["depends_on"])
-        candidate_ids = [selector, *_transitive_blocker_ids(start_ids, packages, rank)]
         remaining = [] if package["status"] in roadmap.TERMINAL_SATISFIED else list(package["acceptance_criteria"])
         evidence = _links(package["evidence"])
         references = _links(package["references"])
         source = milestone.get("source")
+        include_scoped_candidates: list[str] = [selector]
     elif selector in milestone_by_id:
         milestone = milestone_by_id[selector]
         scoped = sorted(milestone["packages"], key=lambda package: (package["order"], package["id"]))
@@ -114,22 +118,23 @@ def context_data(selector: str, root: Path = ROOT, limit: int = DEFAULT_LIMIT) -
             "status": None,
             "state": _milestone_state(scoped, packages),
             "priority": milestone["priority"],
-            "authority": _authority(milestone),
+            "authority": _authority(milestone, limit),
         }
         start_ids = [package["id"] for package in scoped if package["status"] not in roadmap.TERMINAL_SATISFIED]
         direct_ids = sorted({dep for pid in start_ids for dep in packages[pid]["depends_on"]}, key=rank.__getitem__)
-        candidate_ids = [package["id"] for package in scoped]
         remaining = [] if selected["state"] == "terminal" else list(milestone.get("acceptance_criteria", []))
         evidence = _links([link for package in scoped for link in package["evidence"]])
         references = _links([link for package in scoped for link in package["references"]])
         source = milestone.get("source")
+        include_scoped_candidates = [package["id"] for package in scoped]
     else:
         raise KeyError(f"unknown roadmap selector: {selector}")
 
     blockers = _transitive_blocker_ids(start_ids, packages, rank)
+    candidate_ids = [*include_scoped_candidates, *blockers]
     candidates = []
     for pid in sorted(set(candidate_ids), key=rank.__getitem__):
-        row = _package_row(packages[pid], packages, owners)
+        row = _package_row(packages[pid], packages, owners, limit)
         if row["state"] in {"ready", "in_progress"} and packages[pid]["status"] not in roadmap.TERMINAL_SATISFIED:
             candidates.append(row)
 
@@ -138,8 +143,8 @@ def context_data(selector: str, root: Path = ROOT, limit: int = DEFAULT_LIMIT) -
         "selector": selector,
         "selected": selected,
         "source": dict(source) if isinstance(source, dict) else None,
-        "direct_dependencies": _bounded([_package_row(packages[pid], packages, owners) for pid in sorted(set(direct_ids), key=rank.__getitem__)], limit),
-        "transitive_blockers": _bounded([_package_row(packages[pid], packages, owners) for pid in blockers], limit),
+        "direct_dependencies": _bounded([_package_row(packages[pid], packages, owners, limit) for pid in sorted(set(direct_ids), key=rank.__getitem__)], limit),
+        "transitive_blockers": _bounded([_package_row(packages[pid], packages, owners, limit) for pid in blockers], limit),
         "next_candidates": _bounded(candidates, limit),
         "remaining_acceptance_criteria": _bounded(remaining, limit),
         "evidence": _bounded(evidence, limit),
