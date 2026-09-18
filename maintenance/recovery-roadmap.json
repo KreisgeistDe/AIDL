@@ -71,7 +71,7 @@
       "id": "R2",
       "title": "Reconcile the language-authority chain",
       "priority": "P0",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["R1"],
       "goal": "Make the accepted language authority unambiguous across roadmap, specification, grammar, and historical design gates.",
       "authority_chain": [
@@ -187,5 +187,5 @@
     "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
     "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
   ],
-  "next_package": "R2"
+  "next_package": "R3"
 }
