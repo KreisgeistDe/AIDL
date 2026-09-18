@@ -1,313 +1,252 @@
 from __future__ import annotations
-
-import argparse
-import json
-import re
-import sys
+import argparse, json, re, sys
 from pathlib import Path
 from typing import Any
-
 from jsonschema import Draft202012Validator
 
-ROOT = Path(__file__).resolve().parents[1]
-INDEX_PATH = Path("roadmap/v1/index.json")
-SCHEMA_PATH = Path("spec/roadmap-v1.schema.json")
-OUTPUT_VERSION = "aidl.roadmap-output/v1"
-TERMINAL_SATISFIED = {"complete", "not_applicable", "excluded"}
-NONTERMINAL = {"open", "in_progress"}
-
-MARKDOWN_PROJECTIONS = {
-    "M10": Path("backlog/m9-m10-release-conformance.md"),
-    "M10.1": Path("backlog/m10-1-language-freeze.md"),
-    "M10.2": Path("backlog/m10-2-m10-3-language-example-migration.md"),
-    "M10.3": Path("backlog/m10-2-m10-3-language-example-migration.md"),
+ROOT=Path(__file__).resolve().parents[1]
+INDEX_PATH=Path("roadmap/v1/index.json")
+SCHEMA_PATH=Path("spec/roadmap-v1.schema.json")
+OUTPUT_VERSION="aidl.roadmap-output/v1"
+TERMINAL_SATISFIED={"complete","not_applicable","excluded","superseded"}
+STATUS_ORDER=("open","in_progress","complete","not_applicable","excluded","superseded")
+LEGACY_PROJECTIONS={
+ "M10":Path("backlog/m9-m10-release-conformance.md"),
+ "M10.1":Path("backlog/m10-1-language-freeze.md"),
+ "M10.2":Path("backlog/m10-2-m10-3-language-example-migration.md"),
+ "M10.3":Path("backlog/m10-2-m10-3-language-example-migration.md"),
 }
-TODO_PROJECTIONS = {"M10.1", "M10.2", "M10.3"}
-TODO_PATH = Path("TODO.md")
+TODO_PROJECTIONS={"M10.1","M10.2","M10.3"}
 
+def _load(p:Path)->dict[str,Any]: return json.loads(p.read_text(encoding="utf-8"))
+def _err(code,subject,message): return {"code":code,"subject":subject,"message":message}
 
-def _load(path: Path) -> dict[str, Any]:
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _error(code: str, subject: str, message: str) -> dict[str, str]:
-    return {"code": code, "subject": subject, "message": message}
-
-
-def _schema_errors(data: dict[str, Any], schema: dict[str, Any], subject: str) -> list[dict[str, str]]:
-    errors: list[dict[str, str]] = []
-    validator = Draft202012Validator(schema)
-    for issue in sorted(validator.iter_errors(data), key=lambda item: (list(item.absolute_path), item.message)):
-        location = ".".join(str(part) for part in issue.absolute_path) or "<root>"
-        errors.append(_error("ROADMAP-E001", subject, f"schema {location}: {issue.message}"))
-    return errors
-
-
-def _read_documents(root: Path) -> tuple[dict[str, Any], list[tuple[Path, dict[str, Any]]], list[dict[str, str]]]:
-    errors: list[dict[str, str]] = []
-    try:
-        schema = _load(root / SCHEMA_PATH)
-        index = _load(root / INDEX_PATH)
-    except (OSError, json.JSONDecodeError) as exc:
-        return {}, [], [_error("ROADMAP-E001", str(INDEX_PATH), str(exc))]
-    errors.extend(_schema_errors(index, schema, str(INDEX_PATH)))
-    milestones: list[tuple[Path, dict[str, Any]]] = []
-    if errors:
-        return index, milestones, errors
+def _documents(root:Path):
+    errors=[]
+    try: schema=_load(root/SCHEMA_PATH); index=_load(root/INDEX_PATH)
+    except (OSError,json.JSONDecodeError) as e: return {},[],[_err("ROADMAP-E001",str(INDEX_PATH),str(e))]
+    def schema_errors(value,subject):
+        return [_err("ROADMAP-E001",subject,f"schema {'.'.join(map(str,x.absolute_path)) or '<root>'}: {x.message}")
+                for x in sorted(Draft202012Validator(schema).iter_errors(value),key=lambda x:(list(x.absolute_path),x.message))]
+    errors+=schema_errors(index,str(INDEX_PATH)); docs=[]
+    if errors:return index,docs,errors
     for entry in index["milestones"]:
-        path = Path(entry["path"])
-        try:
-            data = _load(root / path)
-        except (OSError, json.JSONDecodeError) as exc:
-            errors.append(_error("ROADMAP-E007", str(path), str(exc)))
-            continue
-        errors.extend(_schema_errors(data, schema, str(path)))
-        milestones.append((path, data))
-    return index, milestones, errors
+        p=Path(entry["path"])
+        try:v=_load(root/p)
+        except (OSError,json.JSONDecodeError) as e: errors.append(_err("ROADMAP-E007",str(p),str(e)));continue
+        errors+=schema_errors(v,str(p)); docs.append((p,v))
+    return index,docs,errors
 
+def _link_errors(root:Path,subject:str,link:dict[str,Any]):
+    if link["kind"] not in {"path","test","schema"}: return []
+    p=Path(link["ref"])
+    if p.is_absolute() or ".." in p.parts or not (root/p).is_file():
+        return [_err("ROADMAP-E006",subject,f"invalid or missing repository-relative {link['kind']} ref {link['ref']}")]
+    return []
 
-def _markdown_rows(text: str, prefix: str) -> list[tuple[str, bool, str | None]]:
-    rows: list[tuple[str, bool, str | None]] = []
-    pattern = re.compile(r"^- \[([ xX])\].*?\b(" + re.escape(prefix) + r"-\d{2})\b", re.MULTILINE)
-    for match in pattern.finditer(text):
-        end = text.find("\n", match.start())
-        line = text[match.start(): end if end >= 0 else len(text)]
-        priority_match = re.search(r"\*\*(P[0-2])\*\*", line)
-        rows.append((match.group(2), match.group(1).lower() == "x", priority_match.group(1) if priority_match else None))
-    return rows
+def _section(text:str,mid:str)->str:
+    m=re.search(r"^##\s+(?:Milestone\s+)?"+re.escape(mid)+r"\b[^\n]*$",text,re.M)
+    if not m:return ""
+    n=re.search(r"^##\s+(?:Milestone\s+)?M[0-9]",text[m.end():],re.M)
+    s=text[m.end():m.end()+n.start() if n else len(text)]
+    a=re.search(r"^###\s+.*acceptance criteria\b",s,re.M|re.I)
+    return s[:a.start()] if a else s
 
-
-def _check_projection(root: Path, milestone: dict[str, Any], path: Path) -> list[dict[str, str]]:
-    errors: list[dict[str, str]] = []
-    text = (root / path).read_text(encoding="utf-8")
-    rows = _markdown_rows(text, milestone["id"])
-    expected = [(p["id"], p["status"] in TERMINAL_SATISFIED, p["priority"]) for p in milestone["packages"]]
-    actual = [(pid, checked, priority) for pid, checked, priority in rows]
-    if [row[0] for row in actual] != [row[0] for row in expected]:
-        errors.append(_error("ROADMAP-E008", str(path), f"{milestone['id']} package IDs/order drift from JSON authority"))
+def _projection_errors(root:Path,m:dict[str,Any]):
+    p=m.get("status_projection")
+    if not isinstance(p,dict): return []
+    path=root/Path(p["path"])
+    try:text=path.read_text(encoding="utf-8")
+    except OSError as e:return [_err("ROADMAP-E008",p["path"],str(e))]
+    errors=[]
+    if p["kind"]=="checkbox_order":
+        rows=[]
+        for line in _section(text,m["id"]).splitlines():
+            x=re.match(r"^- \[([ xX])\]\s+\*\*(P[0-2](?:/P[0-2])*)\*\*\s+",line)
+            if x:rows.append((x.group(1).lower()=="x",x.group(2).split("/")))
+        if len(rows)!=len(m["packages"]):
+            return [_err("ROADMAP-E008",p["path"],f"{m['id']} checkbox task count {len(rows)} != JSON package count {len(m['packages'])}")]
+        for pkg,(checked,priorities) in zip(m["packages"],rows):
+            if checked!=(pkg["status"] in TERMINAL_SATISFIED):errors.append(_err("ROADMAP-E008",p["path"],f"{pkg['id']} checkbox drift from status"))
+            if pkg["priority"] not in priorities:errors.append(_err("ROADMAP-E008",p["path"],f"{pkg['id']} priority drift from JSON authority"))
         return errors
-    for (pid, checked, priority), (_, expected_checked, expected_priority) in zip(actual, expected):
-        if checked != expected_checked:
-            errors.append(_error("ROADMAP-E008", str(path), f"{pid} checkbox drift from status"))
-        if priority is not None and priority != expected_priority:
-            errors.append(_error("ROADMAP-E008", str(path), f"{pid} priority drift from JSON authority"))
+    rows=[]
+    pattern=re.compile(r"^- \[([ xX])\].*?\b("+re.escape(m["id"])+r"-[0-9]{2})\b",re.M)
+    for x in pattern.finditer(text):
+        end=text.find("\n",x.start()); line=text[x.start():end if end>=0 else len(text)]
+        q=re.search(r"\*\*(P[0-2])\*\*",line)
+        rows.append((x.group(2),x.group(1).lower()=="x",q.group(1) if q else None))
+    expected=[(x["id"],x["status"] in TERMINAL_SATISFIED,x["priority"]) for x in m["packages"]]
+    if [x[0] for x in rows]!=[x[0] for x in expected]:return [_err("ROADMAP-E008",p["path"],f"{m['id']} package IDs/order drift from JSON authority")]
+    for actual,want in zip(rows,expected):
+        if actual[1]!=want[1]:errors.append(_err("ROADMAP-E008",p["path"],f"{actual[0]} checkbox drift from status"))
+        if actual[2] is not None and actual[2]!=want[2]:errors.append(_err("ROADMAP-E008",p["path"],f"{actual[0]} priority drift from JSON authority"))
     return errors
 
+def _legacy_projection(root:Path,m:dict[str,Any]):
+    mid=m["id"]; path=LEGACY_PROJECTIONS.get(mid)
+    if path is None:return []
+    try:text=(root/path).read_text(encoding="utf-8")
+    except OSError as e:return [_err("ROADMAP-E008",str(path),str(e))]
+    pattern=re.compile(r"^- \[([ xX])\].*?\b("+re.escape(mid)+r"-[0-9]{2})\b",re.M)
+    rows=[(x.group(2),x.group(1).lower()=="x") for x in pattern.finditer(text)]
+    expected=[(x["id"],x["status"] in TERMINAL_SATISFIED) for x in m["packages"]]
+    errors=[]
+    if [x[0] for x in rows]!=[x[0] for x in expected]:errors.append(_err("ROADMAP-E008",str(path),f"{mid} package IDs/order drift from JSON authority"))
+    else:
+        for a,b in zip(rows,expected):
+            if a[1]!=b[1]:errors.append(_err("ROADMAP-E008",str(path),f"{a[0]} checkbox drift from status"))
+    if mid in TODO_PROJECTIONS:
+        try:todo=(root/"TODO.md").read_text(encoding="utf-8")
+        except OSError as e:return errors+[_err("ROADMAP-E008","TODO.md",str(e))]
+        tr=[(x.group(2),x.group(1).lower()=="x") for x in pattern.finditer(todo)]
+        if [x[0] for x in tr]!=[x[0] for x in expected]:errors.append(_err("ROADMAP-E008","TODO.md",f"{mid} package IDs/order drift from JSON authority"))
+        else:
+            for a,b in zip(tr,expected):
+                if a[1]!=b[1]:errors.append(_err("ROADMAP-E008","TODO.md",f"{a[0]} checkbox drift from status"))
+    return errors
 
-def validate_repository(root: Path = ROOT, *, check_markdown: bool = True) -> list[dict[str, str]]:
-    index, milestone_docs, errors = _read_documents(root)
-    if errors:
-        return sorted(errors, key=lambda item: (item["code"], item["subject"], item["message"]))
-
-    entries = index["milestones"]
-    entry_ids = [entry["id"] for entry in entries]
-    authoritative = index["migration"]["authoritative_milestones"]
-    pending = index["migration"]["pending_milestones"]
-    order = index["milestone_order"]
-
-    if entry_ids != authoritative:
-        errors.append(_error("ROADMAP-E009", str(INDEX_PATH), "milestone entries must exactly match authoritative_milestones in order"))
-    if set(authoritative) & set(pending):
-        errors.append(_error("ROADMAP-E009", str(INDEX_PATH), "authoritative and pending milestones must be disjoint"))
-    if set(authoritative) | set(pending) != set(order):
-        errors.append(_error("ROADMAP-E009", str(INDEX_PATH), "migration scope must partition milestone_order"))
-    if len(entry_ids) != len(set(entry_ids)):
-        errors.append(_error("ROADMAP-E002", str(INDEX_PATH), "duplicate milestone id"))
-    if len([entry["order"] for entry in entries]) != len(set(entry["order"] for entry in entries)):
-        errors.append(_error("ROADMAP-E002", str(INDEX_PATH), "duplicate milestone order"))
-
-    packages: dict[str, dict[str, Any]] = {}
-    package_owner: dict[str, str] = {}
-    milestone_by_id: dict[str, dict[str, Any]] = {}
-    for path, milestone in milestone_docs:
-        milestone_by_id[milestone.get("id", "")] = milestone
-        entry = next((item for item in entries if item["path"] == str(path)), None)
-        if entry is None or any(milestone.get(key) != entry.get(key) for key in ("id", "title", "order", "priority")):
-            errors.append(_error("ROADMAP-E007", str(path), "index/file identity mismatch"))
-        seen_orders: set[int] = set()
-        for package in milestone.get("packages", []):
-            pid = package["id"]
-            if pid in packages:
-                errors.append(_error("ROADMAP-E002", pid, f"duplicate package id; also owned by {package_owner[pid]}"))
+def _relation_errors(values:dict[str,dict[str,Any]],kind:str):
+    errors=[]; edges={k:[] for k in values}
+    for k,v in values.items():
+        for target in v.get("supersedes",[]):
+            if target==k or target not in values:errors.append(_err("ROADMAP-E010",k,f"invalid supersedes reference {target}"))
             else:
-                packages[pid] = package
-                package_owner[pid] = milestone["id"]
-            if package["order"] in seen_orders:
-                errors.append(_error("ROADMAP-E002", milestone["id"], f"duplicate package order {package['order']}"))
-            seen_orders.add(package["order"])
-            for link in [*package["evidence"], *package["references"]]:
-                if link["kind"] in {"path", "test", "schema"}:
-                    ref = Path(link["ref"])
-                    if ref.is_absolute() or ".." in ref.parts or not (root / ref).is_file():
-                        errors.append(_error("ROADMAP-E006", pid, f"invalid or missing repository-relative {link['kind']} ref {link['ref']}"))
+                edges[k].append(target)
+                if k not in values[target].get("superseded_by",[]):errors.append(_err("ROADMAP-E011",k,f"supersedes {target} without reciprocal superseded_by"))
+        for target in v.get("superseded_by",[]):
+            if target==k or target not in values:errors.append(_err("ROADMAP-E010",k,f"invalid superseded_by reference {target}"))
+            elif k not in values[target].get("supersedes",[]):errors.append(_err("ROADMAP-E011",k,f"superseded_by {target} without reciprocal supersedes"))
+    state={};stack=[]
+    def visit(k):
+        state[k]=1;stack.append(k)
+        for t in edges[k]:
+            if state.get(t)==1:errors.append(_err("ROADMAP-E012",k,"supersession cycle "+" -> ".join(stack[stack.index(t):]+[t])))
+            elif not state.get(t):visit(t)
+        stack.pop();state[k]=2
+    for k in sorted(edges):
+        if not state.get(k):visit(k)
+    return errors
 
-    for pid, package in packages.items():
-        for dependency in package["depends_on"]:
-            if dependency == pid:
-                errors.append(_error("ROADMAP-E004", pid, "package cannot depend on itself"))
-            elif dependency not in packages:
-                errors.append(_error("ROADMAP-E003", pid, f"unknown dependency {dependency}"))
-
-    graph = {pid: [dependency for dependency in package["depends_on"] if dependency in packages and dependency != pid] for pid, package in packages.items()}
-    state: dict[str, int] = {}
-    stack: list[str] = []
-
-    def visit(node: str) -> None:
-        state[node] = 1
-        stack.append(node)
-        for dependency in graph[node]:
-            if state.get(dependency) == 1:
-                cycle = stack[stack.index(dependency):] + [dependency]
-                errors.append(_error("ROADMAP-E005", node, "dependency cycle " + " -> ".join(cycle)))
-            elif state.get(dependency, 0) == 0:
-                visit(dependency)
-        stack.pop()
-        state[node] = 2
-
-    for node in sorted(graph):
-        if state.get(node, 0) == 0:
-            visit(node)
-
+def validate_repository(root:Path=ROOT,*,check_markdown:bool=True):
+    index,docs,errors=_documents(root)
+    if errors:return sorted(errors,key=lambda x:(x["code"],x["subject"],x["message"]))
+    entries=index["milestones"]; ids=[x["id"] for x in entries]; auth=index["migration"]["authoritative_milestones"]; pending=index["migration"]["pending_milestones"]; order=index["milestone_order"]
+    if ids!=auth:errors.append(_err("ROADMAP-E009",str(INDEX_PATH),"milestone entries must exactly match authoritative_milestones in order"))
+    if set(auth)&set(pending) or set(auth)|set(pending)!=set(order):errors.append(_err("ROADMAP-E009",str(INDEX_PATH),"migration scope must partition milestone_order"))
+    for label,vals in (("milestone id",ids),("milestone order",[x["order"] for x in entries]),("milestone path",[x["path"] for x in entries])):
+        if len(vals)!=len(set(vals)):errors.append(_err("ROADMAP-E002",str(INDEX_PATH),f"duplicate {label}"))
+    packages={};owners={};milestones={}
+    for path,m in docs:
+        milestones[m["id"]]=m; entry=next((x for x in entries if x["path"]==str(path)),None)
+        if entry is None or any(m.get(k)!=entry.get(k) for k in ("id","title","order","priority")):errors.append(_err("ROADMAP-E007",str(path),"index/file identity mismatch"))
+        if isinstance(m.get("source"),dict):errors+=_link_errors(root,m["id"],m["source"])
+        if isinstance(m.get("status_projection"),dict):errors+=_link_errors(root,m["id"],{"kind":"path","ref":m["status_projection"]["path"]})
+        seen=set()
+        for pkg in m["packages"]:
+            pid=pkg["id"]
+            if pid in packages:errors.append(_err("ROADMAP-E002",pid,f"duplicate package id; also owned by {owners[pid]}"))
+            else:packages[pid]=pkg;owners[pid]=m["id"]
+            if pkg["order"] in seen:errors.append(_err("ROADMAP-E002",m["id"],f"duplicate package order {pkg['order']}"))
+            seen.add(pkg["order"])
+            for link in pkg["evidence"]+pkg["references"]:errors+=_link_errors(root,pid,link)
+    if set(milestones)!=set(ids):errors.append(_err("ROADMAP-E007",str(INDEX_PATH),"index milestone set does not match loaded milestone documents"))
+    for pid,pkg in packages.items():
+        for dep in pkg["depends_on"]:
+            if dep==pid:errors.append(_err("ROADMAP-E004",pid,"package cannot depend on itself"))
+            elif dep not in packages:errors.append(_err("ROADMAP-E003",pid,f"unknown dependency {dep}"))
+    graph={k:[d for d in v["depends_on"] if d in packages and d!=k] for k,v in packages.items()}; state={};stack=[]
+    def visit(k):
+        state[k]=1;stack.append(k)
+        for d in graph[k]:
+            if state.get(d)==1:errors.append(_err("ROADMAP-E005",k,"dependency cycle "+" -> ".join(stack[stack.index(d):]+[d])))
+            elif not state.get(d):visit(d)
+        stack.pop();state[k]=2
+    for k in sorted(graph):
+        if not state.get(k):visit(k)
+    errors+=_relation_errors(packages,"package")+_relation_errors(milestones,"milestone")
     if check_markdown:
-        for milestone_id, markdown_path in MARKDOWN_PROJECTIONS.items():
-            if milestone_id in milestone_by_id:
-                errors.extend(_check_projection(root, milestone_by_id[milestone_id], markdown_path))
-        for milestone_id in sorted(TODO_PROJECTIONS):
-            if milestone_id in milestone_by_id:
-                errors.extend(_check_projection(root, milestone_by_id[milestone_id], TODO_PATH))
+        for _,m in docs: errors+=_projection_errors(root,m) if m.get("status_projection") else _legacy_projection(root,m)
+    return sorted(errors,key=lambda x:(x["code"],x["subject"],x["message"]))
 
-    return sorted(errors, key=lambda item: (item["code"], item["subject"], item["message"]))
+def load_authority(root:Path=ROOT):
+    errors=validate_repository(root)
+    if errors:raise ValueError(json.dumps(errors,sort_keys=True))
+    index=_load(root/INDEX_PATH); milestones=[];packages={};owners={}
+    for e in index["milestones"]:
+        m=_load(root/Path(e["path"]));milestones.append(m)
+        for p in m["packages"]:packages[p["id"]]=p;owners[p["id"]]=m["id"]
+    return index,milestones,packages,owners
 
+def _blocked(pkg,packages):return [d for d in pkg["depends_on"] if packages[d]["status"] not in TERMINAL_SATISFIED]
+def _row(pkg,packages,owners):return {"id":pkg["id"],"milestone":owners[pkg["id"]],"status":pkg["status"],"priority":pkg["priority"],"depends_on":pkg["depends_on"],"blocked_by":_blocked(pkg,packages)}
 
-def load_authority(root: Path = ROOT) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, dict[str, Any]]]:
-    errors = validate_repository(root)
-    if errors:
-        raise ValueError(json.dumps(errors, sort_keys=True, separators=(",", ":")))
-    index = _load(root / INDEX_PATH)
-    milestones = [_load(root / Path(entry["path"])) for entry in index["milestones"]]
-    packages = {package["id"]: package for milestone in milestones for package in milestone["packages"]}
-    return index, milestones, packages
+def summary_data(root:Path=ROOT):
+    index,ms,packages,owners=load_authority(root); counts={s:0 for s in STATUS_ORDER}
+    for p in packages.values():counts[p["status"]]+=1
+    return {"schema_version":OUTPUT_VERSION,"milestones":len(ms),"packages":len(packages),"status_counts":counts,"pending_migration":index["migration"]["pending_milestones"]}
 
+def next_data(root:Path=ROOT,milestone:str|None=None):
+    _,ms,packages,owners=load_authority(root)
+    for m in ms:
+        if milestone and m["id"]!=milestone:continue
+        for p in sorted(m["packages"],key=lambda x:x["order"]):
+            if p["status"] in {"open","in_progress"} and not _blocked(p,packages):return {"schema_version":OUTPUT_VERSION,"next":_row(p,packages,owners)}
+    return {"schema_version":OUTPUT_VERSION,"next":None}
 
-def is_blocked(package: dict[str, Any], packages: dict[str, dict[str, Any]]) -> bool:
-    return package["status"] in NONTERMINAL and any(packages[dependency]["status"] not in TERMINAL_SATISFIED for dependency in package["depends_on"])
+def blockers_data(package_id:str,root:Path=ROOT,transitive:bool=False):
+    _,_,packages,owners=load_authority(root)
+    if package_id not in packages:raise KeyError(package_id)
+    seen=set();out=[]
+    def add(pid):
+        for d in _blocked(packages[pid],packages):
+            if d not in seen:
+                seen.add(d);out.append(_row(packages[d],packages,owners))
+                if transitive:add(d)
+    add(package_id)
+    return {"schema_version":OUTPUT_VERSION,"package":package_id,"blockers":out}
 
+def completed_data(root:Path=ROOT,milestone:str|None=None):
+    _,ms,packages,owners=load_authority(root); rows=[]
+    for m in ms:
+        if milestone and m["id"]!=milestone:continue
+        rows.extend(_row(p,packages,owners) for p in sorted(m["packages"],key=lambda x:x["order"]) if p["status"] in TERMINAL_SATISFIED)
+    return {"schema_version":OUTPUT_VERSION,"completed":rows}
 
-def _ordered(milestones: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [package for milestone in sorted(milestones, key=lambda value: (value["order"], value["id"])) for package in sorted(milestone["packages"], key=lambda value: (value["order"], value["id"]))]
+def superseded_data(root:Path=ROOT):
+    _,ms,packages,owners=load_authority(root)
+    return {"schema_version":OUTPUT_VERSION,"packages":[_row(p,packages,owners)|{"superseded_by":p.get("superseded_by",[]),"supersedes":p.get("supersedes",[])} for p in packages.values() if p["status"]=="superseded" or p.get("supersedes") or p.get("superseded_by")],"milestones":[{"id":m["id"],"supersedes":m.get("supersedes",[]),"superseded_by":m.get("superseded_by",[])} for m in ms if m.get("supersedes") or m.get("superseded_by")]}
 
+def context_data(root:Path=ROOT,milestone:str|None=None,limit:int=32):
+    _,ms,packages,owners=load_authority(root); rows=[]
+    for m in ms:
+        if milestone and m["id"]!=milestone:continue
+        for p in sorted(m["packages"],key=lambda x:x["order"]):
+            if p["status"] not in TERMINAL_SATISFIED:rows.append(_row(p,packages,owners))
+    return {"schema_version":OUTPUT_VERSION,"milestone":milestone,"next":next_data(root,milestone)["next"],"open_total":len(rows),"items":rows[:limit],"truncated":len(rows)>limit}
 
-def summary_data(root: Path = ROOT) -> dict[str, Any]:
-    index, milestones, packages = load_authority(root)
-    ordered = _ordered(milestones)
-    counts = {status: sum(package["status"] == status for package in ordered) for status in ("open", "in_progress", "complete", "not_applicable", "excluded")}
-    return {
-        "authoritative_milestones": index["migration"]["authoritative_milestones"],
-        "pending_migration_milestones": index["migration"]["pending_milestones"],
-        "milestones": len(milestones),
-        "packages": len(ordered),
-        "status_counts": counts,
-        "blocked": sum(is_blocked(package, packages) for package in ordered),
-        "ready": sum(package["status"] in NONTERMINAL and not is_blocked(package, packages) for package in ordered),
-    }
+def _emit(v,fmt):
+    if fmt=="json":print(json.dumps(v,sort_keys=True,separators=(",",":")))
+    else:print(json.dumps(v,indent=2,sort_keys=True))
 
-
-def next_data(root: Path = ROOT, milestone_id: str | None = None) -> dict[str, Any] | None:
-    _, milestones, packages = load_authority(root)
-    for package in _ordered(milestones):
-        if milestone_id and not package["id"].startswith(milestone_id + "-"):
-            continue
-        if package["status"] in NONTERMINAL and not is_blocked(package, packages):
-            return {"id": package["id"], "title": package["title"], "status": package["status"], "depends_on": package["depends_on"]}
-    return None
-
-
-def blocker_ids(packages: dict[str, dict[str, Any]], package_id: str, transitive: bool) -> list[str]:
-    if package_id not in packages:
-        raise KeyError(package_id)
-    result: set[str] = set()
-
-    def walk(pid: str) -> None:
-        for dependency in packages[pid]["depends_on"]:
-            if packages[dependency]["status"] not in TERMINAL_SATISFIED and dependency not in result:
-                result.add(dependency)
-                if transitive:
-                    walk(dependency)
-
-    walk(package_id)
-    return sorted(result)
-
-
-def completed_data(root: Path = ROOT) -> dict[str, Any]:
-    _, milestones, _ = load_authority(root)
-    ordered = _ordered(milestones)
-    return {
-        "complete": [package["id"] for package in ordered if package["status"] == "complete"],
-        "not_applicable": [{"id": package["id"], "reason": package["disposition_reason"]} for package in ordered if package["status"] == "not_applicable"],
-        "excluded": [{"id": package["id"], "reason": package["disposition_reason"]} for package in ordered if package["status"] == "excluded"],
-        "complete_milestones": [milestone["id"] for milestone in sorted(milestones, key=lambda value: (value["order"], value["id"])) if all(package["status"] in TERMINAL_SATISFIED for package in milestone["packages"])],
-    }
-
-
-def _emit(command: str, data: Any) -> None:
-    print(json.dumps({"schema_version": OUTPUT_VERSION, "command": command, "roadmap_version": 1, "data": data}, sort_keys=True, separators=(",", ":"), ensure_ascii=False))
-
-
-def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Validate and query the versioned AIDL roadmap authority")
-    parser.add_argument("--root", type=Path, default=ROOT)
-    sub = parser.add_subparsers(dest="command", required=True)
-    validate = sub.add_parser("validate")
-    validate.add_argument("--format", choices=["json", "text"], default="text")
-    summary = sub.add_parser("summary")
-    summary.add_argument("--format", choices=["json", "text"], default="text")
-    next_parser = sub.add_parser("next")
-    next_parser.add_argument("--milestone")
-    next_parser.add_argument("--format", choices=["json", "text"], default="text")
-    blockers = sub.add_parser("blockers")
-    blockers.add_argument("package_id")
-    blockers.add_argument("--transitive", action="store_true")
-    blockers.add_argument("--format", choices=["json", "text"], default="text")
-    completed = sub.add_parser("completed")
-    completed.add_argument("--format", choices=["json", "text"], default="text")
-    args = parser.parse_args(argv)
-    root = args.root.resolve()
-
+def main(argv=None):
+    ap=argparse.ArgumentParser(); sub=ap.add_subparsers(dest="cmd",required=True)
+    for name in ("validate","summary","next","completed","superseded","context"):
+        p=sub.add_parser(name);p.add_argument("--format",choices=("human","json"),default="human")
+        if name in {"next","completed","context"}:p.add_argument("--milestone")
+        if name=="context":p.add_argument("--limit",type=int,default=32)
+    p=sub.add_parser("blockers");p.add_argument("package");p.add_argument("--transitive",action="store_true");p.add_argument("--format",choices=("human","json"),default="human")
+    a=ap.parse_args(argv)
     try:
-        if args.command == "validate":
-            errors = validate_repository(root)
-            data = {"valid": not errors, "errors": errors}
-            if args.format == "json":
-                _emit("validate", data)
-            elif errors:
-                for error in errors:
-                    print(f"{error['code']} {error['subject']}: {error['message']}", file=sys.stderr)
-            else:
-                print("roadmap: valid")
-            return 1 if errors else 0
-
-        if args.command == "summary":
-            data = summary_data(root)
-        elif args.command == "next":
-            data = next_data(root, args.milestone)
-        elif args.command == "blockers":
-            _, _, packages = load_authority(root)
-            data = {"id": args.package_id, "blockers": blocker_ids(packages, args.package_id, args.transitive), "transitive": args.transitive}
-        else:
-            data = completed_data(root)
-
-        if args.format == "json":
-            _emit(args.command, data)
-        else:
-            print(json.dumps(data, indent=2, sort_keys=True, ensure_ascii=False))
-        return 0
-    except KeyError as exc:
-        print(f"ROADMAP-E003 {exc.args[0]}: unknown package id", file=sys.stderr)
-        return 1
-    except (OSError, json.JSONDecodeError, ValueError) as exc:
-        print(f"roadmap tool failed: {exc}", file=sys.stderr)
-        return 2
-
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+        if a.cmd=="validate":
+            errors=validate_repository();v={"schema_version":OUTPUT_VERSION,"valid":not errors,"errors":errors};_emit(v,a.format);return 0 if not errors else 1
+        if a.cmd=="summary":v=summary_data()
+        elif a.cmd=="next":v=next_data(milestone=a.milestone)
+        elif a.cmd=="completed":v=completed_data(milestone=a.milestone)
+        elif a.cmd=="superseded":v=superseded_data()
+        elif a.cmd=="context":v=context_data(milestone=a.milestone,limit=max(1,a.limit))
+        else:v=blockers_data(a.package,transitive=a.transitive)
+        _emit(v,a.format);return 0
+    except (ValueError,KeyError,OSError,json.JSONDecodeError) as e:
+        print(str(e),file=sys.stderr);return 2
+if __name__=="__main__":raise SystemExit(main())
