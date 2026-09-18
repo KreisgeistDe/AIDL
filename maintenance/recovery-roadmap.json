@@ -20,9 +20,9 @@
   "audit": [
     {
       "id": "machine-readable-roadmap",
-      "status": "partial",
-      "disposition": "finish_rollout",
-      "summary": "roadmap/v1 exists and is validated, but only M10, M10.1, M10.2, and M10.3 are authoritative JSON milestones; later active milestones remain pending migration."
+      "status": "complete",
+      "disposition": "rollout_complete",
+      "summary": "roadmap/v1 now represents all 26 current milestones as authoritative JSON milestones and migration.pending_milestones is empty."
     },
     {
       "id": "revision-4-language-freeze",
@@ -48,7 +48,7 @@
       "id": "R1",
       "title": "Complete roadmap/v1 migration",
       "priority": "P0",
-      "status": "open",
+      "status": "complete",
       "depends_on": [],
       "goal": "Make the current project roadmap deterministically queryable without requiring the orchestrator to reinterpret TODO/backlog prose.",
       "work": [
@@ -187,5 +187,5 @@
     "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
     "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
   ],
-  "next_package": "R1"
+  "next_package": "R2"
 }
