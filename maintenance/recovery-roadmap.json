@@ -116,7 +116,7 @@
       "id": "R4",
       "title": "Restore thin orchestration semantics",
       "priority": "P1",
-      "status": "open",
+      "status": "complete",
       "depends_on": ["R3"],
       "goal": "Return the orchestrator to routing and bounded decision-making rather than broad project-state reconstruction.",
       "normal_inputs": [
@@ -187,5 +187,5 @@
     "Prefer deterministic read-only tooling over repeated LLM reconstruction of repository state.",
     "New workflow rules should replace obsolete complexity rather than merely accumulate beside it."
   ],
-  "next_package": "R4"
+  "next_package": "R5"
 }
