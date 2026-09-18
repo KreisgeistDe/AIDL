@@ -26,7 +26,10 @@ def _section(text: str, heading: str, level: int = 3) -> str:
 
 def _checkbox_contracts(section: str) -> list[str]:
     result: list[str] = []
-    pattern = re.compile(r"^- \[[ xX]\]\s+\*\*P[0-2](?:/P[0-2])?\*\*\s+(.+)$", re.MULTILINE)
+    pattern = re.compile(
+        r"^- \[[ xX]\]\s+(?:\*\*P[0-2](?:/P[0-2])?\*\*\s+)?(.+)$",
+        re.MULTILINE,
+    )
     for match in pattern.finditer(section):
         result.append(match.group(1).strip())
     return result
