@@ -38,30 +38,11 @@
     "runtimeLoader": "tools/core_semantics.py"
   },
   "historicalAuthorities": [
-    {
-      "path": "spec/language-surface-v1.json",
-      "formerRole": "revision-4-language-surface-contract",
-      "currentRole": "historical-non-authoritative-migration-and-certification-evidence",
-      "activeLanguageAuthority": false
-    },
-    {
-      "path": "spec/core.compatibility.aidl",
-      "formerRole": "compatibility-binding",
-      "currentRole": "historical-non-authoritative-compatibility-evidence",
-      "activeLanguageAuthority": false
-    },
-    {
-      "path": "spec/m10-2-language-surface-classification.json",
-      "formerRole": "revision-4-source-classification",
-      "currentRole": "historical-corpus-inventory-for-p2-plus-migration",
-      "activeLanguageAuthority": false
-    },
-    {
-      "path": "spec/core-registry-v1.json",
-      "formerRole": "generated-registry",
-      "currentRole": "legacy-definition-object-migration-evidence-only",
-      "activeLanguageAuthority": false
-    }
+    {"path":"spec/language-surface-v1.json","formerRole":"revision-4-language-surface-contract","currentRole":"historical-non-authoritative-migration-and-certification-evidence","activeLanguageAuthority":false},
+    {"path":"spec/core.compatibility.aidl","formerRole":"compatibility-binding","currentRole":"historical-non-authoritative-compatibility-evidence","activeLanguageAuthority":false},
+    {"path":"spec/m10-2-language-surface-classification.json","formerRole":"revision-4-source-classification","currentRole":"historical-corpus-inventory-for-p2-plus-migration","activeLanguageAuthority":false},
+    {"path":"spec/core-registry-v1.json","formerRole":"generated-registry","currentRole":"legacy-definition-object-migration-evidence-only","activeLanguageAuthority":false},
+    {"path":"roadmap/v1/milestones/m16.5.json","formerRole":"language-surface-normalization-blocking-gate","currentRole":"historical-nonblocking-design-and-evaluation-evidence","activeLanguageAuthority":false}
   ],
   "legacyCorpusBoundary": {
     "parser": "tools/aidl_parser.py",
@@ -79,17 +60,12 @@
     "grammar-projection-is-derived-from-core",
     "revision-4-is-not-active-language-authority",
     "generic-declaration-envelope-is-bootstrap-owned",
-    "concrete-kind-slot-and-semantic-contracts-are-core-owned"
+    "concrete-kind-slot-and-semantic-contracts-are-core-owned",
+    "m16-5-is-historical-nonblocking-where-conflicting"
   ],
   "deferred": {
     "phase": "P2+",
-    "items": [
-      "repository-wide-aidl-source-migration",
-      "reference-app-example-and-fixture-migration",
-      "broad-revision-4-compatibility-code-removal",
-      "kotlin-compiler-rewrite",
-      "full-roadmap-rebase"
-    ],
+    "items": ["repository-wide-aidl-source-migration","reference-app-example-and-fixture-migration","broad-revision-4-compatibility-code-removal","kotlin-compiler-rewrite","full-roadmap-rebase"],
     "rule": "deferred historical syntax is not active language authority and receives no compatibility alias from P1"
   },
   "kotlin": {
@@ -99,5 +75,13 @@
   "openLegacyPrs": {
     "121": "must-be-re-evaluated-against-breaking-baseline-after-p1",
     "123": "must-be-re-evaluated-against-breaking-baseline-after-p1"
+  },
+  "recoveryR2": {
+    "package": "R2",
+    "roadmapMilestone": "M16.5",
+    "roadmapPath": "roadmap/v1/milestones/m16.5.json",
+    "authorityStatus": "historical_nonblocking",
+    "supersessionRule": "M16.5 remains historical design and evaluation evidence. Its unfinished E3-E9 packages do not block the accepted self-described Core authority where they conflict with it.",
+    "activeBlockingAuthority": "spec/core-self-description-v1.aidl"
   }
 }
