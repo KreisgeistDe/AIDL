@@ -41,10 +41,10 @@ class RoadmapContextTest(unittest.TestCase):
             shutil.copy2(source, target)
         return td, root
 
-    def test_ready_package_context(self):
+    def test_dependency_ready_in_progress_package_context(self):
         value = roadmap_context.context_data("M10.5-04", ROOT)
         self.assertEqual("aidl.roadmap-context/v1", value["schema_version"])
-        self.assertEqual("ready", value["selected"]["state"])
+        self.assertEqual("in_progress", value["selected"]["state"])
         self.assertEqual("M10.5-04", value["next_candidates"]["items"][0]["id"])
         self.assertGreater(value["remaining_acceptance_criteria"]["total"], 0)
 
