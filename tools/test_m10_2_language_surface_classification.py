@@ -41,6 +41,27 @@ class LanguageSurfaceClassificationTest(unittest.TestCase):
         self.assertNotIn("### Query and mutation", grammar)
         self.assertIn("P2+ migration boundary", grammar)
 
+    def test_r5_reference_surfaces_do_not_present_revision4_as_active_authority(self) -> None:
+        grammar = (classification.ROOT / "docs/06-grammar.md").read_text(encoding="utf-8")
+        self.assertIn("The active AIDL language authority is `spec/core-self-description-v1.aidl`", grammar)
+        self.assertIn("deterministic human-readable projection", grammar)
+
+        reference_surfaces = [
+            "examples/calendar-offline/README.md",
+            "examples/petstore/README.md",
+            "examples/videohub/README.md",
+            "fixtures/README.md",
+        ]
+        for relative in reference_surfaces:
+            text = (classification.ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("spec/core-self-description-v1.aidl", text, relative)
+            self.assertIn("Recovery R5 Authority", text, relative)
+
+        petstore = (classification.ROOT / "examples/petstore/README.md").read_text(encoding="utf-8")
+        self.assertNotIn("Revision 4 bleibt die semantische Authority", petstore)
+        fixtures = (classification.ROOT / "fixtures/README.md").read_text(encoding="utf-8")
+        self.assertIn("they are not by themselves positive evidence for current Core syntax", fixtures)
+
     def test_new_unclassified_aidl_file_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
