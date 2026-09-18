@@ -28,6 +28,7 @@
       "source": "tools/compiler_refactoring.py",
       "compilerTests": [
         "tools/test_compiler_refactoring.py",
+        "tools/test_m10_5_kotlin_authorized_fixes.py",
         "tools/test_m10_5_kotlin_references_query.py",
         "tools/test_m10_5_kotlin_rename_planning.py"
       ],
